@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cornerstone Parent Portal</title>
+<meta name="description" content="Excused absence notes and dismissal changes for Cornerstone Christian School families.">
+<meta name="theme-color" content="#141213">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CCS Portal">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/theme.css">
+</head>
+<body>
+<header class="top"><div class="top-in"><img src="/icons/logo-horizontal.webp" alt="Cornerstone Christian School" width="200" height="62"></div></header>
+
+<main id="main">
+  <!-- ===== Sign in ===== -->
+  <section class="screen" id="s-login" hidden>
+    <div class="today">
+      <div class="date">Parent Portal</div>
+      <h1>Sign in</h1>
+      <p style="opacity:.85">Use the cell phone number or email address the school has on file for you.</p>
+    </div>
+    <form class="card form" id="f-start" novalidate>
+      <label>Cell phone or email
+        <input id="li-id" type="text" inputmode="email" autocomplete="username" placeholder="904-555-1234 or name@email.com" required>
+      </label>
+      <button class="btn" type="submit">Send my code</button>
+      <p class="err" id="li-err" role="alert"></p>
+    </form>
+    <form class="card form" id="f-code" hidden novalidate>
+      <p>We sent a 6-digit code to <b id="li-masked"></b>.</p>
+      <label>Code
+        <input id="li-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" pattern="[0-9]*" required>
+      </label>
+      <button class="btn" type="submit">Sign in</button>
+      <p class="muted small">This device will be remembered, so next time you won't need a code here.</p>
+      <div class="row-btns"><button type="button" class="link" id="li-back">Use a different phone or email</button><button type="button" class="link" id="li-resend">Send a new code</button></div>
+      <p class="err" id="code-err" role="alert"></p>
+    </form>
+    <p class="muted small center">Not finding your info? Call the front office at <a href="tel:9047305500">(904) 730-5500</a>.</p>
+  </section>
+
+  <!-- ===== Home ===== -->
+  <section class="screen" id="s-home" hidden>
+    <div class="today">
+      <div class="date" id="h-date"></div>
+      <h1 id="h-hello">Welcome</h1>
+      <p style="opacity:.85" id="h-sem"></p>
+    </div>
+    <div class="quick">
+      <a class="qa" href="#note"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg></span><div><b>Excused note</b><small>Parent note for an absence</small></div></a>
+      <a class="qa" href="#doctor"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v12M6 12h12"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg></span><div><b>Doctor's note</b><small>Upload a photo or PDF</small></div></a>
+      <a class="qa wide" href="#dismissal"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="11" rx="2"/><path d="M3 11h18M7 17v2M17 17v2"/></svg></span><div><b>Change dismissal</b><small id="h-cut">Same-day changes by 1:00 PM</small></div></a>
+    </div>
+    <div><h2>My students</h2><div id="h-students" class="stack"></div></div>
+  </section>
+
+  <!-- ===== Parent excused note ===== -->
+  <section class="screen" id="s-note" hidden>
+    <div><h2>Excused absence</h2><h1 class="pg">Parent excused note</h1></div>
+    <div class="card rules">
+      <b class="t">Before you submit</b>
+      <ol>
+        <li>You may submit up to <b class="lim">5</b> parent excused notes per student each semester (18 weeks). After that, a doctor's note is needed for an absence to be excused.</li>
+        <li>Submit the note within <b class="days">5</b> school days of the absence.</li>
+        <li>One note per day absent. If your student missed several days, submit a note for each day.</li>
+      </ol>
+    </div>
+    <form class="stack" id="f-note" novalidate>
+      <div class="card form">
+        <div class="step"><span>1</span>Student</div>
+        <div class="pick" id="n-students"></div>
+      </div>
+      <div class="card form">
+        <div class="step"><span>2</span>Absence</div>
+        <label>Please excuse my student from school on
+          <input type="date" id="n-date" required>
+        </label>
+        <label>Absent reason
+          <select id="n-reason" required>
+            <option value="">Choose one…</option>
+            <option>Car Accident</option>
+            <option>Compliance with a Court Order (e.g., visitation or a subpoena.)</option>
+            <option>Death of an Immediate Family Member</option>
+            <option>DR Appointment</option>
+            <option>Funeral Service or a Memorial Service of a Loved One</option>
+            <option>Illness or Injury of a Family Member Related to the Student</option>
+            <option>Illness or Injury of the Student</option>
+            <option>Infectious Disease or Quarantine Period Related to COVID-19</option>
+            <option>Out-of-town trips, not to exceed 5 excused absences per year</option>
+            <option value="Special Education or related services for a child's disability">Special Education or related services for a child’s disability</option>
+            <option>Transportation Issue</option>
+            <option>Weather Related</option>
+            <option value="Other">Other (enter the reason)</option>
+          </select>
+        </label>
+        <label id="n-other-l" hidden>Other reason
+          <input type="text" id="n-other" maxlength="200">
+        </label>
+      </div>
+      <div class="card form">
+        <div class="step"><span>3</span>Parent / guardian</div>
+        <label>Full name <input type="text" id="n-name" autocomplete="name" required></label>
+        <label>Phone number <input type="tel" id="n-phone" autocomplete="tel" placeholder="xxx-xxx-xxxx" required></label>
+        <div class="sig-l">Signature <button type="button" class="link" id="sig-clear">Clear</button></div>
+        <canvas id="sig" class="sig" width="600" height="180" aria-label="Sign here with your finger or mouse"></canvas>
+        <p class="muted small">Today's date: <b id="n-today"></b></p>
+      </div>
+      <button class="btn big" type="submit">Submit excused note</button>
+      <p class="err" id="n-err" role="alert"></p>
+    </form>
+  </section>
+
+  <!-- ===== Doctor's note ===== -->
+  <section class="screen" id="s-doctor" hidden>
+    <div><h2>Excused absence</h2><h1 class="pg">Doctor's note</h1></div>
+    <div class="card rules">
+      <b class="t">Upload a doctor's note</b>
+      <p>Take a photo of the note or upload a PDF. The front office will review it and update your student's attendance to excused. There is no limit on doctor's notes.</p>
+    </div>
+    <form class="stack" id="f-doc" novalidate>
+      <div class="card form">
+        <div class="step"><span>1</span>Student</div>
+        <div class="pick" id="d-students"></div>
+      </div>
+      <div class="card form">
+        <div class="step"><span>2</span>Dates absent</div>
+        <div class="two">
+          <label>First day <input type="date" id="d-start" required></label>
+          <label>Last day <small class="muted">(if more than one)</small><input type="date" id="d-end"></label>
+        </div>
+        <label>Doctor or office <small class="muted">(optional)</small><input type="text" id="d-provider" maxlength="150"></label>
+      </div>
+      <div class="card form">
+        <div class="step"><span>3</span>The note</div>
+        <label class="drop" id="d-drop">
+          <input type="file" id="d-file" accept="image/*,application/pdf" multiple>
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <b>Take a photo or choose a file</b>
+          <small class="muted">Photo or PDF · up to 6 pages</small>
+        </label>
+        <ul class="files" id="d-files"></ul>
+        <label>Comments <small class="muted">(optional)</small><textarea id="d-comments" rows="2" maxlength="1000"></textarea></label>
+      </div>
+      <button class="btn big" type="submit">Submit doctor's note</button>
+      <p class="err" id="d-err" role="alert"></p>
+    </form>
+  </section>
+
+  <!-- ===== Dismissal change ===== -->
+  <section class="screen" id="s-dismissal" hidden>
+    <div><h2>Transportation</h2><h1 class="pg">Change dismissal</h1></div>
+    <div class="card alert" id="t-cutnote"></div>
+    <form class="stack" id="f-trans" novalidate>
+      <div class="card form">
+        <div class="step"><span>1</span>Student</div>
+        <div class="pick" id="t-students"></div>
+        <div id="t-current"></div>
+      </div>
+      <div class="card form">
+        <div class="step"><span>2</span>What's changing</div>
+        <div class="seg" role="radiogroup" aria-label="Applies to">
+          <label><input type="radio" name="t-period" value="afternoon" checked><span>Afternoon dismissal</span></label>
+          <label><input type="radio" name="t-period" value="morning"><span>Morning arrival</span></label>
+        </div>
+        <div class="seg" role="radiogroup" aria-label="How long">
+          <label><input type="radio" name="t-type" value="today"><span>Today only</span></label>
+          <label><input type="radio" name="t-type" value="one_day" checked><span>Another day</span></label>
+          <label><input type="radio" name="t-type" value="date_range"><span>Date range</span></label>
+          <label><input type="radio" name="t-type" value="permanent"><span>Permanent</span></label>
+        </div>
+        <div class="two">
+          <label id="t-start-l">Date <input type="date" id="t-start"></label>
+          <label id="t-end-l" hidden>Through <input type="date" id="t-end"></label>
+        </div>
+      </div>
+      <div class="card form">
+        <div class="step"><span>3</span>New way home</div>
+        <div class="opts" id="t-methods"></div>
+        <div id="t-bus" hidden>
+          <label>Bus stop <select id="t-stop"></select></label>
+        </div>
+        <div id="t-care" hidden>
+          <label>Extended care location
+            <select id="t-carewhere"><option>Afterschool Care - KHA</option><option>Afterschool Care - SP</option></select>
+          </label>
+        </div>
+        <div id="t-pick" hidden>
+          <label>Who is picking up? <select id="t-person"></select></label>
+          <div id="t-other" hidden class="stack">
+            <label>Their full name <input type="text" id="t-oname" maxlength="120"></label>
+            <div class="two">
+              <label>Relationship <input type="text" id="t-orel" maxlength="60"></label>
+              <label>Phone <input type="tel" id="t-ophone" maxlength="20"></label>
+            </div>
+            <p class="muted small">Anyone not on your student's pickup list will be asked for a photo ID at pickup.</p>
+          </div>
+        </div>
+        <label>Comments for the office <small class="muted">(optional)</small><textarea id="t-comments" rows="2" maxlength="1000"></textarea></label>
+      </div>
+      <button class="btn big" type="submit">Submit dismissal change</button>
+      <p class="err" id="t-err" role="alert"></p>
+    </form>
+  </section>
+
+  <!-- ===== History ===== -->
+  <section class="screen" id="s-history" hidden>
+    <div><h2>History</h2><h1 class="pg">My submissions</h1></div>
+    <div><h2>Absence notes</h2><div class="list" id="hi-notes"></div></div>
+    <div><h2>Dismissal changes</h2><div class="list" id="hi-changes"></div></div>
+    <div class="card">
+      <b class="t">Signed in as <span id="hi-who"></span></b>
+      <div class="row-btns"><button class="btn ghost" id="b-logout">Sign out</button><button class="link" id="b-forget">Sign out and forget this device</button></div>
+    </div>
+  </section>
+
+  <!-- ===== Done ===== -->
+  <section class="screen" id="s-done" hidden>
+    <div class="card done">
+      <svg viewBox="0 0 24 24" width="54" height="54" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg>
+      <h1 id="done-t">Submitted</h1>
+      <p id="done-p"></p>
+      <div class="row-btns"><a class="btn" href="#home">Back to home</a><a class="btn ghost" href="#history">View history</a></div>
+    </div>
+  </section>
+</main>
+
+<nav class="tabs" id="tabs" hidden>
+  <a href="#home" data-t="home"><svg viewBox="0 0 24 24"><path d="M3 11 12 3l9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>Home</a>
+  <a href="#note" data-t="note"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6"/></svg>Absences</a>
+  <a href="#dismissal" data-t="dismissal"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="11" rx="2"/><path d="M3 11h18M7 17v2M17 17v2"/></svg>Dismissal</a>
+  <a href="#history" data-t="history"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History</a>
+</nav>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="/app.js"></script>
+</body>
+</html>

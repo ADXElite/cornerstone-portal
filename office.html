@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Front Office — Cornerstone Portal</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#141213">
+<link rel="icon" href="/icons/favicon-32.png" sizes="32x32">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/theme.css">
+<style>
+main{max-width:1180px}
+.top-in{max-width:1180px;justify-content:space-between}
+.top img{height:48px}
+.who{color:#F6F4F4;font-size:.85rem;text-align:right;line-height:1.25}
+.who button{background:none;border:0;color:#FF8C92;font-weight:700;cursor:pointer;padding:0}
+.otabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:2px solid var(--line);margin-bottom:4px}
+.otabs a{padding:10px 14px;text-decoration:none;font-weight:800;font-family:var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;display:flex;gap:6px;align-items:center}
+.otabs a[aria-current]{color:var(--ink);border-bottom-color:var(--red)}
+.badge{background:var(--red);color:#fff;border-radius:999px;font-family:var(--body);font-size:.72rem;padding:1px 7px;letter-spacing:0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;text-decoration:none}
+.stat b{font-family:var(--display);font-size:2.2rem;line-height:1;display:block}
+.stat span{color:var(--muted);font-weight:600;font-size:.9rem}
+.stat.hot b{color:var(--red)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
+.bar label{display:grid;gap:4px;font-weight:700;font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.bar input,.bar select{min-height:40px;padding:8px 10px;font-size:.95rem}
+.bar .grow{flex:1 1 200px}
+.tw{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:auto}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th{position:sticky;top:0;background:var(--surface);text-align:left;font-family:var(--display);text-transform:uppercase;letter-spacing:.06em;font-size:.82rem;color:var(--muted);padding:10px;border-bottom:2px solid var(--line);white-space:nowrap}
+td{padding:10px;border-top:1px solid var(--line);vertical-align:top}
+tr.click{cursor:pointer}
+tr.click:hover td{background:var(--bg)}
+td small{display:block;color:var(--muted)}
+tr.today td:first-child{box-shadow:inset 4px 0 0 var(--red)}
+.modal{position:fixed;inset:0;z-index:30;background:rgba(10,9,9,.62);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 12px}
+.modal-in{background:var(--surface);border-radius:18px;width:100%;max-width:820px;padding:20px;display:grid;gap:14px}
+.mh{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.doc{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--bg)}
+.doc img{display:block;width:100%;height:auto}
+.doc iframe{width:100%;height:70vh;border:0;display:block;background:#fff}
+.doc .cap{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;font-size:.85rem;background:var(--surface);border-top:1px solid var(--line)}
+.sigimg{background:#fff;border:1px solid var(--line);border-radius:10px;max-width:360px}
+.kv.wide{grid-template-columns:160px 1fr;padding:0}
+@media (max-width:560px){.kv.wide{grid-template-columns:1fr}.kv.wide dt{margin-top:6px}}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.sem-row{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:end}
+@media (max-width:640px){.sem-row{grid-template-columns:1fr 1fr}}
+.cnt{font-weight:700;color:var(--muted);font-size:.9rem}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><img src="/icons/logo-horizontal.webp" alt="Cornerstone Christian School" width="154" height="48"><div class="who" id="who" hidden></div></div></header>
+
+<main>
+  <section class="screen" id="v-login" hidden>
+    <div class="today"><div class="date">Front Office</div><h1>Staff sign in</h1></div>
+    <form class="card form" id="f-login" style="max-width:460px">
+      <label>School email <input type="email" id="lg-email" autocomplete="username" required></label>
+      <label>Password <input type="password" id="lg-pass" autocomplete="current-password" required></label>
+      <button class="btn" type="submit">Sign in</button>
+      <button class="link" type="button" id="lg-forgot">Forgot password?</button>
+      <p class="err" id="lg-err" role="alert"></p>
+    </form>
+  </section>
+
+  <section class="screen" id="v-app" hidden>
+    <nav class="otabs">
+      <a href="#dash" data-v="dash">Today</a>
+      <a href="#notes" data-v="notes">Attendance notes <span class="badge" id="b-notes" hidden></span></a>
+      <a href="#transport" data-v="transport">Dismissal changes <span class="badge" id="b-trans" hidden></span></a>
+      <a href="#students" data-v="students">Students</a>
+      <a href="#roster" data-v="roster">Roster upload</a>
+      <a href="#settings" data-v="settings">Settings</a>
+    </nav>
+
+    <!-- Today -->
+    <div class="screen" id="p-dash" hidden>
+      <div class="stats">
+        <a class="stat hot" href="#notes"><b id="st-notes">–</b><span>Notes waiting for review</span></a>
+        <a class="stat hot" href="#transport"><b id="st-new">–</b><span>Dismissal changes not yet processed</span></a>
+        <a class="stat" href="#transport?today"><b id="st-today">–</b><span>Changes in effect today</span></a>
+        <a class="stat" href="#students"><b id="st-stu">–</b><span>Active students</span></a>
+      </div>
+      <div><h2>Today's dismissal changes</h2><div class="tw"><table><thead><tr><th>Student</th><th>Change</th><th>Pickup</th><th>Submitted</th><th>Status</th></tr></thead><tbody id="dash-today"></tbody></table></div></div>
+      <p class="muted small" id="dash-import"></p>
+    </div>
+
+    <!-- Notes -->
+    <div class="screen" id="p-notes" hidden>
+      <div class="bar">
+        <label>Status<select id="nf-status"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="all">All</option></select></label>
+        <label>Type<select id="nf-kind"><option value="">All</option><option value="parent">Parent notes</option><option value="doctor">Doctor's notes</option></select></label>
+        <label class="grow">Student<input type="search" id="nf-q" placeholder="Name or student ID"></label>
+        <span class="cnt" id="nf-count"></span>
+      </div>
+      <div class="tw"><table><thead><tr><th>Student</th><th>Type</th><th>Date absent</th><th>Reason</th><th>Parent notes used</th><th>Submitted</th><th>Status</th></tr></thead><tbody id="n-rows"></tbody></table></div>
+    </div>
+
+    <!-- Transport report -->
+    <div class="screen" id="p-transport" hidden>
+      <div class="bar">
+        <label>Dates are<select id="tf-by"><option value="submitted">Submitted</option><option value="effective">In effect</option></select></label>
+        <label>From<input type="date" id="tf-from"></label>
+        <label>To<input type="date" id="tf-to"></label>
+        <label>Status<select id="tf-status"><option value="all">All</option><option value="new">Not processed</option><option value="processed">Processed</option><option value="cancelled">Cancelled</option></select></label>
+        <label class="grow">Search<input type="search" id="tf-q" placeholder="Student, parent or pickup person"></label>
+        <button class="btn ghost sm" id="tf-today" type="button">Today</button>
+        <button class="btn ghost sm" id="tf-csv" type="button">Download CSV</button>
+      </div>
+      <span class="cnt" id="tf-count"></span>
+      <div class="tw"><table><thead><tr><th>Student</th><th>When</th><th>From → To</th><th>Pickup person</th><th>Submitted by</th><th>Status</th></tr></thead><tbody id="t-rows"></tbody></table></div>
+    </div>
+
+    <!-- Students -->
+    <div class="screen" id="p-students" hidden>
+      <div class="bar"><label class="grow">Find a student or parent<input type="search" id="sf-q" placeholder="Student name, ID, parent name, phone or email"></label></div>
+      <div id="s-rows" class="stack"></div>
+    </div>
+
+    <!-- Roster -->
+    <div class="screen" id="p-roster" hidden>
+      <div class="card">
+        <b class="t">Upload today's student &amp; parent file</b>
+        <p>Choose the CSV export (same columns as “Report 1.csv”). It updates students, transportation, parents/guardians used for sign-in, and pickup people. Students missing from the file are turned off.</p>
+        <label class="drop"><input type="file" id="r-file" accept=".csv,text/csv"><b>Choose CSV file</b><small class="muted">Nothing changes until you confirm</small></label>
+        <div id="r-preview"></div>
+        <p class="err" id="r-err"></p>
+      </div>
+      <div><h2>Recent uploads</h2><div class="tw"><table><thead><tr><th>When</th><th>By</th><th>Rows</th><th>Students</th><th>Parents</th><th>Pickup people</th><th>Turned off</th></tr></thead><tbody id="r-hist"></tbody></table></div></div>
+    </div>
+
+    <!-- Settings -->
+    <div class="screen" id="p-settings" hidden>
+      <div class="card">
+        <b class="t">Front office staff</b>
+        <p class="muted small">Everyone listed and active can review notes, see the change report, and gets an email for every parent dismissal change. Each person also needs a sign-in (Supabase → Authentication → Users → Add user).</p>
+        <div class="list" id="staff-list"></div>
+        <form class="bar" id="f-staff"><label class="grow">Email<input type="email" id="sa-email" required></label><label class="grow">Name<input type="text" id="sa-name"></label><button class="btn sm">Add staff</button></form>
+        <p class="err" id="sa-err"></p>
+      </div>
+      <div class="card">
+        <b class="t">Semesters</b>
+        <p class="muted small">The 5-note limit counts approved parent notes within each semester.</p>
+        <div id="sem-list" class="stack"></div>
+        <div class="actions"><button class="btn ghost sm" id="sem-add" type="button">Add semester</button><button class="btn sm" id="sem-save" type="button">Save semesters</button></div>
+      </div>
+      <div class="card">
+        <b class="t">Rules</b>
+        <div class="bar">
+          <label>Parent notes per semester<input type="number" id="set-limit" min="0" max="60" style="width:110px"></label>
+          <label>Note deadline (school days)<input type="number" id="set-days" min="0" max="60" style="width:110px"></label>
+          <label>Same-day dismissal cutoff<input type="time" id="set-cut" style="width:140px"></label>
+          <button class="btn sm" id="set-save" type="button">Save rules</button>
+        </div>
+      </div>
+      <p class="err" id="set-err"></p>
+    </div>
+  </section>
+</main>
+
+<div class="modal" id="modal" hidden><div class="modal-in" id="modal-in" role="dialog" aria-modal="true"></div></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="/office.js"></script>
+</body>
+</html>
