@@ -125,8 +125,18 @@ tr.today td:first-child{box-shadow:inset 4px 0 0 var(--red)}
     <!-- Roster -->
     <div class="screen" id="p-roster" hidden>
       <div class="card">
-        <b class="t">Upload today's student &amp; parent file</b>
-        <p>Choose the CSV export (same columns as “Report 1.csv”). It updates students, transportation, parents/guardians used for sign-in, and pickup people. Students missing from the file are turned off.</p>
+        <b class="t">Daily file from the SFTP server</b>
+        <p>Upload the student &amp; parent CSV to the <b>uploads</b> folder on the SFTP server (141.148.36.44, login <b>ccsftp</b>). The portal checks every 30 minutes on school days from 6&nbsp;AM to 6&nbsp;PM, imports the newest file, and moves it to <b>processed</b>.</p>
+        <div id="sftp-errors"></div>
+        <div class="actions">
+          <button class="btn sm" id="sftp-go" type="button">Check SFTP now</button>
+          <label class="actions" style="font-weight:600"><input type="checkbox" id="sftp-force"> I'm sure — allow turning off many students</label>
+        </div>
+        <div id="sftp-result"></div>
+      </div>
+      <div class="card">
+        <b class="t">Or upload the file here</b>
+        <p>Same file, same result — use this if the SFTP server is down. It updates students, transportation, parents/guardians used for sign-in, and pickup people. Students missing from the file are turned off.</p>
         <label class="drop"><input type="file" id="r-file" accept=".csv,text/csv"><b>Choose CSV file</b><small class="muted">Nothing changes until you confirm</small></label>
         <div id="r-preview"></div>
         <p class="err" id="r-err"></p>

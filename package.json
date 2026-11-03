@@ -1,0 +1,8 @@
+{
+  "name": "cornerstone-portal",
+  "private": true,
+  "engines": { "node": "24.x" },
+  "dependencies": {
+    "ssh2-sftp-client": "^11.0.0"
+  }
+}

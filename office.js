@@ -250,10 +250,29 @@ $('#r-file').addEventListener('change', e => {
   }, error: () => $('#r-err').textContent = "Couldn't read that file." });
 });
 async function loadImports() {
+  call('staff_import_errors').then(errs => {
+    $('#sftp-errors').innerHTML = errs.map(e => `<p class="err">${esc(e.note)} <small class="muted">(${stamp(e.at)})</small></p>`).join('');
+  }).catch(() => {});
   const rows = await call('staff_imports');
   $('#r-hist').innerHTML = rows.map(i => `<tr><td>${stamp(i.imported_at)}</td><td>${esc(i.imported_by)}</td><td>${i.rows_in}</td><td>${i.students}</td><td>${i.guardians}</td><td>${i.pickups}</td><td>${i.deactivated}</td></tr>`).join('')
     || '<tr><td colspan="7" class="empty">No uploads yet.</td></tr>';
 }
+
+const SFTP_ERR = { sftp_not_configured: "The portal's SFTP key hasn't been added in Vercel yet (SFTP_PRIVATE_KEY).", sftp_login_failed: "The SFTP server refused the portal's key.",
+  sftp_unreachable: 'The SFTP server could not be reached.', sftp_folders_missing: 'The uploads or processed folder is missing on the SFTP server.' };
+$('#sftp-go').onclick = async () => {
+  const b = $('#sftp-go'); b.disabled = true; b.textContent = 'Checking…'; $('#sftp-result').innerHTML = '';
+  try {
+    const { data } = await sb.auth.getSession();
+    const r = await fetch('/api/sftp-import' + ($('#sftp-force').checked ? '?force=1' : ''), { method: 'POST', headers: { Authorization: 'Bearer ' + data.session.access_token } });
+    const j = await r.json().catch(() => ({}));
+    $('#sftp-result').innerHTML = r.ok
+      ? (j.imported ? `<p class="card" style="background:var(--ok-bg);color:var(--ok);border-color:var(--ok);font-weight:700">Imported ${esc(j.file)}: ${j.students} students, ${j.guardians} parents/guardians, ${j.pickups} pickup people${j.deactivated ? `, ${j.deactivated} turned off` : ''}.</p>` : `<p class="muted">${esc(j.message)}</p>`)
+      : `<p class="err">${esc(j.message || SFTP_ERR[j.error] || emsg(j.error))}</p>`;
+    loadImports(); refreshBadges();
+  } catch (e) { $('#sftp-result').innerHTML = `<p class="err">${esc(emsg(e))}</p>`; }
+  b.disabled = false; b.textContent = 'Check SFTP now';
+};
 
 // ---------- settings ----------
 let SET = null;

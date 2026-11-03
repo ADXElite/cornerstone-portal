@@ -24,7 +24,14 @@ The student/parent export (same columns as "Report 1.csv") feeds everything:
 - `First Name` / `Last Name` / `Relationship` / `Cell phone 2` = pickup people.
 - Transportation columns = what parents see as "now on file".
 
-Upload it at /office → Roster upload, or automatically:
+**Normal way — SFTP (Oracle Cloud server 141.148.36.44):**
+- The school (for now) or the vendor (later) uploads the CSV to `/uploads` with the `ccsftp` login (password).
+- Supabase `pg_cron` job `portal-sftp-import` calls `POST /api/sftp-import` every 30 minutes, 5 AM–6:30 PM ET, Mon–Fri.
+- The portal signs in as `ccsportal` (key only, env `SFTP_PRIVATE_KEY`), imports the newest CSV, and moves it (plus any older ones, marked `skipped_`) to `/processed` with a date stamp.
+- If the safety stop trips or the file is wrong, the file stays in `/uploads`, the office is emailed once, and the error shows on /office → Roster upload. Fix the file, or tick "I'm sure" and click **Check SFTP now**.
+- Car Line and Car Rider mean the same thing; parents see "Car Rider".
+
+Backup ways: /office → Roster upload (choose the file), or:
 ```
 curl -X POST https://portal.csjax.org/api/roster-import \
   -H "x-import-key: $ROSTER_IMPORT_KEY" --data-binary @"Report 1.csv"
@@ -36,7 +43,8 @@ An upload that would turn off more than 15% of students is refused unless forced
 |---|---|
 | `PORTAL_API_KEY` | Matches `private.config.portal_api_key`; lets the API call the parent database functions |
 | `SESSION_SECRET` | Signs parent sign-in cookies |
-| `ROSTER_IMPORT_KEY` | For the automated roster upload |
+| `ROSTER_IMPORT_KEY` | Sent by the pg_cron job (copy in `private.config.portal_import_key`) and the backup upload API |
+| `SFTP_PRIVATE_KEY` | Private key for the `ccsportal` SFTP login (from Oracle Cloud Shell `portal_key`). Optional: `SFTP_HOST`, `SFTP_USER`, `SFTP_UPLOAD_DIR`, `SFTP_PROCESSED_DIR` |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_VERIFY_SID` | Text sign-in codes (Twilio Verify) |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Email sign-in codes and office alerts (csjax.org verified in Resend) |
 
@@ -45,6 +53,7 @@ Front office staff list (each also needs a Supabase sign-in: Authentication → 
 
 ## Files
 - `index.html`, `app.js` — parent app · `office.html`, `office.js` — staff portal · `theme.css` — shared look (matches app.csjax.org)
+- `api/sftp-import.js` — daily pull from the SFTP server
 - `api/auth.js` — code sign-in · `api/parent.js` — notes, files, dismissal changes, office email · `api/roster-import.js` — automated upload
 - `supabase/migrations/` — staff database functions (parent functions and tables are in the Supabase migration history: `portal_phase1_tables`, `portal_phase1_functions`, `portal_staff_functions`)
 - Icons are served from app.csjax.org (see `vercel.json` rewrites).

@@ -122,7 +122,7 @@ $('#b-forget').onclick = async () => { await api('/api/auth', { action: 'forget'
 function transportLines(s) {
   return {
     am: [s.am_transport, s.am_bus_route].filter(Boolean).join(' — ') || 'Not on file',
-    pm: [s.pm_transport, s.pm_details && s.pm_details !== s.pm_transport ? s.pm_details : null, s.pm_bus_route].filter(Boolean).join(' — ') || 'Not on file'
+    pm: [s.pm_transport === 'Car Line' ? 'Car Rider' : s.pm_transport, s.pm_details && !['Car Rider', s.pm_transport].includes(s.pm_details) ? s.pm_details : null, s.pm_bus_route].filter(Boolean).join(' — ') || 'Not on file'
   };
 }
 function meter(s) {
@@ -314,7 +314,7 @@ $('#f-doc').addEventListener('submit', async e => {
 
 // ---------- dismissal change ----------
 const PM = [
-  ['Car Line', 'Picked up in car line'], ['Bus Rider', 'Rides a school bus'], ['Afternoon Extended Care', 'After-school care'],
+  ['Car Rider', 'Picked up in car line'], ['Bus Rider', 'Rides a school bus'], ['Afternoon Extended Care', 'After-school care'],
   ['Student Walker', 'Walks home'], ['Student Driver and/or Passenger', 'Drives or rides with a student driver'], ['City Bus Rider', 'Rides the city bus']];
 const AM = [['Car Rider', 'Dropped off in car line'], ['Bus Rider', 'Rides a school bus'], ['Morning Extended Care', 'Before-school care'], ['Student Walker', 'Walks to school']];
 const afterCut = () => HOME.now_et >= HOME.cutoff || isWeekend(HOME.today);
@@ -374,7 +374,7 @@ function syncMethod() {
   const period = $('input[name=t-period]:checked').value;
   $('#t-bus').hidden = m !== 'Bus Rider';
   $('#t-care').hidden = m !== 'Afternoon Extended Care';
-  $('#t-pick').hidden = !(m === 'Car Line' && period === 'afternoon');
+  $('#t-pick').hidden = !(m === 'Car Rider' && period === 'afternoon');
   $('#t-other').hidden = $('#t-person').value !== '__other';
 }
 $$('input[name=t-period],input[name=t-type]').forEach(i => i.addEventListener('change', syncTrans));
@@ -398,7 +398,7 @@ $('#f-trans').addEventListener('submit', async e => {
   let details = '', person = '', rel = '', phone = '';
   if (method === 'Bus Rider') { details = $('#t-stop').value; if (!details) return err.textContent = ERR.need_bus; }
   if (method === 'Afternoon Extended Care') details = $('#t-carewhere').value;
-  if (method === 'Car Line' && period === 'afternoon') {
+  if (method === 'Car Rider' && period === 'afternoon') {
     const sel = $('#t-person');
     if (!sel.value) return err.textContent = ERR.need_pickup;
     if (sel.value === '__other') {
