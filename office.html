@@ -46,6 +46,9 @@ tr.today td:first-child{box-shadow:inset 4px 0 0 var(--red)}
 .doc .cap{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;font-size:.85rem;background:var(--surface);border-top:1px solid var(--line)}
 .sigimg{background:#fff;border:1px solid var(--line);border-radius:10px;max-width:360px}
 .kv.wide{grid-template-columns:160px 1fr;padding:0}
+.fx{width:26px;height:26px;accent-color:var(--ok);cursor:pointer}
+td.c{text-align:center}
+td.c small{text-align:center}
 @media (max-width:560px){.kv.wide{grid-template-columns:1fr}.kv.wide dt{margin-top:6px}}
 .actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .sem-row{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:end}
@@ -73,6 +76,7 @@ tr.today td:first-child{box-shadow:inset 4px 0 0 var(--red)}
       <a href="#dash" data-v="dash">Today</a>
       <a href="#notes" data-v="notes">Attendance notes <span class="badge" id="b-notes" hidden></span></a>
       <a href="#transport" data-v="transport">Dismissal changes <span class="badge" id="b-trans" hidden></span></a>
+      <a href="#signins" data-v="signins">Sign-In/Sign-Out <span class="badge" id="b-sio" hidden></span></a>
       <a href="#students" data-v="students">Students</a>
       <a href="#roster" data-v="roster">Roster upload</a>
       <a href="#settings" data-v="settings">Settings</a>
@@ -84,6 +88,7 @@ tr.today td:first-child{box-shadow:inset 4px 0 0 var(--red)}
         <a class="stat hot" href="#notes"><b id="st-notes">–</b><span>Notes waiting for review</span></a>
         <a class="stat hot" href="#transport"><b id="st-new">–</b><span>Dismissal changes not yet processed</span></a>
         <a class="stat" href="#transport?today"><b id="st-today">–</b><span>Changes in effect today</span></a>
+        <a class="stat" href="#signins"><b id="st-sio">–</b><span>Late sign-ins &amp; early check-outs today</span></a>
         <a class="stat" href="#students"><b id="st-stu">–</b><span>Active students</span></a>
       </div>
       <div><h2>Today's dismissal changes</h2><div class="tw"><table><thead><tr><th>Student</th><th>Change</th><th>Pickup</th><th>Submitted</th><th>Status</th></tr></thead><tbody id="dash-today"></tbody></table></div></div>
@@ -114,6 +119,22 @@ tr.today td:first-child{box-shadow:inset 4px 0 0 var(--red)}
       </div>
       <span class="cnt" id="tf-count"></span>
       <div class="tw"><table><thead><tr><th>Student</th><th>When</th><th>From → To</th><th>Pickup person</th><th>Submitted by</th><th>Status</th></tr></thead><tbody id="t-rows"></tbody></table></div>
+    </div>
+
+    <!-- Sign-In / Sign-Out -->
+    <div class="screen" id="p-signins" hidden>
+      <div class="bar">
+        <label>From<input type="date" id="sio-from"></label>
+        <label>To<input type="date" id="sio-to"></label>
+        <label>Type<select id="sio-kind"><option value="all">All</option><option value="early_out">Early check-outs</option><option value="late_in">Late sign-ins</option></select></label>
+        <label>FACTS<select id="sio-facts"><option value="all">All</option><option value="todo">Not updated yet</option><option value="done">Updated</option></select></label>
+        <label class="grow">Search<input type="search" id="sio-q" placeholder="Student, person or PIN"></label>
+        <button class="btn ghost sm" id="sio-today" type="button">Today</button>
+        <button class="btn ghost sm" id="sio-csv" type="button">Download CSV</button>
+      </div>
+      <span class="cnt" id="sio-count"></span>
+      <div class="tw"><table><thead><tr><th>Time</th><th>Type</th><th>Student</th><th>Signed by</th><th>Reason</th><th>Signature</th><th style="text-align:center">Updated in FACTS</th></tr></thead><tbody id="sio-rows"></tbody></table></div>
+      <p class="muted small">Kiosk: open <b>portal.csjax.org/kiosk</b> on the front office iPad. Updates every 30 seconds.</p>
     </div>
 
     <!-- Students -->
@@ -152,6 +173,11 @@ tr.today td:first-child{box-shadow:inset 4px 0 0 var(--red)}
         <div class="list" id="staff-list"></div>
         <form class="bar" id="f-staff"><label class="grow">Email<input type="email" id="sa-email" required></label><label class="grow">Name<input type="text" id="sa-name"></label><button class="btn sm">Add staff</button></form>
         <p class="err" id="sa-err"></p>
+      </div>
+      <div class="card">
+        <b class="t">Front office iPads (sign-in / sign-out kiosk)</b>
+        <p class="muted small">To add an iPad, open <b>portal.csjax.org/kiosk</b> in Safari on it and sign in with a staff account once. Tap Share → Add to Home Screen for full-screen mode. Turning an iPad off here stops it from working until it's set up again.</p>
+        <div class="list" id="kiosk-list"></div>
       </div>
       <div class="card">
         <b class="t">Semesters</b>

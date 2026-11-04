@@ -16,7 +16,15 @@ Parent and front office web app for Cornerstone Christian School — **https://p
 | Dismissal change | Like KidAccount: today / another day / date range / permanent, afternoon or morning. Shows the student's current transportation and every pickup person in the data file. **Same-day changes close at 1:00 PM ET.** Every change emails all active front office staff. |
 | Change report | /office → Dismissal changes: filter by submitted date or dates in effect, status, search; mark processed once KidAccount is updated; download CSV. |
 
-Phases to come: dismissal boards for teachers, late sign-in, early check-out.
+## Phase 2 (live): early check-out & late sign-in
+- **Pick-up PINs:** every parent/guardian and pickup person in the roster gets a unique 4-digit PIN (`portal_people`), keyed by phone (or email, or name when neither exists). The same person keeps the same PIN for all their students and across daily imports. Parents see the PINs on their home screen; the office sees PINs next to names on Students, Dismissal changes and Sign-In/Sign-Out.
+- **iPad kiosk — portal.csjax.org/kiosk:** a staff member signs in once on the iPad to turn it on (device key in `portal_kiosks`; turn off in Settings). Hold the logo 3 seconds to reset the iPad.
+  - Early check-out: PIN → students linked to that person → reason → signature.
+  - Late sign-in: adult with PIN (same as above), or a student by badge barcode (camera), typed student ID, or name search → reason.
+  - 5 wrong PINs lock the iPad for 3 minutes. A student can be checked out / signed in late once per day.
+- **Office → Sign-In/Sign-Out:** today's list (refreshes every 30 s), signatures, "Updated in FACTS" checkbox per entry (records who and when), CSV.
+
+Phases to come: dismissal boards for teachers.
 
 ## Daily roster file
 The student/parent export (same columns as "Report 1.csv") feeds everything:
@@ -52,6 +60,7 @@ An upload that would turn off more than 15% of students is refused unless forced
 Front office staff list (each also needs a Supabase sign-in: Authentication → Users → Add user), semester dates, notes per semester, note deadline, same-day cutoff.
 
 ## Files
+- `kiosk.html`, `kiosk.js` — front office iPad sign-in/sign-out
 - `index.html`, `app.js` — parent app · `office.html`, `office.js` — staff portal · `theme.css` — shared look (matches app.csjax.org)
 - `api/sftp-import.js` — daily pull from the SFTP server
 - `api/auth.js` — code sign-in · `api/parent.js` — notes, files, dismissal changes, office email · `api/roster-import.js` — automated upload

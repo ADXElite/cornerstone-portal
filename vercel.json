@@ -2,6 +2,23 @@
   "cleanUrls": true,
   "headers": [
     {
+      "source": "/kiosk(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), geolocation=(), microphone=()"
+        }
+      ]
+    },
+    {
       "source": "/office(.*)",
       "headers": [
         {
@@ -63,6 +80,15 @@
         {
           "key": "Permissions-Policy",
           "value": "geolocation=(), microphone=()"
+        }
+      ]
+    },
+    {
+      "source": "/kiosk.webmanifest",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/manifest+json"
         }
       ]
     }

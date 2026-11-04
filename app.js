@@ -138,6 +138,16 @@ function renderHome() {
   $('#h-cut').textContent = `Same-day changes by ${fmt12(HOME.cutoff)}`;
   const box = $('#h-students');
   if (!HOME.students.length) { box.innerHTML = `<div class="card">No students are linked to your account. Please call the front office at (904) 730-5500.</div>`; return; }
+  // Pick-up PINs: one row per person, with the students they can pick up.
+  const people = new Map();
+  for (const s of HOME.students) for (const p of [...s.guardians.map(g => ({ ...g, g: 1 })), ...s.pickups]) {
+    if (!p.pin || !p.name) continue;
+    const e = people.get(p.pin) || { name: p.name, rel: new Set(), kids: new Set(), g: 0, phone: p.phone };
+    if (p.relationship) e.rel.add(p.relationship); e.kids.add(s.first_name); e.g = e.g || p.g; people.set(p.pin, e);
+  }
+  $('#h-pins').innerHTML = [...people.entries()].sort((a, b) => b[1].g - a[1].g || a[1].name.localeCompare(b[1].name)).map(([pin, e]) =>
+    `<div class="row"><div class="txt"><b>${esc(e.name)}</b><p>${esc([...e.rel].join(' / ') || (e.g ? 'Parent/guardian' : 'Pickup'))} · ${esc([...e.kids].join(', '))}${e.phone ? ' · ' + esc(e.phone) : ''}</p></div><span class="pin" aria-label="PIN ${pin.split('').join(' ')}">${pin}</span></div>`).join('')
+    || '<div class="empty">No pickup people on file.</div>';
   box.innerHTML = HOME.students.map(s => {
     const t = transportLines(s);
     const up = s.upcoming_changes.map(c => `<span class="tag ${c.status === 'processed' ? 'ok' : 'warn'}">${c.change_type === 'permanent' ? 'From ' : ''}${nice(c.start_date)}${c.change_type === 'date_range' ? '–' + nice(c.end_date) : ''}: ${esc(c.new_method)}</span>`).join(' ');
@@ -343,7 +353,7 @@ function drawCurrent() {
     return `<div class="card" style="background:var(--bg)"><b class="t">${esc(s.first_name)} — now on file</b>
       <dl class="kv" style="padding:0"><dt>Morning</dt><dd>${esc(t.am)}</dd><dt>Afternoon</dt><dd>${esc(t.pm)}</dd></dl>
       <details><summary><b>Pickup people on file (${list.length})</b></summary>
-        <div class="list" style="margin-top:8px">${list.map(p => `<div class="row"><div class="txt"><b>${esc(p.name)}</b><p>${esc([p.relationship, p.phone].filter(Boolean).join(' · ') || p.kind)}</p></div></div>`).join('') || '<div class="empty">No pickup people on file.</div>'}</div>
+        <div class="list" style="margin-top:8px">${list.map(p => `<div class="row"><div class="txt"><b>${esc(p.name)}</b><p>${esc([p.relationship, p.phone].filter(Boolean).join(' · ') || p.kind)}</p></div>${p.pin ? `<span class="pin sm">${p.pin}</span>` : ''}</div>`).join('') || '<div class="empty">No pickup people on file.</div>'}</div>
       </details></div>`;
   }).join('');
   const cur = $('#t-person').value;

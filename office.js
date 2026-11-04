@@ -53,18 +53,22 @@ sb.auth.onAuthStateChange(async (ev) => {
 function badges(m) {
   $('#b-notes').hidden = !m.pending_notes; $('#b-notes').textContent = m.pending_notes;
   $('#b-trans').hidden = !m.new_changes; $('#b-trans').textContent = m.new_changes;
+  $('#b-sio').hidden = !m.signins_todo; $('#b-sio').textContent = m.signins_todo;
 }
 async function refreshBadges() { try { ME = await call('staff_me'); badges(ME); } catch {} }
 
 // ---------- routing ----------
-const VIEWS = ['dash', 'notes', 'transport', 'students', 'roster', 'settings'];
+const VIEWS = ['dash', 'notes', 'transport', 'signins', 'students', 'roster', 'settings'];
+let sioTimer = null;
 function route() {
   if (!ME) return;
   const [v, q] = (location.hash.slice(1) || 'dash').split('?');
   const view = VIEWS.includes(v) ? v : 'dash';
   VIEWS.forEach(x => $('#p-' + x).hidden = x !== view);
+  clearInterval(sioTimer);
   $$('.otabs a').forEach(a => a.dataset.v === view ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
   ({ dash: loadDash, notes: loadNotes, transport: () => { if (q === 'today') { $('#tf-by').value = 'effective'; $('#tf-from').value = $('#tf-to').value = TODAY; } loadTrans(); },
+     signins: () => { loadSignins(); sioTimer = setInterval(() => { if (!document.hidden && $('#modal').hidden) loadSignins(true); }, 30000); },
      students: () => {}, roster: loadImports, settings: loadSettings })[view]();
 }
 addEventListener('hashchange', route);
@@ -78,7 +82,7 @@ const when = c => c.change_type === 'date_range' ? `${nice(c.start_date)} – ${
 const TS = { new: ['Not processed', 'warn'], processed: ['Processed', 'ok'], cancelled: ['Cancelled', 'gray'] };
 async function loadDash() {
   await refreshBadges();
-  $('#st-notes').textContent = ME.pending_notes; $('#st-new').textContent = ME.new_changes; $('#st-today').textContent = ME.today_changes; $('#st-stu').textContent = ME.students;
+  $('#st-notes').textContent = ME.pending_notes; $('#st-new').textContent = ME.new_changes; $('#st-today').textContent = ME.today_changes; $('#st-stu').textContent = ME.students; $('#st-sio').textContent = ME.signins_today;
   const li = ME.last_import;
   $('#dash-import').textContent = li ? `Roster last updated ${stamp(li.imported_at)} by ${li.imported_by} (${li.students} students).` : 'No roster has been uploaded yet.';
   const rows = (await call('staff_transport', { p_from: TODAY, p_to: TODAY, p_by: 'effective', p_status: 'all' })).filter(c => c.status !== 'cancelled');
@@ -160,7 +164,7 @@ function tRow(c, i) {
     <td><b>${esc(c.student)}</b><small>Gr ${esc(grade(c.grade))} · ${esc(c.teacher || '')}</small></td>
     <td>${when(c)}<small>${c.period === 'afternoon' ? 'Afternoon' : 'Morning'} · ${TYPE[c.change_type]}</small></td>
     <td><small>${esc(c.current_method || '—')}</small><b>→ ${esc(c.new_method)}</b>${c.new_details && c.new_details !== 'Not on pickup list' ? `<small>${esc(c.new_details)}</small>` : ''}</td>
-    <td>${c.pickup_person ? `<b>${esc(c.pickup_person)}</b><small>${esc([c.pickup_relationship, c.pickup_phone].filter(Boolean).join(' · '))}${c.new_details === 'Not on pickup list' ? ' · <b style="display:inline;color:var(--red)">Not on pickup list</b>' : ''}</small>` : '—'}${c.comments ? `<small>“${esc(c.comments)}”</small>` : ''}</td>
+    <td>${c.pickup_person ? `<b>${esc(c.pickup_person)}${c.pickup_pin ? ` <span class="pin sm">${c.pickup_pin}</span>` : ''}</b><small>${esc([c.pickup_relationship, c.pickup_phone].filter(Boolean).join(' · '))}${c.new_details === 'Not on pickup list' ? ' · <b style="display:inline;color:var(--red)">Not on pickup list</b>' : ''}</small>` : '—'}${c.comments ? `<small>“${esc(c.comments)}”</small>` : ''}</td>
     <td>${esc(c.submitted_name || '')}<small>${esc(c.submitted_by)} · ${stamp(c.created_at)}</small></td>
     <td><span class="tag ${k}">${l}</span>${c.processed_by ? `<small>${esc(c.processed_by)}</small>` : ''}</td></tr>`;
 }
@@ -213,6 +217,60 @@ $('#tf-csv').onclick = () => {
   a.download = `dismissal-changes-${$('#tf-from').value || 'all'}-to-${$('#tf-to').value || 'now'}.csv`; a.click();
 };
 
+// ---------- sign-in / sign-out ----------
+let SIO = [];
+const KIND = { early_out: ['Early check-out', ''], late_in: ['Late sign-in', 'warn'] };
+const HOW = { pin: 'PIN', student_id: 'Student ID typed', badge: 'Badge scanned', name: 'Name search' };
+const tm = t => new Date(t).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
+async function loadSignins(quiet) {
+  if (!$('#sio-from').value && !$('#sio-to').value) $('#sio-from').value = $('#sio-to').value = TODAY;
+  if (!quiet) $('#sio-rows').innerHTML = '<tr><td colspan="7" class="empty">Loading…</td></tr>';
+  try {
+    SIO = await call('staff_signins', { p_from: $('#sio-from').value || null, p_to: $('#sio-to').value || null, p_kind: $('#sio-kind').value, p_q: $('#sio-q').value.trim() || null, p_facts: $('#sio-facts').value });
+  } catch (e) { if (!quiet) $('#sio-rows').innerHTML = `<tr><td colspan="7" class="empty">${esc(emsg(e))}</td></tr>`; return; }
+  const multiDay = $('#sio-from').value !== $('#sio-to').value;
+  $('#sio-count').textContent = `${SIO.length} entr${SIO.length === 1 ? 'y' : 'ies'} · ${SIO.filter(r => !r.facts_done).length} not yet updated in FACTS`;
+  $('#sio-rows').innerHTML = SIO.map((r, i) => `<tr data-i="${i}">
+    <td><b>${tm(r.created_at)}</b>${multiDay ? `<small>${nice(new Date(r.created_at).toLocaleDateString('en-CA', { timeZone: 'America/New_York' }))}</small>` : ''}</td>
+    <td><span class="tag ${KIND[r.kind][1]}">${KIND[r.kind][0]}</span></td>
+    <td><b>${esc(r.student)}</b><small>Gr ${esc(grade(r.grade))} · ${esc(r.teacher || '')}</small></td>
+    <td>${r.method === 'pin' ? `<b>${esc(r.person_name)} <span class="pin sm">${esc(r.pin)}</span></b><small>${esc(r.relationship || '')}</small>` : `<b>Student signed self in</b><small>${HOW[r.method]}</small>`}</td>
+    <td>${esc(r.reason || '')}</td>
+    <td>${r.has_signature ? `<button class="link" data-sig="${i}">View</button>` : '<small class="muted">—</small>'}</td>
+    <td class="c"><input type="checkbox" class="fx" data-fx="${i}" ${r.facts_done ? 'checked' : ''} aria-label="Updated in FACTS for ${esc(r.student)}">${r.facts_done ? `<small>${esc((r.facts_by || '').split('@')[0])} · ${tm(r.facts_at)}</small>` : ''}</td></tr>`).join('')
+    || '<tr><td colspan="7" class="empty">No late sign-ins or early check-outs.</td></tr>';
+  refreshBadges();
+}
+$('#sio-rows').addEventListener('change', async e => {
+  const cb = e.target.closest('[data-fx]'); if (!cb) return;
+  const r = SIO[+cb.dataset.fx]; cb.disabled = true;
+  try { await call('staff_signin_facts', { p_id: r.id, p_done: cb.checked }); toast(cb.checked ? 'Marked updated in FACTS' : 'Unmarked'); loadSignins(true); }
+  catch (x) { cb.checked = !cb.checked; toast(emsg(x)); }
+  cb.disabled = false;
+});
+$('#sio-rows').addEventListener('click', async e => {
+  const b = e.target.closest('[data-sig]'); if (!b) return;
+  const r = await call('staff_signin', { p_id: SIO[+b.dataset.sig].id });
+  $('#modal').hidden = false;
+  $('#modal-in').innerHTML = `<div class="mh"><div><h2 style="margin:0">${KIND[r.kind][0]}</h2><h1 style="font-size:1.7rem">${esc(r.student)}</h1></div><button class="x" id="m-x" aria-label="Close">×</button></div>
+    <dl class="kv wide"><dt>Time</dt><dd>${stamp(r.created_at)}</dd><dt>Signed by</dt><dd>${esc(r.person_name)}${r.pin ? ` <span class="pin sm">${esc(r.pin)}</span>` : ''} ${r.relationship ? '(' + esc(r.relationship) + ')' : ''}</dd>
+      <dt>Reason</dt><dd>${esc(r.reason || '')}</dd>${r.kiosk ? `<dt>Device</dt><dd>${esc(r.kiosk)}</dd>` : ''}</dl>
+    ${r.signature ? `<img class="sigimg" src="${r.signature}" alt="Signature">` : ''}`;
+  $('#m-x').onclick = closeModal;
+});
+['#sio-from', '#sio-to', '#sio-kind', '#sio-facts'].forEach(s => $(s).addEventListener('change', () => loadSignins()));
+$('#sio-q').addEventListener('input', debounce(() => loadSignins()));
+$('#sio-today').onclick = () => { $('#sio-from').value = $('#sio-to').value = TODAY; loadSignins(); };
+$('#sio-csv').onclick = () => {
+  const cols = [['Date', r => new Date(r.created_at).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })], ['Time', r => tm(r.created_at)], ['Type', r => KIND[r.kind][0]],
+    ['Student', r => r.student], ['Student ID', r => r.student_id], ['Grade', r => r.grade], ['Teacher', r => r.teacher], ['Signed by', r => r.person_name], ['PIN', r => r.pin],
+    ['Relationship', r => r.relationship], ['How', r => HOW[r.method]], ['Reason', r => r.reason], ['Updated in FACTS', r => r.facts_done ? 'Yes' : 'No'], ['Updated by', r => r.facts_by]];
+  const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const csv = [cols.map(c => q(c[0])).join(','), ...SIO.map(r => cols.map(c => q(c[1](r))).join(','))].join('\r\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = `sign-in-sign-out-${$('#sio-from').value}-to-${$('#sio-to').value}.csv`; a.click();
+};
+
 // ---------- students ----------
 $('#sf-q').addEventListener('input', debounce(async () => {
   const q = $('#sf-q').value.trim();
@@ -222,8 +280,8 @@ $('#sf-q').addEventListener('input', debounce(async () => {
     <div class="stu-h"><div class="av">${esc(s.name[0])}</div><div><b>${esc(s.name)}${s.active ? '' : ' <span class="tag gray">Not enrolled</span>'}</b><small>ID ${s.student_id} · Grade ${esc(grade(s.grade))} · ${esc(s.teacher || '')}</small></div></div>
     <dl class="kv"><dt>Morning</dt><dd>${esc(s.am || '—')}</dd><dt>Afternoon</dt><dd>${esc(s.pm || '—')}</dd>
       <dt>Parent notes</dt><dd>${s.parent_notes_approved} of ${LIMIT} approved this semester · ${s.doctor_notes} doctor's note${s.doctor_notes === 1 ? '' : 's'}</dd>
-      <dt>Sign-in parents</dt><dd>${s.guardians.map(g => `${esc(g.name)} (${esc(g.relationship || '')}) · ${esc(g.phone || 'no phone')} · ${esc(g.email || 'no email')}`).join('<br>') || '—'}</dd>
-      <dt>Pickup people</dt><dd>${s.pickups.map(p => `${esc(p.name)}${p.relationship ? ' (' + esc(p.relationship) + ')' : ''}${p.phone ? ' · ' + esc(p.phone) : ''}`).join('<br>') || '—'}</dd></dl></article>`).join('')
+      <dt>Sign-in parents</dt><dd>${s.guardians.map(g => `${g.pin ? `<span class="pin sm">${g.pin}</span> ` : ''}${esc(g.name)} (${esc(g.relationship || '')}) · ${esc(g.phone || 'no phone')} · ${esc(g.email || 'no email')}`).join('<br>') || '—'}</dd>
+      <dt>Pickup people</dt><dd>${s.pickups.map(p => `${p.pin ? `<span class="pin sm">${p.pin}</span> ` : ''}${esc(p.name)}${p.relationship ? ' (' + esc(p.relationship) + ')' : ''}${p.phone ? ' · ' + esc(p.phone) : ''}`).join('<br>') || '—'}</dd></dl></article>`).join('')
     || '<div class="card">No matches.</div>';
 }));
 
@@ -285,6 +343,14 @@ async function loadSettings() {
     try { await call('staff_staff_save', { p_email: b.dataset.e, p_name: null, p_active: b.dataset.a === '1' }); loadSettings(); } catch (e) { $('#sa-err').textContent = emsg(e); }
   });
   drawSems(set.semesters);
+  call('staff_kiosks').then(ks => {
+    $('#kiosk-list').innerHTML = ks.map(k => `<div class="row"><div class="txt"><b>${esc(k.label)}</b><p>Set up by ${esc(k.created_by)} · ${stamp(k.created_at)}${k.last_seen_at ? ' · last used ' + stamp(k.last_seen_at) : ''}</p></div>
+      <button class="btn ghost sm" data-k="${k.id}">Turn off</button></div>`).join('') || '<div class="empty">No iPads set up yet.</div>';
+    $('#kiosk-list').querySelectorAll('[data-k]').forEach(b => b.onclick = async () => {
+      if (!confirm('Turn off this iPad? It will need to be set up again.')) return;
+      await call('staff_kiosk_revoke', { p_id: b.dataset.k }); loadSettings();
+    });
+  }).catch(() => {});
   $('#set-limit').value = set.parent_note_limit; $('#set-days').value = set.note_days_limit; $('#set-cut').value = set.dismissal_cutoff;
 }
 function drawSems(list) {

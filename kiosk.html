@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Front Office Sign-In / Sign-Out</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#141213">
+<link rel="manifest" href="/kiosk.webmanifest">
+<link rel="icon" href="/icons/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CCS Sign-In">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/theme.css">
+<style>
+html,body{height:100%;overscroll-behavior:none;-webkit-user-select:none;user-select:none}
+body{display:flex;flex-direction:column}
+.top-in{max-width:none;justify-content:space-between}
+.top img{height:56px}
+.clock{color:#F6F4F4;font-family:var(--display);font-weight:700;font-size:1.6rem;letter-spacing:.04em;text-align:right;line-height:1.05}
+.clock small{display:block;font-family:var(--body);font-size:.8rem;font-weight:600;opacity:.7;letter-spacing:.06em;text-transform:uppercase}
+main.k{flex:1;max-width:980px;width:100%;margin:0 auto;padding:24px max(20px,env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));display:flex;flex-direction:column}
+.kscreen{flex:1;display:flex;flex-direction:column;gap:20px}
+.kh{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size:2.4rem;line-height:1;margin:0;text-wrap:balance}
+.ksub{font-size:1.2rem;color:var(--muted);margin-top:-8px}
+.big2{display:grid;grid-template-columns:1fr 1fr;gap:20px;flex:1;min-height:320px}
+@media (max-width:700px){.big2{grid-template-columns:1fr}}
+.bigbtn{border:0;border-radius:24px;padding:28px;display:flex;flex-direction:column;justify-content:flex-end;gap:10px;text-align:left;cursor:pointer;min-height:220px;color:#fff;position:relative;overflow:hidden}
+.bigbtn.out{background:var(--red)}
+.bigbtn.in{background:#141213;border:3px solid var(--red)}
+.bigbtn svg{width:64px;height:64px;position:absolute;top:26px;left:26px;opacity:.95}
+.bigbtn b{font-family:var(--display);font-weight:800;font-size:2.6rem;text-transform:uppercase;line-height:1}
+.bigbtn span{font-size:1.15rem;opacity:.9}
+.bigbtn:active{transform:scale(.985)}
+.back{align-self:flex-start;background:none;border:2px solid var(--line);border-radius:999px;padding:10px 20px;font-weight:700;font-size:1.05rem;cursor:pointer;color:var(--ink)}
+.pinwrap{display:grid;justify-items:center;gap:22px;margin:auto 0}
+.dots{display:flex;gap:18px}
+.dots i{width:26px;height:26px;border-radius:50%;border:3px solid var(--ink);display:block}
+.dots i.on{background:var(--ink)}
+.dots.shake{animation:shake .35s}
+@keyframes shake{20%,60%{transform:translateX(-12px)}40%,80%{transform:translateX(12px)}}
+.pad{display:grid;grid-template-columns:repeat(3,108px);gap:16px}
+.pad button{height:92px;border-radius:20px;border:2px solid var(--line);background:var(--surface);font-family:var(--display);font-size:2.4rem;font-weight:700;cursor:pointer;color:var(--ink)}
+.pad button:active{background:var(--chip);border-color:var(--red)}
+.pad .fn{font-family:var(--body);font-size:1.05rem;font-weight:700;color:var(--muted)}
+.kerr{color:var(--red);font-weight:700;font-size:1.15rem;min-height:1.5em;text-align:center}
+.choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.choice{border:2px solid var(--line);background:var(--surface);border-radius:20px;padding:22px;text-align:left;cursor:pointer;display:grid;gap:6px;color:var(--ink)}
+.choice b{font-size:1.4rem}
+.choice span{color:var(--muted);font-size:1.05rem}
+.choice:active{border-color:var(--red)}
+.stus{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.stu-pick{display:flex;gap:16px;align-items:center;border:3px solid var(--line);background:var(--surface);border-radius:18px;padding:16px 18px;cursor:pointer;text-align:left;color:var(--ink)}
+.stu-pick .av{width:56px;height:56px;font-size:1.5rem}
+.stu-pick b{display:block;font-size:1.3rem;line-height:1.15}
+.stu-pick small{color:var(--muted);font-size:1rem}
+.stu-pick[aria-pressed="true"]{border-color:var(--red);background:var(--chip)}
+.stu-pick[aria-pressed="true"] .av::after{content:"\2713"}
+.stu-pick[aria-pressed="true"] .av span{display:none}
+.chips2{display:flex;flex-wrap:wrap;gap:10px}
+.chips2 button{border:2px solid var(--line);background:var(--surface);border-radius:999px;padding:12px 18px;font-weight:700;font-size:1.05rem;cursor:pointer;color:var(--ink)}
+.chips2 button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+textarea.kr{font-size:1.2rem;min-height:84px;-webkit-user-select:text;user-select:text}
+.ksig{width:100%;height:220px;border:2px dashed var(--muted);border-radius:16px;background:#fff;touch-action:none}
+.row2{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.kbtn{background:var(--red);color:#fff;border:0;border-radius:16px;padding:20px 28px;font-weight:800;font-size:1.3rem;cursor:pointer;min-width:240px}
+.kbtn[disabled]{opacity:.5}
+.kbtn.ghost{background:transparent;border:2px solid var(--line);color:var(--ink)}
+.done2{margin:auto;display:grid;justify-items:center;text-align:center;gap:14px;max-width:640px}
+.done2 svg{width:110px;height:110px;color:var(--ok)}
+.done2 h1{font-size:2.6rem}
+.done2 p{font-size:1.35rem}
+.scanbox{position:relative;width:100%;max-width:560px;margin:0 auto;border-radius:18px;overflow:hidden;background:#000;aspect-ratio:4/3}
+#scanner{width:100%;height:100%}
+#scanner video{object-fit:cover!important;width:100%!important;height:100%!important}
+.scanline{position:absolute;left:8%;right:8%;top:50%;height:3px;background:var(--red);box-shadow:0 0 12px var(--red);pointer-events:none}
+.search{font-size:1.3rem!important;min-height:60px!important}
+.hits{display:grid;gap:10px}
+.hit{display:flex;justify-content:space-between;align-items:center;gap:12px;border:2px solid var(--line);background:var(--surface);border-radius:14px;padding:14px 18px;font-size:1.2rem;font-weight:700;cursor:pointer;text-align:left;color:var(--ink)}
+.hit small{color:var(--muted);font-weight:600}
+.setup{max-width:480px;margin:auto;width:100%}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><img src="/icons/logo-horizontal.webp" alt="Cornerstone Christian School" width="180" height="56"><div class="clock" id="clock"></div></div></header>
+<main class="k" id="k"></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="/kiosk.js"></script>
+</body>
+</html>

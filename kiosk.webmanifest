@@ -1,0 +1,14 @@
+{
+  "name": "Cornerstone Front Office Sign-In",
+  "short_name": "CCS Sign-In",
+  "start_url": "/kiosk",
+  "scope": "/kiosk",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#141213",
+  "theme_color": "#141213",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
