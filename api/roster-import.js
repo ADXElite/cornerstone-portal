@@ -30,6 +30,8 @@ module.exports = async (req, res) => {
     if (!key || req.headers['x-import-key'] !== key) return C.send(res, 401, { error: 'bad_key' });
     const rows = parseCsv(await C.readText(req));
     const force = new URL(req.url, 'http://x').searchParams.get('force') === '1';
+    const cols = rows[0] ? Object.keys(rows[0]) : [];
+    if (cols.includes('studentid') && cols.includes('Attendance')) return C.send(res, 200, await C.rpc('portal_attendance_import', { p_rows: rows, p_by: 'API upload' }));
     return C.send(res, 200, await C.rpc('portal_roster_import', { p_rows: rows, p_force: force }));
   } catch (e) { return C.fail(res, e); }
 };

@@ -45,6 +45,7 @@ li .tag{flex:none;font-family:var(--display);font-weight:700;background:var(--ch
 .absent{margin-top:.8rem;color:var(--muted);font-size:.8rem}
 li.chg{background:#FFF4DC}
 li > span:first-child{min-width:0}
+li .lt{font-size:.6rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
 li .pu{display:block;font-size:.72rem;font-weight:700;color:var(--chip-ink)}
 li .chg{flex:none;font-family:var(--display);font-weight:800;background:var(--red);color:#fff;border-radius:.3rem;padding:0 .35rem;font-size:.75rem;letter-spacing:.05em;text-transform:uppercase;align-self:center}
 .legend{margin-top:.6rem;color:var(--muted);font-size:.7rem}
@@ -102,7 +103,7 @@ function renderBoard(b){
       for (const s of g.students){ (by[s.detail || '—'] ||= []).push(s); }
       const keys = Object.keys(by).sort((a,b)=>(parseFloat(a)||999)-(parseFloat(b)||999) || a.localeCompare(b));
       for (const n of keys){
-        html += `<div class="sub-h">Bus ${esc(n)}</div><ul>` + by[n].map(s=>`<li class="${s.changed?'chg':''}"><span>${esc(s.name)}</span>${who(s)}${s.changed?'<span class="chg">Changed</span>':''}</li>`).join('') + '</ul>';
+        html += `<div class="sub-h">Bus ${esc(n)}</div><ul>` + by[n].map(s=>`<li class="${s.changed?'chg':''}"><span>${esc(s.name)}${s.late?' <small class="lt">late</small>':''}</span>${who(s)}${s.changed?'<span class="chg">Changed</span>':''}</li>`).join('') + '</ul>';
       }
     } else {
       // Show the sub-method (e.g. car number or program) only when it adds information
@@ -110,12 +111,13 @@ function renderBoard(b){
         // A changed car rider shows who is picking up under the name, so the badge always fits.
         const pickup = k === 'car' && s.changed && s.detail;
         const d = s.detail && !pickup && !/^car rider$/i.test(s.detail) ? `<span class="tag">${esc(s.detail)}</span>` : '';
-        return `<li class="${s.changed?'chg':''}"><span>${esc(s.name)}${pickup ? `<small class="pu">with ${esc(s.detail)}</small>` : ''}</span>${who(s)}${d}${s.changed?'<span class="chg">Changed</span>':''}</li>`;
+        return `<li class="${s.changed?'chg':''}"><span>${esc(s.name)}${s.late?' <small class="lt">late</small>':''}${pickup ? `<small class="pu">with ${esc(s.detail)}</small>` : ''}</span>${who(s)}${d}${s.changed?'<span class="chg">Changed</span>':''}</li>`;
       }).join('') + '</ul>';
     }
     html += '</section>';
   }
   html += '</div>';
+  if (b.absent && b.absent.length) html += `<div class="absent"><b>Absent today:</b> ${b.absent.map(esc).join(', ')}</div>`;
   if (b.checked_out && b.checked_out.length) html += `<div class="absent"><b>Checked out early:</b> ${b.checked_out.map(c => `${esc(c.name)} (${esc(c.time)})`).join(', ')}</div>`;
   if (b.changes) html += `<div class="legend"><span class="chg" style="background:var(--red);color:#fff;border-radius:.3rem;padding:0 .35rem;font-weight:800;font-family:var(--display);text-transform:uppercase">Changed</span> = a parent or the office changed this student's dismissal for today.</div>`;
   main.innerHTML = html;

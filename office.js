@@ -58,7 +58,7 @@ function badges(m) {
 async function refreshBadges() { try { ME = await call('staff_me'); badges(ME); } catch {} }
 
 // ---------- routing ----------
-const VIEWS = ['dash', 'notes', 'transport', 'signins', 'students', 'roster', 'settings'];
+const VIEWS = ['dash', 'notes', 'transport', 'signins', 'pins', 'students', 'roster', 'settings'];
 let sioTimer = null;
 function route() {
   if (!ME) return;
@@ -69,7 +69,7 @@ function route() {
   $$('.otabs a').forEach(a => a.dataset.v === view ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
   ({ dash: loadDash, notes: loadNotes, transport: () => { if (q === 'today') { $('#tf-by').value = 'effective'; $('#tf-from').value = $('#tf-to').value = TODAY; } loadTrans(); },
      signins: () => { loadSignins(); sioTimer = setInterval(() => { if (!document.hidden && $('#modal').hidden) loadSignins(true); }, 30000); },
-     students: () => {}, roster: loadImports, settings: loadSettings })[view]();
+     pins: loadPins, students: () => {}, roster: loadImports, settings: loadSettings })[view]();
 }
 addEventListener('hashchange', route);
 const closeModal = () => { $('#modal').hidden = true; $('#modal-in').innerHTML = ''; $$('[data-blob]').forEach(u => URL.revokeObjectURL(u.dataset.blob)); };
@@ -264,18 +264,52 @@ $('#sio-csv').onclick = () => {
 };
 
 // ---------- students ----------
+const TODAY_TAG = { present: ['Present', 'ok'], late: ['Late — present', 'warn'], absent: ['Absent', ''], dismissed: ['Checked out early', 'gray'] };
 $('#sf-q').addEventListener('input', debounce(async () => {
   const q = $('#sf-q').value.trim();
   if (q.length < 2) return $('#s-rows').innerHTML = '';
   const rows = await call('staff_students', { p_q: q });
   $('#s-rows').innerHTML = rows.map(s => `<article class="stu">
-    <div class="stu-h"><div class="av">${esc(s.name[0])}</div><div><b>${esc(s.name)}${s.active ? '' : ' <span class="tag gray">Not enrolled</span>'}</b><small>ID ${s.student_id} · Grade ${esc(grade(s.grade))} · ${esc(s.teacher || '')}</small></div></div>
+    <div class="stu-h"><div class="av">${esc(s.name[0])}</div><div><b>${esc(s.name)}${s.active ? '' : ' <span class="tag gray">Not enrolled</span>'}</b><small>ID ${s.student_id} · Grade ${esc(grade(s.grade))} · ${esc(s.teacher || '')}${s.board && s.board !== s.teacher ? ' · dismissal board: ' + esc(s.board) : ''}</small></div>${s.today ? `<span class="tag ${TODAY_TAG[s.today][1]}" style="margin-left:auto">${TODAY_TAG[s.today][0]}</span>` : ''}</div>
     <dl class="kv"><dt>Morning</dt><dd>${esc(s.am || '—')}</dd><dt>Afternoon</dt><dd>${esc(s.pm || '—')}</dd>
       <dt>Parent notes</dt><dd>${s.parent_notes_approved} of ${LIMIT} approved this semester · ${s.doctor_notes} doctor's note${s.doctor_notes === 1 ? '' : 's'}</dd>
       <dt>Sign-in parents</dt><dd>${s.guardians.map(g => `${g.pin ? `<span class="pin sm">${g.pin}</span> ` : ''}${esc(g.name)} (${esc(g.relationship || '')}) · ${esc(g.phone || 'no phone')} · ${esc(g.email || 'no email')}`).join('<br>') || '—'}</dd>
       <dt>Pickup people</dt><dd>${s.pickups.map(p => `${p.pin ? `<span class="pin sm">${p.pin}</span> ` : ''}${esc(p.name)}${p.relationship ? ' (' + esc(p.relationship) + ')' : ''}${p.phone ? ' · ' + esc(p.phone) : ''}`).join('<br>') || '—'}</dd></dl></article>`).join('')
     || '<div class="card">No matches.</div>';
 }));
+
+// ---------- pick-up & PIN report ----------
+let PINS = [], PINF = null;
+async function loadPins() {
+  if (!PINF) {
+    PINF = await call('staff_pin_filters');
+    $('#pf-grade').innerHTML = '<option value="">All grades</option>' + (PINF.grades || []).sort((a, b) => a === 'K' ? -1 : b === 'K' ? 1 : +a - +b).map(g => `<option value="${esc(g)}">${esc(g === 'K' ? 'Kindergarten' : 'Grade ' + String(g).replace(/^0/, ''))}</option>`).join('');
+    $('#pf-teacher').innerHTML = '<option value="">All teachers</option>' + (PINF.teachers || []).sort().map(t => `<option>${esc(t)}</option>`).join('');
+    $('#pf-warn').innerHTML = (PINF.warnings || []).map(w => `<p class="err">⚠ ${esc(w.note)}</p>`).join('');
+  }
+  $('#pin-rows').innerHTML = '<tr><td colspan="7" class="empty">Loading…</td></tr>';
+  PINS = await call('staff_pin_report', { p_q: $('#pf-q').value.trim() || null, p_grade: $('#pf-grade').value || null, p_teacher: $('#pf-teacher').value || null });
+  const students = new Set(PINS.map(r => r.sid)).size;
+  $('#pf-count').textContent = `${students} student${students === 1 ? '' : 's'} · ${PINS.length} people`;
+  let last = null;
+  $('#pin-rows').innerHTML = PINS.map(r => {
+    const first = r.sid !== last; last = r.sid;
+    return `${first ? `<tr class="grp"><td colspan="7"><b>${esc(r.last)}, ${esc(r.first)}</b> <small style="display:inline">ID ${r.sid} · Grade ${esc(grade(r.grade))} · ${esc(r.teacher || '')}${r.board && r.board !== r.teacher ? ' · board: ' + esc(r.board) : ''}</small></td></tr>` : ''}
+    <tr><td>${esc(r.name)}${r.pending ? ' <span class="tag warn">Added in portal</span>' : ''}</td><td>${r.type === 'Parent/guardian' ? '<span class="tag ok">Parent/guardian</span>' : '<span class="tag gray">Pick-up</span>'}</td>
+      <td>${esc(r.relationship || '')}</td><td>${esc(r.phone || '')}<small>${esc(r.email || '')}</small></td><td>${esc(r.id || '')}</td>
+      <td>${r.pin ? `<span class="pin sm">${esc(r.pin)}</span>` : '—'}</td><td><small>${r.pin_source === 'file' ? 'From FACTS' : r.pin ? 'Portal' : ''}</small></td></tr>`;
+  }).join('') || '<tr><td colspan="7" class="empty">No matches.</td></tr>';
+}
+['#pf-grade', '#pf-teacher'].forEach(s => $(s).addEventListener('change', loadPins));
+$('#pf-q').addEventListener('input', debounce(loadPins));
+$('#pf-print').onclick = () => window.print();
+$('#pf-csv').onclick = () => {
+  const cols = [['Student', r => `${r.last}, ${r.first}`], ['Student ID', r => r.sid], ['Grade', r => r.grade], ['Homeroom', r => r.teacher], ['Dismissal board', r => r.board],
+    ['Person', r => r.name], ['Type', r => r.type], ['Relationship', r => r.relationship], ['Phone', r => r.phone], ['Email', r => r.email], ['FACTS ID', r => r.id], ['PIN', r => r.pin], ['PIN from', r => r.pin_source === 'file' ? 'FACTS' : 'Portal']];
+  const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const csv = [cols.map(c => q(c[0])).join(','), ...PINS.map(r => cols.map(c => q(c[1](r))).join(','))].join('\r\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `pickup-pins-${TODAY}.csv`; a.click();
+};
 
 // ---------- roster ----------
 let PARSED = null;
@@ -284,21 +318,31 @@ $('#r-file').addEventListener('change', e => {
   if (!f) return;
   Papa.parse(f, { header: true, skipEmptyLines: true, transformHeader: h => h.trim(), complete: res => {
     PARSED = res.data;
-    if (!PARSED.length || !('Student ID (System)' in PARSED[0])) { PARSED = null; return $('#r-err').textContent = ERR.bad_columns; }
-    const ids = new Set(PARSED.map(r => r['Student ID (System)']).filter(Boolean));
-    $('#r-preview').innerHTML = `<div class="card" style="background:var(--bg)"><b class="t">${esc(f.name)}</b><p>${PARSED.length} rows · ${ids.size} students</p>
-      <label class="actions" style="font-weight:600"><input type="checkbox" id="r-force"> I'm sure — allow turning off many students</label>
-      <div class="actions"><button class="btn" id="r-go">Update roster</button></div></div>`;
+    const att = PARSED.length && 'studentid' in PARSED[0] && 'Attendance' in PARSED[0];
+    if (!PARSED.length || (!att && !('Student ID (System)' in PARSED[0]))) { PARSED = null; return $('#r-err').textContent = 'That file is neither the student & parent file nor the daily attendance file.'; }
+    if (att) {
+      const a = PARSED.filter(r => /^a/i.test(r.Attendance || '')).length;
+      $('#r-preview').innerHTML = `<div class="card" style="background:var(--bg)"><b class="t">${esc(f.name)} — daily attendance for today</b><p>${PARSED.length} students · ${a} absent · ${PARSED.length - a} present</p>
+        <div class="actions"><button class="btn" id="r-go">Update today's attendance</button></div></div>`;
+    } else {
+      const ids = new Set(PARSED.map(r => r['Student ID (System)']).filter(Boolean));
+      $('#r-preview').innerHTML = `<div class="card" style="background:var(--bg)"><b class="t">${esc(f.name)} — student &amp; parent file</b><p>${PARSED.length} rows · ${ids.size} students</p>
+        <label class="actions" style="font-weight:600"><input type="checkbox" id="r-force"> I'm sure — allow turning off many students</label>
+        <div class="actions"><button class="btn" id="r-go">Update roster</button></div></div>`;
+    }
     $('#r-go').onclick = async () => {
       const b = $('#r-go'); b.disabled = true; b.textContent = 'Updating…';
       try {
-        const r = await call('staff_roster_import', { p_rows: PARSED, p_force: $('#r-force').checked });
-        $('#r-preview').innerHTML = `<div class="card on" style="background:var(--ok-bg);color:var(--ok);border-color:var(--ok)"><b>Roster updated: ${r.students} students, ${r.guardians} parents/guardians, ${r.pickups} pickup people${r.deactivated ? `, ${r.deactivated} turned off` : ''}.</b></div>`;
+        const r = att ? await call('staff_attendance_import', { p_rows: PARSED }) : await call('staff_roster_import', { p_rows: PARSED, p_force: $('#r-force').checked });
+        $('#r-preview').innerHTML = `<div class="card on" style="background:var(--ok-bg);color:var(--ok);border-color:var(--ok)"><b>${att ? attText(r) : rosterText(r)}</b></div>`;
         $('#r-file').value = ''; PARSED = null; loadImports();
-      } catch (x) { $('#r-err').textContent = emsg(x); b.disabled = false; b.textContent = 'Update roster'; }
+      } catch (x) { $('#r-err').textContent = emsg(x); b.disabled = false; b.textContent = att ? "Update today's attendance" : 'Update roster'; }
     };
   }, error: () => $('#r-err').textContent = "Couldn't read that file." });
 });
+const rosterText = r => `Roster updated: ${r.students} students, ${r.guardians} parents/guardians, ${r.pickups} pickup people${r.deactivated ? `, ${r.deactivated} turned off` : ''}${r.file_pins != null ? `, ${r.file_pins} PINs from the file` : ''}.`
+  + (r.warnings && r.warnings.length ? ' ⚠ ' + r.warnings.join(' ') : '');
+const attText = r => `Today's attendance updated: ${r.present} present, ${r.absent} absent${r.not_in_roster ? ` (${r.not_in_roster} IDs not in the roster)` : ''}.`;
 async function loadImports() {
   call('staff_import_errors').then(errs => {
     $('#sftp-errors').innerHTML = errs.map(e => `<p class="err">${esc(e.note)} <small class="muted">(${stamp(e.at)})</small></p>`).join('');
@@ -317,7 +361,8 @@ $('#sftp-go').onclick = async () => {
     const r = await fetch('/api/sftp-import' + ($('#sftp-force').checked ? '?force=1' : ''), { method: 'POST', headers: { Authorization: 'Bearer ' + data.session.access_token } });
     const j = await r.json().catch(() => ({}));
     $('#sftp-result').innerHTML = r.ok
-      ? (j.imported ? `<p class="card" style="background:var(--ok-bg);color:var(--ok);border-color:var(--ok);font-weight:700">Imported ${esc(j.file)}: ${j.students} students, ${j.guardians} parents/guardians, ${j.pickups} pickup people${j.deactivated ? `, ${j.deactivated} turned off` : ''}.</p>` : `<p class="muted">${esc(j.message)}</p>`)
+      ? (j.imported ? (j.results || []).map(x => `<p class="card" style="background:var(--ok-bg);color:var(--ok);border-color:var(--ok);font-weight:700">${esc(x.file)}: ${esc(x.kind === 'attendance' ? attText(x) : rosterText(x))}</p>`).join('')
+          + (j.message ? `<p class="err">${esc(j.message)}</p>` : '') : `<p class="muted">${esc(j.message)}</p>`)
       : `<p class="err">${esc(j.message || SFTP_ERR[j.error] || emsg(j.error))}</p>`;
     loadImports(); refreshBadges();
   } catch (e) { $('#sftp-result').innerHTML = `<p class="err">${esc(emsg(e))}</p>`; }

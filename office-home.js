@@ -22,6 +22,11 @@ async function homeLoad(quiet) {
     Object.assign(H, { trans, pick, other, sio, notes });
   } catch (e) { toast(emsg(e)); return; }
   drawHome();
+  call('staff_today_summary').then(t => {
+    $('#h-today').innerHTML = `<b>Today:</b> ${t.present} present · ${t.late} signed in late · ${t.absent} absent · ${t.dismissed} checked out early
+      <small class="muted" style="display:block">${t.attendance_in ? 'Attendance file received ' + stamp(t.attendance_at) : "Today's attendance file hasn't arrived yet (sent around 11:30 AM) — everyone counts as present until then."}</small>
+      ${t.absent_list.length ? `<details><summary class="muted small">Absent list (${t.absent_list.length})</summary><p class="small">${t.absent_list.map(a => esc(a.name) + ' (' + esc(grade(a.grade)) + ')').join(', ')}</p></details>` : ''}`;
+  }).catch(() => {});
   const li = ME.last_import;
   $('#dash-import').textContent = li ? `Roster last updated ${stamp(li.imported_at)} by ${li.imported_by} (${li.students} students).` : '';
   $('#h-updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });

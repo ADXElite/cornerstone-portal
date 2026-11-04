@@ -60,6 +60,8 @@ tr.done td{opacity:.6}
 .hits2{display:grid;gap:6px}
 .hits2 button{display:flex;justify-content:space-between;gap:10px;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:700;color:var(--ink)}
 .hits2 button small{color:var(--muted);font-weight:600}
+tr.grp td{background:var(--bg);border-top:2px solid var(--line);padding-top:12px}
+@media print{.top,.otabs,.noprint,#who,.toast{display:none!important}main{padding:0}.tw{border:0;overflow:visible}th{position:static}body{background:#fff}.pin.sm{background:#000;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}tr{break-inside:avoid}}
 .fx{width:26px;height:26px;accent-color:var(--ok);cursor:pointer}
 td.c{text-align:center}
 td.c small{text-align:center}
@@ -91,6 +93,7 @@ td.c small{text-align:center}
       <a href="#notes" data-v="notes">Notes report <span class="badge" id="b-notes" hidden></span></a>
       <a href="#transport" data-v="transport">Dismissal report <span class="badge" id="b-trans" hidden></span></a>
       <a href="#signins" data-v="signins">Sign-In/Out report <span class="badge" id="b-sio" hidden></span></a>
+      <a href="#pins" data-v="pins">Pick-up &amp; PIN report</a>
       <a href="#students" data-v="students">Students</a>
       <a href="#roster" data-v="roster">Roster upload</a>
       <a href="#settings" data-v="settings">Settings</a>
@@ -106,6 +109,7 @@ td.c small{text-align:center}
         <label class="hdate" id="h-dates" hidden>From <input type="date" id="h-from"> to <input type="date" id="h-to"></label>
         <span class="muted small" id="h-updated"></span>
       </div>
+      <div class="card" id="h-today" style="padding:10px 14px"></div>
       <nav class="jump">
         <a href="#sec-changes">Change requests <span class="badge" id="j-changes" hidden></span></a>
         <a href="#sec-sio">Late sign-in &amp; early sign-out <span class="badge" id="j-sio" hidden></span></a>
@@ -220,6 +224,20 @@ td.c small{text-align:center}
       <span class="cnt" id="sio-count"></span>
       <div class="tw"><table><thead><tr><th>Time</th><th>Type</th><th>Student</th><th>Signed by</th><th>Reason</th><th>Signature</th><th style="text-align:center">Updated in FACTS</th></tr></thead><tbody id="sio-rows"></tbody></table></div>
       <p class="muted small">Kiosk: open <b>portal.csjax.org/kiosk</b> on the front office iPad. Updates every 30 seconds.</p>
+    </div>
+
+    <!-- Pick-up & PIN report -->
+    <div class="screen" id="p-pins" hidden>
+      <div id="pf-warn"></div>
+      <div class="bar noprint">
+        <label class="grow">Search<input type="search" id="pf-q" placeholder="Student, person, phone or PIN"></label>
+        <label>Grade<select id="pf-grade"></select></label>
+        <label>Teacher<select id="pf-teacher"></select></label>
+        <button class="btn ghost sm" id="pf-print" type="button">Print</button>
+        <button class="btn ghost sm" id="pf-csv" type="button">Download CSV</button>
+      </div>
+      <span class="cnt" id="pf-count"></span>
+      <div class="tw"><table class="pintable"><thead><tr><th>Person</th><th>Type</th><th>Relationship</th><th>Contact</th><th>FACTS ID</th><th>PIN</th><th></th></tr></thead><tbody id="pin-rows"></tbody></table></div>
     </div>
 
     <!-- Students -->

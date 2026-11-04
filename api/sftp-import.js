@@ -1,6 +1,7 @@
 // Daily roster import from the school's SFTP server (Oracle Cloud, 141.148.36.44).
 // The school (now) or the vendor (later) uploads the student/parent CSV to /uploads with the ccsftp login.
-// This function signs in as ccsportal (key only), imports the newest CSV, and moves every CSV it handled to /processed.
+// This function signs in as ccsportal (key only), imports the newest roster CSV and the newest daily attendance CSV,
+// and moves every CSV it handled to /processed. File type is detected from its columns.
 //
 // Called by:
 //   - Supabase pg_cron job "portal-sftp-import" (every 30 min, 6 AM–6 PM ET, Mon–Fri) with header x-import-key
@@ -72,31 +73,54 @@ module.exports = async (req, res) => {
       const done = await firstDir(sftp, [C.env('SFTP_PROCESSED_DIR'), '/processed', 'processed'].filter(Boolean));
       if (!up || !done) throw Object.assign(new Error('sftp_folders_missing'), { code: 502 });
 
-      const files = (await sftp.list(up)).filter(f => f.type === '-' && /\.csv$/i.test(f.name)).sort((a, b) => a.modifyTime - b.modifyTime);
-      if (!files.length) return C.send(res, 200, { ok: true, imported: false, message: 'No new file in /uploads.' });
+      const all = (await sftp.list(up)).filter(f => f.type === '-' && /\.csv$/i.test(f.name)).sort((a, b) => a.modifyTime - b.modifyTime);
+      if (!all.length) return C.send(res, 200, { ok: true, imported: false, message: 'No new file in /uploads.' });
 
-      const newest = files[files.length - 1];
-      const buf = await sftp.get(`${up}/${newest.name}`);
-      const rows = parseCsv(buf.toString('utf8'));
-      try {
-        result = await C.rpc('portal_roster_import_by', { p_rows: rows, p_force: force, p_by: `${by}: ${newest.name}` });
-      } catch (e) {
-        // Leave the file in /uploads so the office can fix it or force it; tell the office once per file.
-        const msg = /too_many_removed/.test(e.message)
-          ? `${newest.name} would turn off ${e.message.split(':')[1] || 'many'} students, so it was held back as a safety stop. If the file is correct, open Roster upload and click "Check SFTP now" with "I'm sure" ticked.`
-          : e.message === 'bad_columns' ? `${newest.name} doesn't have the "Student ID (System)" column. Check that the right report was uploaded.`
-          : `${newest.name}: ${e.message}`;
-        const first = await C.rpc('portal_import_error', { p_file: newest.name, p_note: msg });
-        if (first) await notifyFailure(msg);
-        return C.send(res, 409, { error: e.message, message: msg, file: newest.name });
+      // Read every file and sort it by layout: daily attendance (studentid, Attendance) or student/parent roster.
+      const files = [];
+      for (const f of all) {
+        const rows = parseCsv((await sftp.get(`${up}/${f.name}`)).toString('utf8'));
+        const cols = rows[0] ? Object.keys(rows[0]) : [];
+        const kind = cols.includes('studentid') && cols.includes('Attendance') ? 'attendance' : cols.includes('Student ID (System)') ? 'roster' : 'unknown';
+        files.push({ f, rows, kind });
       }
-      // Imported: move the newest and any older (superseded) files to /processed.
-      const moved = [];
-      for (const f of files) {
-        const dest = `${done}/${stamp()}_${f === newest ? '' : 'skipped_'}${f.name}`;
-        try { await sftp.rename(`${up}/${f.name}`, dest); moved.push(dest); } catch (e) { console.error('move failed', f.name, e.message); }
+      const results = [], moved = [], held = [];
+      const move = async (x, tag = '') => {
+        const dest = `${done}/${stamp()}_${tag}${x.f.name}`;
+        try { await sftp.rename(`${up}/${x.f.name}`, dest); moved.push(dest); } catch (e) { console.error('move failed', x.f.name, e.message); }
+      };
+      // Roster first (so new students exist), then attendance. Only the newest file of each kind is imported.
+      for (const kind of ['roster', 'attendance']) {
+        const list = files.filter(x => x.kind === kind);
+        if (!list.length) continue;
+        const newest = list[list.length - 1];
+        try {
+          const r = kind === 'roster'
+            ? await C.rpc('portal_roster_import_by', { p_rows: newest.rows, p_force: force, p_by: `${by}: ${newest.f.name}` })
+            : await C.rpc('portal_attendance_import', { p_rows: newest.rows, p_by: `${by}: ${newest.f.name}` });
+          results.push({ kind, file: newest.f.name, ...r });
+          for (const x of list) await move(x, x === newest ? '' : 'skipped_');
+        } catch (e) {
+          // Leave the file in /uploads so the office can fix it or force it; tell the office once per file.
+          const msg = /too_many_removed/.test(e.message)
+            ? `${newest.f.name} would turn off ${e.message.split(':')[1] || 'many'} students, so it was held back as a safety stop. If the file is correct, open Roster upload and click "Check SFTP now" with "I'm sure" ticked.`
+            : e.message === 'bad_columns' ? `${newest.f.name} is missing expected columns. Check that the right report was uploaded.`
+            : `${newest.f.name}: ${e.message}`;
+          held.push({ kind, file: newest.f.name, error: e.message, message: msg });
+          if (await C.rpc('portal_import_error', { p_file: newest.f.name, p_note: msg })) await notifyFailure(msg);
+        }
       }
-      return C.send(res, 200, { ok: true, imported: true, file: newest.name, older_skipped: files.length - 1, moved, ...result });
+      for (const x of files.filter(x => x.kind === 'unknown')) {
+        const msg = `${x.f.name} isn't a student roster or daily attendance file, so it was moved to /processed without importing.`;
+        held.push({ kind: 'unknown', file: x.f.name, message: msg });
+        if (await C.rpc('portal_import_error', { p_file: x.f.name, p_note: msg })) await notifyFailure(msg);
+        await move(x, 'unrecognized_');
+      }
+      if (!results.length && held.length) return C.send(res, 409, { error: held[0].error || 'not_imported', message: held.map(h => h.message).join(' '), held });
+      const roster = results.find(r => r.kind === 'roster') || {};
+      return C.send(res, 200, { ok: true, imported: results.length > 0, results, held, moved,
+        file: results.map(r => r.file).join(', '), ...roster, attendance: results.find(r => r.kind === 'attendance') || null,
+        message: held.length ? held.map(h => h.message).join(' ') : undefined });
     } finally { try { await sftp.end(); } catch {} }
   } catch (e) {
     if (/authentication|All configured authentication methods failed|privateKey|Cannot parse/i.test(e.message)) e = Object.assign(new Error('sftp_login_failed'), { code: 502, detail: e.message });

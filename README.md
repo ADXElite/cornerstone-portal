@@ -77,3 +77,19 @@ Front office staff list (each also needs a Supabase sign-in: Authentication → 
 - `api/auth.js` — code sign-in · `api/parent.js` — notes, files, dismissal changes, office email · `api/roster-import.js` — automated upload
 - `supabase/migrations/` — staff database functions (parent functions and tables are in the Supabase migration history: `portal_phase1_tables`, `portal_phase1_functions`, `portal_staff_functions`)
 - Icons are served from app.csjax.org (see `vercel.json` rewrites).
+
+## Daily files (Nov 2026 layout)
+**Student & parent file** (`Report_5.csv` layout) — adds:
+- `7th Period Dismissal Teacher`: when filled, the student is on that teacher's dismissal board; blank = homeroom board. Name variants are folded with `portal_teacher_alias` (e.g. `nichelle-wilson` → `nichelle-english-wilson`).
+- `Parent Individual ID` / `Parent Individual ID 1`: the parent's FACTS ID (same numbers as pick-up `Reference ID`). Parents and pick-up people are one person per ID (`r:<id>`); one login sees every student linked to that ID. Two IDs with the same name and same PIN are treated as one person.
+- `Pin` / `Pin 1`: that parent's kiosk PIN. File PINs always win; a random PIN that collides is replaced. If the file gives the same PIN to two different people, the first keeps it and the import warns (Roster upload / PIN report).
+
+**Daily attendance file** (`studentid`, `Attendance` = P/A), sent ~11:30 AM. Stored in `portal_attendance` for today. Today's status (`private.portal_status_today`):
+- checked out early on the iPad → **dismissed** (off the board, listed "Checked out early")
+- signed in late → **late** = present (on the board, even if the file said A)
+- A in the file → **absent** (off the board, listed "Absent today")
+- otherwise → **present** (also before the file arrives)
+
+SFTP: the import detects each file by its columns, imports the newest roster and the newest attendance file, and moves everything to /processed. The pg_cron job now runs every 15 minutes on school days.
+
+**Office:** new *Pick-up & PIN report* tab (every parent/guardian and pick-up person per student with PIN, FACTS ID, where the PIN came from; search, grade/teacher filter, print, CSV). Home shows today's present/late/absent/checked-out counts; Students search shows today's status and dismissal board.
