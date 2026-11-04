@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Cornerstone Portal Dismissal Board",
+  "short_name": "CCS Dismissal",
+  "version": "1.0.0",
+  "description": "Opens your class's Cornerstone dismissal board full-screen from 2:35 to 3:30 PM on school days, then closes it.",
+  "permissions": ["alarms", "storage"],
+  "content_scripts": [
+    { "matches": ["https://portal.csjax.org/classroom*"], "js": ["bridge.js"], "run_at": "document_start" }
+  ],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "Open dismissal board" },
+  "storage": { "managed_schema": "schema.json" },
+  "icons": { "16": "icon16.png", "48": "icon48.png", "128": "icon128.png" },
+  "homepage_url": "https://portal.csjax.org/privacy-extension"
+}

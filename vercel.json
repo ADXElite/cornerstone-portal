@@ -2,6 +2,19 @@
   "cleanUrls": true,
   "headers": [
     {
+      "source": "/(dismissal|classroom)(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
       "source": "/kiosk(.*)",
       "headers": [
         {
@@ -75,7 +88,7 @@
         },
         {
           "key": "X-Frame-Options",
-          "value": "DENY"
+          "value": "SAMEORIGIN"
         },
         {
           "key": "Permissions-Policy",
@@ -97,6 +110,10 @@
     {
       "source": "/icons/:file",
       "destination": "https://app.csjax.org/icons/:file"
+    },
+    {
+      "source": "/dismissal/:slug",
+      "destination": "/dismissal"
     }
   ]
 }

@@ -30,7 +30,12 @@ Parent and front office web app for Cornerstone Christian School — **https://p
 - **Reference ID linking:** people are keyed by the FACTS Reference ID (`r:<id>`), and parents/guardians take the Reference ID of their matching contact row. Anyone with a phone/email in the file can sign in and sees every student they're linked to. Excused notes and pick-up list changes are limited to parents/guardians (FirstName LastName / … 1 columns); pick-up contacts can view students, see PINs and submit dismissal changes.
 - **Office Home:** Change requests (dismissal, pick-up person, other), Late sign-in & early sign-out (print 4"×2½" tardy / early-dismissal slip), Excused attendance notes (doctor's note download or generated PDF with student name, ID, date, reason, signature), Enter a change, Send a parent alert. Every item has an **Entered in FACTS** checkbox; "Needs entering in FACTS" is the default view.
 
-Phases to come: dismissal boards for teachers.
+## Phase 4 (live): classroom dismissal boards
+- **Boards:** `https://portal.csjax.org/dismissal/<teacher>` (e.g. `/dismissal/charles-brand`), list at `/dismissal`. Same look and link names as app.csjax.org, including the combined `williams-newkirk` board and `nichelle-wilson` link (`COMBINED` / `RENAME` in `api/dismissal.js`).
+- **Data (live, refreshes every minute):** today's afternoon transportation from the roster file, overridden by any parent/office dismissal change in effect today (marked **Changed**), minus students checked out early on the front office iPad (listed at the bottom). Database: `portal_board_read` / `private.portal_dismissal_today`.
+- **Campus only:** `/api/dismissal` answers only IPs in Vercel env `DISMISSAL_ALLOWED_IPS` (107.1.157.26, 71.199.80.116).
+- **Classroom page:** `/classroom` — teacher picks a class (remembered), bottom bar with Change class / Close board.
+- **Chrome extension:** `chrome-extension/` — "Cornerstone Portal Dismissal Board". Opens `/classroom` full-screen 2:35–3:30 PM Mon–Fri, remembers the class with Chrome sync, Close board keeps it closed for the day, toolbar icon opens it any time. Privacy policy: `/privacy-extension`. Store listing and Admin steps: `chrome-extension/STORE-LISTING.md`.
 
 ## Daily roster file
 The student/parent export (same columns as "Report 1.csv") feeds everything:

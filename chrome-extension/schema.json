@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "properties": {
+    "board": {
+      "title": "Class board (optional)",
+      "description": "e.g. charles-brand. Leave blank so each teacher picks their class on screen (recommended).",
+      "type": "string"
+    },
+    "start": {
+      "title": "Open board at (24-hour HH:MM, New York time)",
+      "description": "Default 14:35",
+      "type": "string"
+    },
+    "end": {
+      "title": "Close board at (24-hour HH:MM, New York time)",
+      "description": "Default 15:30",
+      "type": "string"
+    },
+    "weekdaysOnly": {
+      "title": "Monday–Friday only",
+      "description": "Default true",
+      "type": "boolean"
+    }
+  }
+}
