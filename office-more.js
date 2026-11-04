@@ -96,18 +96,19 @@ async function loadBuses() {
   };
 }
 function rosterHtml(r, i) {
-  const by = {}; for (const s of r.students) (by[s.stop] ||= []).push(s);
+  // Students arrive sorted by afternoon drop-off time; group by stop in that order.
+  const by = new Map(); for (const s of r.students) { const k = s.stop_no ? 'n' + s.stop_no : 's' + s.stop; if (!by.has(k)) by.set(k, []); by.get(k).push(s); }
   const riding = r.students.filter(s => s.status === 'present' || s.status === 'late').length;
   const date = new Date(r.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   const label = s => s.status === 'absent' ? 'ABSENT' : s.status === 'dismissed' ? 'Checked out early' : s.status === 'late' ? 'Present (late)' : 'Present';
   return `<section class="roster" data-i="${i}">
-    <h3><span>Bus ${esc(r.bus)}</span><small style="font-family:var(--body);font-size:.9rem;font-weight:600;text-transform:none">${date} · ${riding} riding of ${r.students.length}</small></h3>
-    <p class="small" style="margin:2px 0 0;color:#6B6466">Cornerstone Christian School · Afternoon route · printed ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}${r.attendance_in ? '' : ' · attendance not in yet'}</p>
-    ${Object.keys(by).map(stop => `<h4>${esc(stop.replace(/^Bus\s*\d+\s*-\s*/i, ''))} <span style="font-weight:400;color:#6B6466">(${by[stop].length})</span></h4>
-      <table><tbody>${by[stop].map(s => `<tr class="${s.status === 'absent' || s.status === 'dismissed' ? 'abs' : ''}">
+    <h3><span>Bus ${esc(r.bus)}${r.driver ? ` <small style="font-family:var(--body);font-size:1rem;font-weight:600;text-transform:none">· ${esc(r.driver)}</small>` : ''}</span><small style="font-family:var(--body);font-size:.9rem;font-weight:600;text-transform:none">${date} · ${riding} riding of ${r.students.length}</small></h3>
+    <p class="small" style="margin:2px 0 0;color:#6B6466">Cornerstone Christian School · Afternoon route${r.leaves ? ' · leaves school ' + esc(r.leaves) : ''} · printed ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}${r.attendance_in ? '' : ' · attendance not in yet'}</p>
+    ${[...by.values()].map(list => { const f = list[0]; return `<h4>${f.stop_time ? esc(f.stop_time) + ' · ' : ''}${esc(f.stop)} <span style="font-weight:400;color:#6B6466">— ${esc(f.stop_where || '')} (${list.filter(s => s.status === 'present' || s.status === 'late').length} riding)</span></h4>
+      <table><tbody>${list.map(s => `<tr class="${s.status === 'absent' || s.status === 'dismissed' ? 'abs' : ''}">
         <td style="width:30px"><span class="chk"></span></td><td><b>${esc(s.name)}</b>${s.changed ? ' <b style="color:#E4010D">· changed today</b>' : ''}</td>
         <td>${esc(grade(s.grade))}</td><td>${esc((s.teacher || '').replace(/^(Mr|Mrs|Ms|Miss|Dr)\.?\s+/, ''))}</td>
-        <td style="text-decoration:none"><b>${label(s)}</b></td></tr>`).join('')}</tbody></table>`).join('')}
+        <td style="text-decoration:none"><b>${label(s)}</b></td></tr>`).join('')}</tbody></table>`; }).join('')}
   </section>`;
 }
 window.loadBuses = loadBuses;

@@ -57,19 +57,20 @@ async function loadBus(quiet) {
   let r; try { r = await call('duty_bus', { p_bus: BUS }); } catch (x) { if (!quiet) APP.innerHTML = `<div class="card err">${esc(x.message)}</div>`; return; }
   const riding = r.students.filter(s => s.status === 'present' || s.status === 'late');
   const on = riding.filter(s => s.on_bus).length;
-  const by = {}; for (const s of r.students) (by[s.stop] ||= []).push(s);
+  // Students arrive sorted by afternoon drop-off time; keep that order.
+  const by = new Map(); for (const s of r.students) { const k = s.stop_no ? 'n' + s.stop_no : 's' + s.stop; if (!by.has(k)) by.set(k, []); by.get(k).push(s); }
   const y = scrollY;
-  APP.innerHTML = `<div class="hd"><div><h1>Bus ${esc(BUS)}</h1><span class="prog">${on} of ${riding.length} on the bus</span></div>
+  APP.innerHTML = `<div class="hd"><div><h1>Bus ${esc(BUS)}</h1><span class="prog">${r.driver ? esc(r.driver) + ' · ' : ''}${r.leaves ? 'leaves school ' + esc(r.leaves) + ' · ' : ''}${on} of ${riding.length} on the bus</span></div>
       <div class="tools"><button class="btn ghost sm" id="chg">Change bus</button><button class="btn ghost sm" id="ref">Refresh</button></div></div>
     ${r.attendance_in ? '' : '<p class="muted small">Today\'s attendance isn\'t in yet, so everyone shows as present.</p>'}
     <p class="muted small">Tap a student when they get on the bus. Tap again to undo.</p>
-    ${Object.keys(by).map(stop => `<div class="stop"><span>${esc(stop.replace(/^Bus\s*\d+\s*-\s*/i, ''))}</span><span class="muted">${by[stop].filter(s => s.status === 'present' || s.status === 'late').length}</span></div>
-      ${by[stop].map(s => {
+    ${[...by.values()].map(list => { const f = list[0]; return `<div class="stop"><span>${f.stop_time ? esc(f.stop_time) + ' · ' : ''}${esc(f.stop)}<small style="display:block;font-family:var(--body);font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted);font-size:.85rem">${esc(f.stop_where || '')}</small></span><span class="muted">${list.filter(s => s.status === 'present' || s.status === 'late').length}</span></div>
+      ${list.map(s => {
         const out = s.status === 'absent' || s.status === 'dismissed' || s.elsewhere;
         const st = s.status === 'absent' ? 'Absent' : s.status === 'dismissed' ? 'Checked out early' : s.elsewhere ? 'Picked up in car line' : s.on_bus ? 'On bus ' + tm(s.on_bus_at) : s.status === 'late' ? 'Present (late)' : '';
         return `<button class="kid ${s.on_bus ? 'on' : ''} ${out ? 'out' : ''} ${s.changed ? 'chg' : ''}" data-id="${s.student_id}" ${out ? 'disabled' : ''}>
           <span class="box">${s.on_bus ? '✓' : ''}</span><span><b>${esc(s.name)}</b><small>Grade ${esc(grade(s.grade))}${s.changed ? ' · <span style="color:var(--red)">changed today</span>' : ''}</small></span>
-          <span class="st"><small>${esc(st)}</small></span></button>`; }).join('')}`).join('') || '<div class="card">No students on this bus today.</div>'}`;
+          <span class="st"><small>${esc(st)}</small></span></button>`; }).join('')}`; }).join('') || '<div class="card">No students on this bus today.</div>'}`;
   scrollTo(0, y);
   $('#chg').onclick = () => { store.set('ccs_bus', null); pickBus(); };
   $('#ref').onclick = () => loadBus();
