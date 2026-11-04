@@ -2,13 +2,12 @@
 // Uses helpers from office.js ($, call, esc, nice, stamp, grade, toast, openNote, openChange, closeModal, b64Blob, ...).
 const PUSH_URL = 'https://cvvdwhgdiqnoqgxtgzfw.supabase.co/functions/v1/portal-push';
 const H = { trans: [], pick: [], other: [], sio: [], notes: [] };
-const showMode = () => document.querySelector('input[name=h-show]:checked').value;
+const showMode = () => 'todo';
 const fx = (kind, i, done, by, at) => `<td class="c"><input type="checkbox" class="fx" data-sis="${kind}:${i}" ${done ? 'checked' : ''} aria-label="Entered in FACTS">${done && by ? `<small>${esc(String(by).split('@')[0])}${at ? ' · ' + stamp(at) : ''}</small>` : ''}</td>`;
 const src = (by, name) => `${esc(name || '')}<small>${esc(by || '')}</small>`;
 
 async function homeLoad(quiet) {
   const all = showMode() === 'all';
-  $('#h-dates').hidden = !all;
   if (all && !$('#h-from').value) { const d = D(TODAY); d.setDate(d.getDate() - 14); $('#h-from').value = d.toLocaleDateString('en-CA'); $('#h-to').value = TODAY; }
   const from = all ? $('#h-from').value || null : null, to = all ? $('#h-to').value || null : null, sis = all ? 'all' : 'todo';
   if (!quiet) ['#h-trans', '#h-pick', '#h-other', '#h-sio', '#h-notes'].forEach(id => $(id).innerHTML = `<tr><td colspan="7" class="empty">Loading…</td></tr>`);
@@ -22,14 +21,6 @@ async function homeLoad(quiet) {
     Object.assign(H, { trans, pick, other, sio, notes });
   } catch (e) { toast(emsg(e)); return; }
   drawHome();
-  call('staff_today_summary').then(t => {
-    $('#h-today').innerHTML = `<b>Today:</b> ${t.present} present · ${t.late} signed in late · ${t.absent} absent · ${t.dismissed} checked out early
-      <small class="muted" style="display:block">${t.attendance_in ? 'Attendance file received ' + stamp(t.attendance_at) : "Today's attendance file hasn't arrived yet (sent around 11:30 AM) — everyone counts as present until then."}</small>
-      ${t.absent_list.length ? `<details><summary class="muted small">Absent list (${t.absent_list.length})</summary><p class="small">${t.absent_list.map(a => esc(a.name) + ' (' + esc(grade(a.grade)) + ')').join(', ')}</p></details>` : ''}`;
-  }).catch(() => {});
-  const li = ME.last_import;
-  $('#dash-import').textContent = li ? `Roster last updated ${stamp(li.imported_at)} by ${li.imported_by} (${li.students} students).` : '';
-  $('#h-updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   refreshBadges();
 }
 
@@ -234,15 +225,8 @@ window.noteReviewed = async (id, status) => {
 let ESTU = null;
 const PM_OPTS = ['Car Rider', 'Bus Rider', 'Afternoon Extended Care', 'Student Walker', 'Student Driver and/or Passenger', 'City Bus Rider'];
 const AM_OPTS = ['Car Rider', 'Bus Rider', 'Morning Extended Care', 'Student Walker'];
-$('#e-q').addEventListener('input', debounce(async () => {
-  const q = $('#e-q').value.trim();
-  if (q.length < 2) return $('#e-hits').innerHTML = '';
-  const rows = await call('staff_students', { p_q: q });
-  $('#e-hits').innerHTML = rows.filter(s => s.active).slice(0, 8).map((s, i) => `<button type="button" data-i="${i}">${esc(s.name)}<small>ID ${s.student_id} · Gr ${esc(grade(s.grade))}</small></button>`).join('') || '<p class="muted">No matches.</p>';
-  $('#e-hits').onclick = e => { const b = e.target.closest('button'); if (!b) return; pickEStudent(rows.filter(s => s.active)[+b.dataset.i]); };
-}));
 function pickEStudent(s) {
-  ESTU = s; $('#e-hits').innerHTML = ''; $('#e-q').value = s.name;
+  ESTU = s;
   $('#e-student').innerHTML = `<div class="card" style="background:var(--bg)"><b class="t">${esc(s.name)} · ID ${s.student_id} · Grade ${esc(grade(s.grade))}</b>
     <dl class="kv" style="padding:0"><dt>Morning</dt><dd>${esc(s.am || '—')}</dd><dt>Afternoon</dt><dd>${esc(s.pm || '—')}</dd></dl></div>`;
   drawEFields();
@@ -304,8 +288,8 @@ $('#e-save').onclick = async () => {
     const r = await call('staff_enter_change', { p });
     toast(r.pin ? `Saved. PIN for this person: ${r.pin}` : 'Saved — added to the list to enter in FACTS.');
     if (r.pin) alert(`Pick-up person added. Their PIN is ${r.pin}.`);
-    $('#e-type').value = ''; $('#e-fields').innerHTML = ''; ESTU = null; $('#e-q').value = ''; $('#e-student').innerHTML = '';
-    homeLoad(true);
+    $('#e-type').value = ''; $('#e-fields').innerHTML = '';
+    if (window.loadStudent) loadStudent(s.student_id);
   } catch (x) {
     const m = { missing_fields: 'Fill in every field.', need_name: 'Enter first and last name.', need_phone: 'Enter a 10-digit phone.', already_on_list: 'That person is already on the list.',
       cant_remove_guardian: "Parents/guardians can't be removed here.", not_on_list: 'That person is no longer on the list.', pick_student: 'Choose a student.' }[x.message];
@@ -316,6 +300,7 @@ $('#e-save').onclick = async () => {
 
 // ---------- parent alerts ----------
 let AINFO = null, ASTU = null;
+window.alertInfo = alertInfo;
 async function alertInfo() {
   try {
     AINFO = await call('staff_push_info');
@@ -325,7 +310,14 @@ async function alertInfo() {
 }
 $('#a-aud').onchange = () => {
   const a = $('#a-aud').value;
-  $('#a-pick-l').hidden = !(a === 'grade' || a === 'teacher'); $('#a-stu-wrap').hidden = a !== 'student';
+  $('#a-pick-l').hidden = !(a === 'grade' || a === 'teacher' || a === 'transport'); $('#a-stu-wrap').hidden = a !== 'student';
+  $('#a-bus-l').hidden = true;
+  if (a === 'transport') {
+    $('#a-pick').innerHTML = (AINFO?.methods || []).filter(Boolean).sort().map(m => `<option>${esc(m)}</option>`).join('');
+    const syncBus = () => { const bus = $('#a-pick').value === 'Bus Rider'; $('#a-bus-l').hidden = !bus;
+      $('#a-bus').innerHTML = '<option value="">All buses</option>' + (AINFO?.buses || []).sort((x, y) => +x - +y).map(b => `<option value="${esc(b)}">Bus ${esc(b)}</option>`).join(''); };
+    $('#a-pick').onchange = syncBus; syncBus();
+  } else $('#a-pick').onchange = null;
   if (a === 'grade') $('#a-pick').innerHTML = (AINFO?.grades || []).sort((x, y) => (x === 'K' ? -1 : y === 'K' ? 1 : +x - +y)).map(g => `<option value="${esc(g)}">${esc(g === 'K' ? 'Kindergarten' : 'Grade ' + String(g).replace(/^0/, ''))}</option>`).join('');
   if (a === 'teacher') $('#a-pick').innerHTML = (AINFO?.teachers || []).sort().map(t => `<option>${esc(t)}</option>`).join('');
 };
@@ -338,9 +330,10 @@ $('#a-q').addEventListener('input', debounce(async () => {
 $('#a-send').onclick = async () => {
   const title = $('#a-title').value.trim(), body = $('#a-body').value.trim(), a = $('#a-aud').value;
   if (!title) return toast('Add a title.');
-  const aud = a === 'all' ? { type: 'all' } : a === 'grade' ? { type: 'grade', grades: [$('#a-pick').value] } : a === 'teacher' ? { type: 'teacher', teacher: $('#a-pick').value } : { type: 'student', student_id: ASTU?.student_id };
+  const aud = a === 'all' ? { type: 'all' } : a === 'transport' ? { type: 'transport', method: $('#a-pick').value, bus: $('#a-pick').value === 'Bus Rider' ? $('#a-bus').value : '' } : a === 'grade' ? { type: 'grade', grades: [$('#a-pick').value] } : a === 'teacher' ? { type: 'teacher', teacher: $('#a-pick').value } : { type: 'student', student_id: ASTU?.student_id };
   if (a === 'student' && !ASTU) return toast('Choose a student.');
-  const label = a === 'all' ? 'all families' : a === 'student' ? `${ASTU.name}'s family` : $('#a-pick').selectedOptions[0]?.textContent;
+  const label = a === 'all' ? 'all families' : a === 'student' ? `${ASTU.name}'s family`
+    : a === 'transport' ? `families of today's ${$('#a-pick').value === 'Bus Rider' && $('#a-bus').value ? 'Bus ' + $('#a-bus').value + ' riders' : $('#a-pick').value + 's'}` : $('#a-pick').selectedOptions[0]?.textContent;
   if (!confirm(`Send "${title}" to ${label}?`)) return;
   const b = $('#a-send'); b.disabled = true; $('#a-res').textContent = 'Sending…';
   try { const r = await pushTo(aud, title, body, '/'); $('#a-res').textContent = `Sent to ${r.sent} phone${r.sent === 1 ? '' : 's'}.`; $('#a-title').value = $('#a-body').value = ''; alertInfo(); }
@@ -350,5 +343,5 @@ $('#a-send').onclick = async () => {
 
 // Refresh the home screen every 30 seconds while it's open.
 const _homeLoad = homeLoad;
-homeLoad = async (quiet) => { await _homeLoad(quiet); if (!quiet) alertInfo(); };
+homeLoad = async (quiet) => { await _homeLoad(quiet); };
 setInterval(() => { if (!document.hidden && !$('#p-dash').hidden && $('#modal').hidden) _homeLoad(true); }, 30000);

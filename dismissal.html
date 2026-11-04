@@ -44,6 +44,9 @@ li .who{flex:none;font-size:.7rem;font-weight:700;letter-spacing:.04em;text-tran
 li .tag{flex:none;font-family:var(--display);font-weight:700;background:var(--chip);color:var(--chip-ink);border-radius:.3rem;padding:0 .35rem;font-size:.9rem;align-self:center}
 .absent{margin-top:.8rem;color:var(--muted);font-size:.8rem}
 li.chg{background:#FFF4DC}
+li.gone{background:#E6F4EC}
+li.gone > span:first-child{color:#6B6466;text-decoration:line-through;text-decoration-thickness:2px}
+li .gn{flex:none;font-family:var(--display);font-weight:800;background:#1E7A46;color:#fff;border-radius:.3rem;padding:0 .35rem;font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;align-self:center;white-space:nowrap}
 li > span:first-child{min-width:0}
 li .lt{font-size:.6rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
 li .pu{display:block;font-size:.72rem;font-weight:700;color:var(--chip-ink)}
@@ -89,21 +92,22 @@ function message(h, p){ main.innerHTML = `<div class="msg"><h2>${esc(h)}</h2><p>
 function renderBoard(b){
   document.title = `${b.teacher_name} — Dismissal`;
   document.getElementById('title').textContent = b.teacher_name;
-  document.getElementById('subtitle').textContent = 'Dismissal · ' + fmtDate(b.board_date);
+  document.getElementById('subtitle').textContent = 'Dismissal · ' + fmtDate(b.board_date) + (b.dismissed ? ` · ${b.dismissed} dismissed` : '');
   document.getElementById('stamp').innerHTML = `Updated<b>${esc(fmtTime(b.updated_at))}</b>`;
   const groups = (b.groups||[]).filter(g => g.students && g.students.length);
   if (!groups.length && !(b.checked_out||[]).length) return message('No students listed', 'No dismissal entries for this class today.');
   let html = '<div class="cols">';
   for (const g of groups){
     const k = kindOf(g);
-    html += `<section class="col" data-k="${k}"><h2>${esc(g.method)}<span>${g.students.length}</span></h2>`;
+    const left = g.students.filter(s => !s.gone).length;
+    html += `<section class="col" data-k="${k}"><h2>${esc(g.method)}<span>${left === g.students.length ? left : left + ' of ' + g.students.length + ' left'}</span></h2>`;
     if (k === 'bus') {
       // Sub-group by bus number
       const by = {};
       for (const s of g.students){ (by[s.detail || '—'] ||= []).push(s); }
       const keys = Object.keys(by).sort((a,b)=>(parseFloat(a)||999)-(parseFloat(b)||999) || a.localeCompare(b));
       for (const n of keys){
-        html += `<div class="sub-h">Bus ${esc(n)}</div><ul>` + by[n].map(s=>`<li class="${s.changed?'chg':''}"><span>${esc(s.name)}${s.late?' <small class="lt">late</small>':''}</span>${who(s)}${s.changed?'<span class="chg">Changed</span>':''}</li>`).join('') + '</ul>';
+        html += `<div class="sub-h">Bus ${esc(n)}</div><ul>` + by[n].map(s=>`<li class="${s.gone?'gone':s.changed?'chg':''}"><span>${esc(s.name)}${s.late?' <small class="lt">late</small>':''}</span>${who(s)}${s.gone?`<span class="gn">✓ ${esc(s.gone)}</span>`:s.changed?'<span class="chg">Changed</span>':''}</li>`).join('') + '</ul>';
       }
     } else {
       // Show the sub-method (e.g. car number or program) only when it adds information
@@ -111,7 +115,7 @@ function renderBoard(b){
         // A changed car rider shows who is picking up under the name, so the badge always fits.
         const pickup = k === 'car' && s.changed && s.detail;
         const d = s.detail && !pickup && !/^car rider$/i.test(s.detail) ? `<span class="tag">${esc(s.detail)}</span>` : '';
-        return `<li class="${s.changed?'chg':''}"><span>${esc(s.name)}${s.late?' <small class="lt">late</small>':''}${pickup ? `<small class="pu">with ${esc(s.detail)}</small>` : ''}</span>${who(s)}${d}${s.changed?'<span class="chg">Changed</span>':''}</li>`;
+        return `<li class="${s.gone?'gone':s.changed?'chg':''}"><span>${esc(s.name)}${s.late?' <small class="lt">late</small>':''}${pickup && !s.gone ? `<small class="pu">with ${esc(s.detail)}</small>` : ''}</span>${who(s)}${s.gone?'':d}${s.gone?`<span class="gn">✓ ${esc(s.gone)}</span>`:s.changed?'<span class="chg">Changed</span>':''}</li>`;
       }).join('') + '</ul>';
     }
     html += '</section>';
@@ -160,7 +164,11 @@ async function load(){
   }catch(e){ /* keep showing the last good board; retry next tick */ }
 }
 load();
-setInterval(load, 60000);
+// Refresh every minute (every 30 seconds during dismissal, 2:35–3:30 PM) so dismissed students show right away.
+function nyHM(){ return new Intl.DateTimeFormat('en-GB',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date()); }
+let tickN = 0;
+setInterval(() => { tickN++; const hm = nyHM(); if ((hm >= '14:35' && hm < '15:30') || tickN % 2 === 0) load(); }, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
 // Reload once a day overnight so the page picks up any updates
 setTimeout(() => location.reload(), 6 * 3600 * 1000);
 </script>

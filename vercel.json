@@ -2,6 +2,19 @@
   "cleanUrls": true,
   "headers": [
     {
+      "source": "/(bus|carline|duty)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
       "source": "/(dismissal|classroom)(.*)",
       "headers": [
         {
@@ -114,6 +127,14 @@
     {
       "source": "/dismissal/:slug",
       "destination": "/dismissal"
+    },
+    {
+      "source": "/bus",
+      "destination": "/duty"
+    },
+    {
+      "source": "/carline",
+      "destination": "/duty"
     }
   ]
 }

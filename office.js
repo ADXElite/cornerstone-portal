@@ -54,11 +54,13 @@ function badges(m) {
   $('#b-notes').hidden = !m.pending_notes; $('#b-notes').textContent = m.pending_notes;
   $('#b-trans').hidden = !m.new_changes; $('#b-trans').textContent = m.new_changes;
   $('#b-sio').hidden = !m.signins_todo; $('#b-sio').textContent = m.signins_todo;
+  const home = (m.new_changes || 0) + (m.pickup_todo || 0) + (m.notes_todo || 0) + (m.other_todo || 0) + (m.signins_todo || 0);
+  $('#b-home').hidden = !home; $('#b-home').textContent = home;
 }
 async function refreshBadges() { try { ME = await call('staff_me'); badges(ME); } catch {} }
 
 // ---------- routing ----------
-const VIEWS = ['dash', 'notes', 'transport', 'signins', 'pins', 'students', 'roster', 'settings'];
+const VIEWS = ['dash', 'students', 'student', 'buses', 'alerts', 'notes', 'transport', 'signins', 'pins', 'roster', 'settings'];
 let sioTimer = null;
 function route() {
   if (!ME) return;
@@ -66,10 +68,12 @@ function route() {
   const view = VIEWS.includes(v) ? v : 'dash';
   VIEWS.forEach(x => $('#p-' + x).hidden = x !== view);
   clearInterval(sioTimer);
-  $$('.otabs a').forEach(a => a.dataset.v === view ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
+  const tab = view === 'student' ? 'students' : view;
+  $$('.otabs a').forEach(a => a.dataset.v === tab ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
   ({ dash: loadDash, notes: loadNotes, transport: () => { if (q === 'today') { $('#tf-by').value = 'effective'; $('#tf-from').value = $('#tf-to').value = TODAY; } loadTrans(); },
      signins: () => { loadSignins(); sioTimer = setInterval(() => { if (!document.hidden && $('#modal').hidden) loadSignins(true); }, 30000); },
-     pins: loadPins, students: () => {}, roster: loadImports, settings: loadSettings })[view]();
+     pins: loadPins, students: () => loadStudentList(), student: () => loadStudent(new URLSearchParams(q || '').get('id')),
+     buses: loadBuses, alerts: () => window.alertInfo && alertInfo(), roster: loadImports, settings: loadSettings })[view]();
 }
 addEventListener('hashchange', route);
 const closeModal = () => { $('#modal').hidden = true; $('#modal-in').innerHTML = ''; $$('[data-blob]').forEach(u => URL.revokeObjectURL(u.dataset.blob)); };
@@ -265,18 +269,6 @@ $('#sio-csv').onclick = () => {
 
 // ---------- students ----------
 const TODAY_TAG = { present: ['Present', 'ok'], late: ['Late — present', 'warn'], absent: ['Absent', ''], dismissed: ['Checked out early', 'gray'] };
-$('#sf-q').addEventListener('input', debounce(async () => {
-  const q = $('#sf-q').value.trim();
-  if (q.length < 2) return $('#s-rows').innerHTML = '';
-  const rows = await call('staff_students', { p_q: q });
-  $('#s-rows').innerHTML = rows.map(s => `<article class="stu">
-    <div class="stu-h"><div class="av">${esc(s.name[0])}</div><div><b>${esc(s.name)}${s.active ? '' : ' <span class="tag gray">Not enrolled</span>'}</b><small>ID ${s.student_id} · Grade ${esc(grade(s.grade))} · ${esc(s.teacher || '')}${s.board && s.board !== s.teacher ? ' · dismissal board: ' + esc(s.board) : ''}</small></div>${s.today ? `<span class="tag ${TODAY_TAG[s.today][1]}" style="margin-left:auto">${TODAY_TAG[s.today][0]}</span>` : ''}</div>
-    <dl class="kv"><dt>Morning</dt><dd>${esc(s.am || '—')}</dd><dt>Afternoon</dt><dd>${esc(s.pm || '—')}</dd>
-      <dt>Parent notes</dt><dd>${s.parent_notes_approved} of ${LIMIT} approved this semester · ${s.doctor_notes} doctor's note${s.doctor_notes === 1 ? '' : 's'}</dd>
-      <dt>Sign-in parents</dt><dd>${s.guardians.map(g => `${g.pin ? `<span class="pin sm">${g.pin}</span> ` : ''}${esc(g.name)} (${esc(g.relationship || '')}) · ${esc(g.phone || 'no phone')} · ${esc(g.email || 'no email')}`).join('<br>') || '—'}</dd>
-      <dt>Pickup people</dt><dd>${s.pickups.map(p => `${p.pin ? `<span class="pin sm">${p.pin}</span> ` : ''}${esc(p.name)}${p.relationship ? ' (' + esc(p.relationship) + ')' : ''}${p.phone ? ' · ' + esc(p.phone) : ''}`).join('<br>') || '—'}</dd></dl></article>`).join('')
-    || '<div class="card">No matches.</div>';
-}));
 
 // ---------- pick-up & PIN report ----------
 let PINS = [], PINF = null;
@@ -374,10 +366,19 @@ let SET = null;
 async function loadSettings() {
   const [staff, set] = await Promise.all([call('staff_staff_list'), call('staff_settings')]);
   SET = set;
-  $('#staff-list').innerHTML = staff.map(s => `<div class="row"><div class="txt"><b>${esc(s.name || s.email)}</b><p>${esc(s.email)}${s.has_login ? '' : ' · <b style="display:inline;color:var(--red)">needs a sign-in</b>'}</p></div>
-    <button class="btn ${s.active ? 'ghost' : ''} sm" data-e="${esc(s.email)}" data-a="${s.active ? 0 : 1}">${s.active ? 'Turn off' : 'Turn on'}</button></div>`).join('');
+  const ROLE = { office: ['Front office', 'ok'], carline: ['Car line', 'warn'], bus: ['Bus driver', 'gray'] };
+  $('#staff-list').innerHTML = staff.map(s => `<div class="row"><div class="txt"><b>${esc(s.name || s.email)} <span class="tag ${ROLE[s.role][1]}">${ROLE[s.role][0]}</span>${s.active ? '' : ' <span class="tag gray">Off</span>'}</b>
+      <p>${esc(s.email)}${s.has_login ? (s.last_sign_in ? ' · last signed in ' + stamp(s.last_sign_in) : ' · has a sign-in') : ' · <b style="display:inline;color:var(--red)">no sign-in yet</b>'}</p></div>
+    <span class="actions"><button class="btn ghost sm" data-pw="${esc(s.email)}">${s.has_login ? 'Reset password' : 'Create sign-in'}</button>
+    <button class="btn ${s.active ? 'ghost' : ''} sm" data-e="${esc(s.email)}" data-r="${s.role}" data-a="${s.active ? 0 : 1}">${s.active ? 'Turn off' : 'Turn on'}</button></span></div>`).join('');
   $$('#staff-list [data-e]').forEach(b => b.onclick = async () => {
-    try { await call('staff_staff_save', { p_email: b.dataset.e, p_name: null, p_active: b.dataset.a === '1' }); loadSettings(); } catch (e) { $('#sa-err').textContent = emsg(e); }
+    try { await call('staff_staff_save', { p_email: b.dataset.e, p_name: null, p_active: b.dataset.a === '1', p_role: b.dataset.r }); loadSettings(); } catch (e) { $('#sa-err').textContent = emsg(e); }
+  });
+  $$('#staff-list [data-pw]').forEach(b => b.onclick = async () => {
+    const pw = prompt(`New password for ${b.dataset.pw} (at least 8 characters):`); if (!pw) return;
+    const st = staff.find(x => x.email === b.dataset.pw);
+    try { await staffUsers(st.has_login ? { action: 'password', email: b.dataset.pw, password: pw } : { action: 'create', email: b.dataset.pw, name: st.name, role: st.role, password: pw }); toast('Password saved. Share it with them privately.'); loadSettings(); }
+    catch (x) { $('#sa-err').textContent = x.message; }
   });
   drawSems(set.semesters);
   call('staff_kiosks').then(ks => {
@@ -407,10 +408,24 @@ $('#set-save').onclick = async () => {
     toast('Rules saved');
   } catch (e) { $('#set-err').textContent = emsg(e); }
 };
+async function staffUsers(body) {
+  const { data } = await sb.auth.getSession();
+  const r = await fetch('https://cvvdwhgdiqnoqgxtgzfw.supabase.co/functions/v1/portal-staff-users', { method: 'POST',
+    headers: { Authorization: 'Bearer ' + data.session.access_token, apikey: 'sb_publishable_hnUHrqYS2un679djbzsXxg_oLYDQDp0', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Could not save.');
+  return j;
+}
 $('#f-staff').addEventListener('submit', async e => {
   e.preventDefault(); $('#sa-err').textContent = '';
-  try { await call('staff_staff_save', { p_email: $('#sa-email').value, p_name: $('#sa-name').value, p_active: true }); $('#f-staff').reset(); loadSettings(); toast('Staff added'); }
-  catch (x) { $('#sa-err').textContent = emsg(x); }
+  const b = e.submitter; b.disabled = true;
+  try {
+    await staffUsers({ action: 'create', email: $('#sa-email').value, name: $('#sa-name').value, role: $('#sa-role').value, password: $('#sa-pass').value });
+    const where = { carline: 'portal.csjax.org/carline', bus: 'portal.csjax.org/bus', office: 'portal.csjax.org/office' }[$('#sa-role').value];
+    alert(`Sign-in created.\n\nGive them: ${where}\nEmail: ${$('#sa-email').value.trim().toLowerCase()}\nPassword: the one you just typed`);
+    $('#f-staff').reset(); loadSettings();
+  } catch (x) { $('#sa-err').textContent = x.message; }
+  b.disabled = false;
 });
 
 boot();

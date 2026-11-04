@@ -62,6 +62,17 @@ tr.done td{opacity:.6}
 .hits2 button small{color:var(--muted);font-weight:600}
 tr.grp td{background:var(--bg);border-top:2px solid var(--line);padding-top:12px}
 @media print{.top,.otabs,.noprint,#who,.toast{display:none!important}main{padding:0}.tw{border:0;overflow:visible}th{position:static}body{background:#fff}.pin.sm{background:#000;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}tr{break-inside:avoid}}
+.azbar{display:flex;flex-wrap:wrap;gap:4px}
+.azbar a{min-width:30px;text-align:center;padding:4px 6px;border:1px solid var(--line);border-radius:6px;text-decoration:none;font-weight:700;font-size:.85rem;background:var(--surface)}
+.sgrid{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;align-items:start}
+@media (max-width:900px){.sgrid{grid-template-columns:1fr}}
+.roster{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;color:#141213}
+.roster h3{font-family:var(--display);font-weight:800;font-size:1.6rem;text-transform:uppercase;margin:0;display:flex;justify-content:space-between;align-items:baseline}
+.roster h4{margin:12px 0 4px;font-size:.95rem;border-bottom:2px solid #141213;padding-bottom:2px}
+.roster table td{padding:5px 8px;border-top:1px solid #E4DFDF}
+.roster .abs td{color:#8a8486;text-decoration:line-through}
+.roster .chk{width:22px;height:22px;border:2px solid #141213;border-radius:4px;display:inline-block}
+@media print{.roster{border:0;break-after:page;padding:0}.roster:last-child{break-after:auto}#bz-print{display:block}}
 .fx{width:26px;height:26px;accent-color:var(--ok);cursor:pointer}
 td.c{text-align:center}
 td.c small{text-align:center}
@@ -89,33 +100,29 @@ td.c small{text-align:center}
 
   <section class="screen" id="v-app" hidden>
     <nav class="otabs">
-      <a href="#dash" data-v="dash">Home</a>
-      <a href="#notes" data-v="notes">Notes report <span class="badge" id="b-notes" hidden></span></a>
-      <a href="#transport" data-v="transport">Dismissal report <span class="badge" id="b-trans" hidden></span></a>
-      <a href="#signins" data-v="signins">Sign-In/Out report <span class="badge" id="b-sio" hidden></span></a>
-      <a href="#pins" data-v="pins">Pick-up &amp; PIN report</a>
+      <a href="#dash" data-v="dash">Home <span class="badge" id="b-home" hidden></span></a>
       <a href="#students" data-v="students">Students</a>
-      <a href="#roster" data-v="roster">Roster upload</a>
+      <a href="#buses" data-v="buses">Buses &amp; car line</a>
+      <a href="#alerts" data-v="alerts">Alerts</a>
+      <a href="#notes" data-v="notes">Notes <span class="badge" id="b-notes" hidden></span></a>
+      <a href="#transport" data-v="transport">Dismissal changes <span class="badge" id="b-trans" hidden></span></a>
+      <a href="#signins" data-v="signins">Sign-in/out <span class="badge" id="b-sio" hidden></span></a>
+      <a href="#pins" data-v="pins">PINs</a>
+      <a href="#roster" data-v="roster">Data upload</a>
       <a href="#settings" data-v="settings">Settings</a>
     </nav>
 
     <!-- Today -->
     <div class="screen" id="p-dash" hidden>
       <div class="hbar">
-        <div class="seg sm" role="radiogroup" aria-label="Show">
-          <label><input type="radio" name="h-show" value="todo" checked><span>Needs entering in FACTS</span></label>
-          <label><input type="radio" name="h-show" value="all"><span>Everything</span></label>
-        </div>
-        <label class="hdate" id="h-dates" hidden>From <input type="date" id="h-from"> to <input type="date" id="h-to"></label>
+        <div><h1 style="font-size:1.8rem">Needs attention</h1><p class="muted small">Changes, notes and sign-ins/outs that still need to be approved or entered in FACTS. Checked items drop off this list.</p></div>
         <span class="muted small" id="h-updated"></span>
       </div>
-      <div class="card" id="h-today" style="padding:10px 14px"></div>
+      <input type="radio" name="h-show" value="todo" checked hidden>
       <nav class="jump">
         <a href="#sec-changes">Change requests <span class="badge" id="j-changes" hidden></span></a>
         <a href="#sec-sio">Late sign-in &amp; early sign-out <span class="badge" id="j-sio" hidden></span></a>
         <a href="#sec-notes">Excused attendance notes <span class="badge" id="j-notes" hidden></span></a>
-        <a href="#sec-enter">Enter a change</a>
-        <a href="#sec-alert">Send a parent alert</a>
       </nav>
 
       <section class="hsec" id="sec-changes">
@@ -141,47 +148,6 @@ td.c small{text-align:center}
         <div class="tw"><table><thead><tr><th>Student</th><th>Type</th><th>Date absent</th><th>Reason</th><th>Review</th><th>Download</th><th class="c">Entered in FACTS</th></tr></thead><tbody id="h-notes"></tbody></table></div>
       </section>
 
-      <section class="hsec" id="sec-enter">
-        <h2 class="hh">Enter a change</h2>
-        <div class="card form">
-          <label>Student <input type="search" id="e-q" placeholder="Type a student's name or ID" autocomplete="off"></label>
-          <div class="hits2" id="e-hits"></div>
-          <div id="e-student"></div>
-          <label>What's changing?
-            <select id="e-type">
-              <option value="">Choose…</option>
-              <option value="transport">Transportation / dismissal change</option>
-              <option value="pickup_add">Add a pick-up person</option>
-              <option value="pickup_remove">Remove a pick-up person</option>
-              <option value="late_in">Late sign-in</option>
-              <option value="early_out">Early check-out</option>
-              <option value="other">Other details</option>
-            </select>
-          </label>
-          <div id="e-fields" class="stack"></div>
-          <div class="actions"><button class="btn" id="e-save" type="button">Save change</button></div>
-          <p class="err" id="e-err"></p>
-        </div>
-      </section>
-
-      <section class="hsec" id="sec-alert">
-        <h2 class="hh">Send a parent alert</h2>
-        <div class="card form">
-          <p class="muted small" id="a-info">Push alerts go to parents who added the app to their phone and turned on alerts.</p>
-          <label>Title <input type="text" id="a-title" maxlength="80" placeholder="Early dismissal today"></label>
-          <label>Message <textarea id="a-body" rows="3" maxlength="300" placeholder="School will dismiss at 12:30 PM due to weather."></textarea></label>
-          <div class="two">
-            <label>Send to
-              <select id="a-aud"><option value="all">All families</option><option value="grade">One grade</option><option value="teacher">One homeroom</option><option value="student">One student's family</option></select>
-            </label>
-            <label id="a-pick-l" hidden>Which? <select id="a-pick"></select></label>
-          </div>
-          <div id="a-stu-wrap" hidden><label>Student <input type="search" id="a-q" placeholder="Type a student's name" autocomplete="off"></label><div class="hits2" id="a-hits"></div></div>
-          <div class="actions"><button class="btn" id="a-send" type="button">Send alert</button><span class="muted small" id="a-res"></span></div>
-          <div class="list" id="a-log"></div>
-        </div>
-      </section>
-      <p class="muted small" id="dash-import"></p>
     </div>
 
     <!-- Notes -->
@@ -242,15 +208,92 @@ td.c small{text-align:center}
 
     <!-- Students -->
     <div class="screen" id="p-students" hidden>
-      <div class="bar"><label class="grow">Find a student or parent<input type="search" id="sf-q" placeholder="Student name, ID, parent name, phone or email"></label></div>
-      <div id="s-rows" class="stack"></div>
+      <div class="bar">
+        <div class="seg sm" role="radiogroup" aria-label="Which students">
+          <label><input type="radio" name="sl-arch" value="0" checked><span>Current students</span></label>
+          <label><input type="radio" name="sl-arch" value="1"><span>Archived</span></label>
+        </div>
+        <label>Grade<select id="sl-grade"></select></label>
+        <label>Teacher<select id="sl-teacher"></select></label>
+        <span class="cnt" id="sl-count"></span>
+      </div>
+      <div class="azbar" id="sl-az"></div>
+      <div class="tw"><table><thead><tr><th>Student</th><th>Grade</th><th>Homeroom / board</th><th>Today</th><th>Going home</th></tr></thead><tbody id="sl-rows"></tbody></table></div>
+    </div>
+
+    <div class="screen" id="p-student" hidden>
+      <a href="#students" class="link" style="justify-self:start">‹ All students</a>
+      <div id="st-head"></div>
+      <div class="sgrid">
+        <div class="stack" id="st-left"></div>
+        <div class="stack">
+          <section class="card form" id="sec-enter">
+            <b class="t">Enter a change for this student</b>
+            <div id="e-student" hidden></div>
+            <label>What's changing?
+              <select id="e-type">
+                <option value="">Choose…</option>
+                <option value="transport">Transportation / dismissal change</option>
+                <option value="pickup_add">Add a pick-up person</option>
+                <option value="pickup_remove">Remove a pick-up person</option>
+                <option value="late_in">Late sign-in</option>
+                <option value="early_out">Early check-out</option>
+                <option value="other">Other details</option>
+              </select>
+            </label>
+            <div id="e-fields" class="stack"></div>
+            <div class="actions"><button class="btn" id="e-save" type="button">Save change</button></div>
+            <p class="err" id="e-err"></p>
+            <p class="muted small">Saved changes go on the Home list to enter in FACTS.</p>
+          </section>
+          <div id="st-right" class="stack"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Buses & car line -->
+    <div class="screen" id="p-buses" hidden>
+      <div class="card noprint" id="h-today" style="padding:10px 14px"></div>
+      <div class="card noprint" id="bz-progress" style="padding:10px 14px"></div>
+      <div class="card noprint">
+        <b class="t">Bus rosters for today</b>
+        <p class="muted small">Built from today's transportation (including parent and office changes for today) and today's attendance. Print right before dismissal for the most current list.</p>
+        <div class="actions noprint" id="bz-buttons"></div>
+      </div>
+      <div id="bz-print" class="stack"></div>
+      <div class="card noprint">
+        <b class="t">Driver and car line screens</b>
+        <p>Bus drivers: <b>portal.csjax.org/bus</b> · Car line: <b>portal.csjax.org/carline</b>. They sign in with the staff accounts you create under Settings → Staff sign-ins.</p>
+      </div>
+    </div>
+
+    <!-- Alerts -->
+    <div class="screen" id="p-alerts" hidden>
+      <section class="hsec" id="sec-alert">
+        <h2 class="hh">Send a parent alert</h2>
+        <div class="card form">
+          <p class="muted small" id="a-info">Push alerts go to parents who added the app to their phone and turned on alerts.</p>
+          <label>Title <input type="text" id="a-title" maxlength="80" placeholder="Early dismissal today"></label>
+          <label>Message <textarea id="a-body" rows="3" maxlength="300" placeholder="School will dismiss at 12:30 PM due to weather."></textarea></label>
+          <div class="two">
+            <label>Send to
+              <select id="a-aud"><option value="all">All families</option><option value="transport">By transportation (today)</option><option value="grade">One grade</option><option value="teacher">One homeroom</option><option value="student">One student's family</option></select>
+            </label>
+            <label id="a-pick-l" hidden>Which? <select id="a-pick"></select></label>
+            <label id="a-bus-l" hidden>Bus <select id="a-bus"></select></label>
+          </div>
+          <div id="a-stu-wrap" hidden><label>Student <input type="search" id="a-q" placeholder="Type a student's name" autocomplete="off"></label><div class="hits2" id="a-hits"></div></div>
+          <div class="actions"><button class="btn" id="a-send" type="button">Send alert</button><span class="muted small" id="a-res"></span></div>
+          <div class="list" id="a-log"></div>
+        </div>
+      </section>
     </div>
 
     <!-- Roster -->
     <div class="screen" id="p-roster" hidden>
       <div class="card">
         <b class="t">Daily file from the SFTP server</b>
-        <p>Upload the student &amp; parent CSV to the <b>uploads</b> folder on the SFTP server (141.148.36.44, login <b>ccsftp</b>). The portal checks every 30 minutes on school days from 6&nbsp;AM to 6&nbsp;PM, imports the newest file, and moves it to <b>processed</b>.</p>
+        <p>Upload the student &amp; parent CSV to the <b>uploads</b> folder on the SFTP server (141.148.36.44, login <b>ccsftp</b>). On school days the portal checks at <b>10:00 AM</b> and <b>5:00 PM</b> for the student &amp; parent file and at <b>11:30 AM</b> for the daily attendance file (and keeps checking every 5 minutes for half an hour in case a file is late), imports the newest of each, and moves them to <b>processed</b>.</p>
         <div id="sftp-errors"></div>
         <div class="actions">
           <button class="btn sm" id="sftp-go" type="button">Check SFTP now</button>
@@ -260,21 +303,29 @@ td.c small{text-align:center}
       </div>
       <div class="card">
         <b class="t">Or upload the file here</b>
-        <p>Same file, same result — use this if the SFTP server is down. It updates students, transportation, parents/guardians used for sign-in, and pickup people. Students missing from the file are turned off.</p>
+        <p>Same file, same result — use this if the SFTP server is down. It updates students, transportation, parents/guardians used for sign-in, and pickup people. Students missing from the file are archived — their history stays and they appear under Students → Archived.</p>
         <label class="drop"><input type="file" id="r-file" accept=".csv,text/csv"><b>Choose CSV file</b><small class="muted">Nothing changes until you confirm</small></label>
         <div id="r-preview"></div>
         <p class="err" id="r-err"></p>
       </div>
-      <div><h2>Recent uploads</h2><div class="tw"><table><thead><tr><th>When</th><th>By</th><th>Rows</th><th>Students</th><th>Parents</th><th>Pickup people</th><th>Turned off</th></tr></thead><tbody id="r-hist"></tbody></table></div></div>
+      <div><h2>Recent uploads</h2><div class="tw"><table><thead><tr><th>When</th><th>By</th><th>Rows</th><th>Students</th><th>Parents</th><th>Pickup people</th><th>Archived</th></tr></thead><tbody id="r-hist"></tbody></table></div></div>
     </div>
 
     <!-- Settings -->
     <div class="screen" id="p-settings" hidden>
       <div class="card">
-        <b class="t">Front office staff</b>
-        <p class="muted small">Everyone listed and active can review notes, see the change report, and gets an email for every parent dismissal change. Each person also needs a sign-in (Supabase → Authentication → Users → Add user).</p>
+        <b class="t">Staff sign-ins</b>
+        <p class="muted small"><b>Front office</b> — the whole office portal, plus emails for every parent change. <b>Car line</b> — only portal.csjax.org/carline. <b>Bus driver</b> — only portal.csjax.org/bus.</p>
         <div class="list" id="staff-list"></div>
-        <form class="bar" id="f-staff"><label class="grow">Email<input type="email" id="sa-email" required></label><label class="grow">Name<input type="text" id="sa-name"></label><button class="btn sm">Add staff</button></form>
+        <form class="stack" id="f-staff" style="margin-top:6px">
+          <div class="bar">
+            <label class="grow">Name<input type="text" id="sa-name" required></label>
+            <label class="grow">Email<input type="email" id="sa-email" required></label>
+            <label>Role<select id="sa-role"><option value="carline">Car line</option><option value="bus">Bus driver</option><option value="office">Front office</option></select></label>
+            <label>Password<input type="text" id="sa-pass" minlength="8" placeholder="At least 8 characters" autocomplete="off" required></label>
+            <button class="btn sm">Create sign-in</button>
+          </div>
+        </form>
         <p class="err" id="sa-err"></p>
       </div>
       <div class="card">
@@ -310,5 +361,6 @@ td.c small{text-align:center}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="/office.js"></script>
 <script src="/office-home.js"></script>
+<script src="/office-more.js"></script>
 </body>
 </html>

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cornerstone Dismissal</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#141213">
+<link rel="icon" href="/icons/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/theme.css">
+<style>
+.top-in{justify-content:space-between}
+.top img{height:46px}
+.who{color:#F6F4F4;font-size:.85rem;text-align:right;line-height:1.25}
+.who button{background:none;border:0;color:#FF8C92;font-weight:700;cursor:pointer;padding:0;font-size:.85rem}
+main{padding-bottom:40px}
+.hd{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.hd h1{font-size:2.2rem}
+.prog{font-weight:700;color:var(--muted)}
+.buses{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.buses button{border:2px solid var(--line);background:var(--surface);border-radius:16px;padding:18px;text-align:left;cursor:pointer;color:var(--ink);display:grid;gap:4px}
+.buses b{font-family:var(--display);font-weight:800;font-size:2.2rem;line-height:1}
+.buses small{color:var(--muted);font-weight:600}
+.stop{font-family:var(--display);font-weight:800;font-size:1.15rem;text-transform:uppercase;letter-spacing:.03em;margin:14px 0 6px;display:flex;justify-content:space-between;gap:8px}
+.kid{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:2px solid var(--line);background:var(--surface);border-radius:14px;padding:12px 14px;cursor:pointer;color:var(--ink);margin-bottom:8px;min-height:64px}
+.kid .box{width:34px;height:34px;border-radius:10px;border:3px solid var(--line);flex:none;display:grid;place-items:center;font-weight:800;font-size:1.2rem;color:#fff}
+.kid b{display:block;font-size:1.15rem;line-height:1.2}
+.kid small{color:var(--muted);font-weight:600}
+.kid .st{margin-left:auto;text-align:right;flex:none}
+.kid.on{border-color:var(--ok);background:var(--ok-bg)}
+.kid.on .box{background:var(--ok);border-color:var(--ok)}
+.kid.out{opacity:.55;cursor:default}
+.kid.chg{box-shadow:inset 5px 0 0 var(--red)}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tools input[type=search]{flex:1 1 220px;font-size:1.1rem;min-height:50px}
+.people{display:grid;gap:10px}
+.person{display:flex;align-items:center;gap:12px;border:2px solid var(--line);background:var(--surface);border-radius:14px;padding:14px;cursor:pointer;text-align:left;color:var(--ink);min-height:64px}
+.person b{font-size:1.15rem;display:block}
+.person small{color:var(--muted)}
+.person:hover,.person:focus-visible{border-color:var(--red)}
+.person.today{border-color:var(--red);background:var(--chip)}
+.sheet{position:fixed;inset:0;z-index:30;background:rgba(10,9,9,.62);display:flex;align-items:flex-end;justify-content:center}
+.sheet-in{background:var(--bg);width:100%;max-width:640px;max-height:90vh;overflow-y:auto;border-radius:22px 22px 0 0;padding:18px max(16px,env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));display:grid;gap:14px}
+@media (min-width:700px){.sheet{align-items:center}.sheet-in{border-radius:22px}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><img src="/icons/logo-horizontal.webp" alt="Cornerstone Christian School" width="148" height="46"><div class="who" id="who" hidden></div></div></header>
+<main>
+  <section class="screen" id="v-login" hidden>
+    <div class="today"><div class="date" id="lg-what">Dismissal</div><h1>Staff sign in</h1></div>
+    <form class="card form" id="f-login" style="max-width:460px">
+      <label>School email <input type="email" id="lg-email" autocomplete="username" required></label>
+      <label>Password <input type="password" id="lg-pass" autocomplete="current-password" required></label>
+      <button class="btn" type="submit">Sign in</button>
+      <p class="err" id="lg-err" role="alert"></p>
+    </form>
+  </section>
+  <section class="screen" id="v-app" hidden></section>
+</main>
+<div class="sheet" id="sheet" hidden><div class="sheet-in" id="sheet-in" role="dialog" aria-modal="true"></div></div>
+<div class="toast" id="toast" role="status" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="/duty.js"></script>
+</body>
+</html>

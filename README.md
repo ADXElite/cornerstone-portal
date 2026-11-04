@@ -93,3 +93,13 @@ Front office staff list (each also needs a Supabase sign-in: Authentication → 
 SFTP: the import detects each file by its columns, imports the newest roster and the newest attendance file, and moves everything to /processed. The pg_cron job now runs every 15 minutes on school days.
 
 **Office:** new *Pick-up & PIN report* tab (every parent/guardian and pick-up person per student with PIN, FACTS ID, where the PIN came from; search, grade/teacher filter, print, CSV). Home shows today's present/late/absent/checked-out counts; Students search shows today's status and dismissal board.
+
+## Phase 6: buses, car line, roles, archive (Nov 2026)
+- **Import schedule** (`private.portal_sftp_tick`, pg_cron every 5 min): on school days it calls `/api/sftp-import` only in the windows 10:00–10:30 AM and 5:00–5:30 PM (student & parent file) and 11:30 AM–12:00 PM (daily attendance), New York time (handles daylight saving).
+- **Roles** (`portal_staff.role`): `office` (office portal), `carline` (`/carline` only), `bus` (`/bus` only). Office creates sign-ins in Settings → Staff sign-ins (Edge Function `portal-staff-users`).
+- **Bus drivers — `/bus`:** pick a bus (remembered), see today's riders by stop with present/absent, tap when a student boards.
+- **Car line — `/carline`:** today's car riders; tap a student, pick the authorized pick-up person; saved in `portal_dismissals`.
+- **Today's plan** (`private.portal_plan_today`): roster transportation + today's dismissal changes + attendance + early check-outs. Used by bus rosters, car line, alerts and boards.
+- **Boards:** students marked on a bus / picked up show greyed with ✓ ("On bus 5 · 3:12", "Picked up by …"); column headers show how many are left. Boards refresh every 30 s from 2:35–3:30 PM, otherwise every minute.
+- **Office:** Home shows only items to approve/enter in FACTS. Students = A–Z list (current or archived) → student page with today's plan, people & PINs, full history, and *Enter a change*. Buses & car line = attendance today, dismissal progress, printable bus rosters (one page per bus, by stop, present/absent). Alerts can target today's transportation (car riders, Bus 1/4/5, after care…).
+- **Archive:** students missing from the file are archived (`archived_at`) with all history kept; they return automatically if they reappear.
