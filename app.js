@@ -16,6 +16,10 @@ const ERR = {
   sms_failed: "We couldn't send the text. Please try again or use your email address.",
   email_failed: "We couldn't send the email. Please try again or use your phone number.",
   signed_out: 'Your sign-in expired. Please sign in again.',
+  guardian_only: 'Only a parent or guardian on file can do this for that student.',
+  need_name: "Enter the person's first and last name.", need_phone: 'Enter a 10-digit cell phone number.', bad_email: 'Check the email address.',
+  already_on_list: 'That person is already on the pick-up list.', cant_remove_guardian: "Parents/guardians can't be removed here. Please call the front office.",
+  not_on_list: 'That person is no longer on the list.',
   limit_reached: "This student already has 5 approved parent notes this semester. A doctor's note is needed for this absence to be excused.",
   too_late: 'Parent notes must be submitted within 5 school days of the absence. Please contact the front office.',
   duplicate: 'A note for this student and date has already been submitted.',
@@ -62,11 +66,11 @@ let HOME = null, ident = null;
 const S = { files: [] };
 
 // ---------- routing ----------
-const SCREENS = ['login', 'home', 'note', 'doctor', 'dismissal', 'history', 'done'];
+const SCREENS = ['login', 'home', 'note', 'doctor', 'dismissal', 'pickups', 'history', 'done'];
 function show(name) {
   SCREENS.forEach(s => $('#s-' + s).hidden = s !== name);
   $('#tabs').hidden = name === 'login';
-  const tab = name === 'doctor' ? 'note' : name;
+  const tab = name === 'doctor' ? 'note' : name === 'pickups' ? 'home' : name;
   $$('.tabs a').forEach(a => { if (a.dataset.t === tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   window.scrollTo(0, 0);
 }
@@ -76,6 +80,7 @@ async function route() {
   if (h === 'note') { renderNote(); show('note'); }
   else if (h === 'doctor') { renderDoctor(); show('doctor'); }
   else if (h === 'dismissal') { renderTrans(); show('dismissal'); }
+  else if (h === 'pickups') { renderPickups(); show('pickups'); }
   else if (h === 'history') { show('history'); loadHistory(); }
   else if (h === 'done') show('done');
   else { renderHome(); show('home'); }
@@ -96,7 +101,7 @@ $('#f-start').addEventListener('submit', async e => {
   busy(btn, true, 'Sending…');
   try {
     const r = await api('/api/auth', { action: 'start', identifier: ident });
-    if (r.trusted) { await loadHome(); location.hash = '#home'; route(); return; }
+    if (r.trusted) { await loadHome(); location.hash = '#home'; route(); afterSignIn(); return; }
     $('#li-masked').textContent = r.masked;
     $('#f-start').hidden = true; $('#f-code').hidden = false; $('#li-code').value = ''; $('#li-code').focus();
   } catch (err) { $('#li-err').textContent = msg(err.message); }
@@ -108,15 +113,16 @@ $('#f-code').addEventListener('submit', async e => {
   busy(btn, true, 'Checking…');
   try {
     await api('/api/auth', { action: 'verify', identifier: ident, code: $('#li-code').value });
-    await loadHome(); location.hash = '#home'; route();
+    await loadHome(); location.hash = '#home'; route(); afterSignIn();
   } catch (err) { $('#code-err').textContent = msg(err.message); }
   finally { busy(btn, false); }
 });
 $('#li-code').addEventListener('input', e => { const v = e.target.value.replace(/\D/g, ''); e.target.value = v; if (v.length === 6) $('#f-code').requestSubmit(); });
 $('#li-back').onclick = () => { $('#f-code').hidden = true; $('#f-start').hidden = false; $('#li-id').focus(); };
 $('#li-resend').onclick = () => { $('#f-code').hidden = true; $('#f-start').hidden = false; $('#f-start').requestSubmit(); };
-$('#b-logout').onclick = async () => { await api('/api/auth', { action: 'logout' }).catch(() => {}); HOME = null; location.hash = ''; show('login'); };
-$('#b-forget').onclick = async () => { await api('/api/auth', { action: 'forget' }).catch(() => {}); HOME = null; location.hash = ''; show('login'); };
+async function dropPush() { try { const sub = await navigator.serviceWorker.ready.then(r => r.pushManager.getSubscription()); if (sub) { await api('/api/parent', { action: 'push', off: true, subscription: sub.toJSON() }); await sub.unsubscribe(); } } catch {} }
+$('#b-logout').onclick = async () => { await dropPush(); await api('/api/auth', { action: 'logout' }).catch(() => {}); HOME = null; location.hash = ''; show('login'); };
+$('#b-forget').onclick = async () => { await dropPush(); await api('/api/auth', { action: 'forget' }).catch(() => {}); HOME = null; location.hash = ''; show('login'); };
 
 // ---------- home ----------
 function transportLines(s) {
@@ -180,7 +186,7 @@ function renderNote() {
   $$('.lim').forEach(e => e.textContent = HOME.parent_note_limit);
   $$('.days').forEach(e => e.textContent = HOME.note_days_limit);
   picker($('#n-students'), {
-    disable: s => s.parent_notes_approved >= HOME.parent_note_limit ? `${HOME.parent_note_limit} of ${HOME.parent_note_limit} used — doctor's note needed` : null,
+    disable: s => !s.is_guardian ? 'Only parents/guardians can submit notes' : s.parent_notes_approved >= HOME.parent_note_limit ? `${HOME.parent_note_limit} of ${HOME.parent_note_limit} used — doctor's note needed` : null,
     note: s => `${s.parent_notes_approved} of ${HOME.parent_note_limit} used this semester`
   });
   const d = $('#n-date');
@@ -254,7 +260,7 @@ function signedOut() { HOME = null; show('login'); $('#li-err').textContent = ER
 
 // ---------- doctor's note ----------
 function renderDoctor() {
-  picker($('#d-students'));
+  picker($('#d-students'), { disable: s => !s.is_guardian ? 'Only parents/guardians can submit notes' : null });
   const d = $('#d-start'); d.max = addDays(HOME.today, 60); if (!d.value) d.value = HOME.today;
   $('#d-end').max = addDays(HOME.today, 90);
   drawFiles();
@@ -439,6 +445,123 @@ $('#f-trans').addEventListener('submit', async e => {
   }
 });
 
+// ---------- pick-up people ----------
+function renderPickups() {
+  picker($('#pp-students'), { disable: s => !s.is_guardian ? 'Only parents/guardians can change this list' : null, onchange: e => {
+    const cb = e.target.closest('input'); if (!cb) return;
+    if (cb.checked) $$('#pp-students input').forEach(i => { if (i !== cb) i.checked = false; });
+    drawPickups();
+  } });
+  const first = HOME.students.find(s => s.is_guardian);
+  if (first && !picked($('#pp-students')).length) { const i = $(`#pp-students input[value="${first.student_id}"]`); if (i) i.checked = true; }
+  $('#f-pp').hidden = !first;
+  drawPickups();
+}
+function drawPickups() {
+  const s = picked($('#pp-students'))[0];
+  if (!s) { $('#pp-list').innerHTML = HOME.students.some(x => x.is_guardian) ? '' : '<div class="card">Only a parent or guardian on file can change the pick-up list.</div>'; return; }
+  const rows = [
+    ...s.guardians.filter(g => g.name).map(g => `<div class="row"><div class="txt"><b>${esc(g.name)}</b><p>${esc(g.relationship || 'Parent/guardian')}${g.phone ? ' · ' + esc(g.phone) : ''}</p></div>${g.pin ? `<span class="pin sm">${g.pin}</span>` : ''}</div>`),
+    ...s.pickups.map(p => `<div class="row"><div class="txt"><b>${esc(p.name)}${p.pending ? ' <span class="tag warn">Added in app</span>' : ''}</b><p>${esc([p.relationship, p.phone].filter(Boolean).join(' · ') || 'Pick-up')}</p>
+      <button class="link" data-rm="${esc(p.key)}" data-nm="${esc(p.name)}" style="padding:4px 0">Remove</button></div>${p.pin ? `<span class="pin sm">${p.pin}</span>` : ''}</div>`)
+  ];
+  $('#pp-list').innerHTML = `<div><h2>${esc(s.first_name)}'s pick-up list</h2><div class="list">${rows.join('') || '<div class="empty">No one on file.</div>'}</div></div>`;
+}
+$('#pp-list').addEventListener('click', async e => {
+  const b = e.target.closest('[data-rm]'); if (!b) return;
+  const s = picked($('#pp-students'))[0];
+  if (!confirm(`Remove ${b.dataset.nm} from ${s.first_name}'s pick-up list? Their PIN will stop working for ${s.first_name}.`)) return;
+  b.disabled = true;
+  try {
+    await api('/api/parent', { action: 'pickup', type: 'remove', student_id: s.student_id, person_key: b.dataset.rm });
+    await loadHome(); renderPickups(); toast(`${b.dataset.nm} removed. The front office was notified.`);
+  } catch (x) { if (x.status === 401) return signedOut(); toast(msg(x.message)); b.disabled = false; }
+});
+$('#pp-phone').addEventListener('input', e => {
+  const d = e.target.value.replace(/\D/g, '').slice(0, 10);
+  e.target.value = d.length > 6 ? `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}` : d.length > 3 ? `${d.slice(0, 3)}-${d.slice(3)}` : d;
+});
+$('#f-pp').addEventListener('submit', async e => {
+  e.preventDefault();
+  const err = $('#pp-err'); err.textContent = '';
+  const s = picked($('#pp-students'))[0];
+  if (!s) return err.textContent = 'Choose a student.';
+  if (!$('#pp-first').value.trim() || !$('#pp-last').value.trim()) return err.textContent = ERR.need_name;
+  if ($('#pp-phone').value.replace(/\D/g, '').length !== 10) return err.textContent = ERR.need_phone;
+  const btn = e.submitter || $('#f-pp .btn'); busy(btn, true, 'Adding…');
+  try {
+    const r = await api('/api/parent', { action: 'pickup', type: 'add', student_id: s.student_id, first_name: $('#pp-first').value, last_name: $('#pp-last').value,
+      relationship: $('#pp-rel').value, phone: $('#pp-phone').value, email: $('#pp-email').value });
+    const nm = $('#pp-first').value.trim();
+    $('#f-pp').reset(); await loadHome(); renderPickups();
+    alert(`${nm} was added to ${s.first_name}'s pick-up list.\n\nTheir PIN is ${r.pin}. Share it with them — they'll type it on the front office iPad.`);
+  } catch (x) { if (x.status === 401) return signedOut(); err.textContent = msg(x.message); }
+  finally { busy(btn, false); }
+});
+
+// ---------- install on home screen + push alerts ----------
+const VAPID_PUBLIC = 'BEdnr4yPaJwpJFaIgOZhqymxN25eKxIQpK5rcudvfU1ERy3t4WQtlk8ialLqFbLqIvckyc0auLReADT7PWrGMWg';
+const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isAndroid = /android/i.test(navigator.userAgent);
+const isPhone = isIOS || isAndroid;
+const canPush = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const later = { get: k => { try { return +localStorage.getItem(k) || 0; } catch { return 0; } }, set: k => { try { localStorage.setItem(k, Date.now() + 3 * 864e5); } catch {} } };
+let installEvt = null;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (!$('#welcome').hidden) sheet('install'); });
+addEventListener('appinstalled', () => { $('#welcome').hidden = true; toast('Installed! Open Cornerstone from your home screen.'); });
+const SHARE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>';
+function sheet(mode) {
+  const box = $('#welcome-in');
+  if (mode === 'install') {
+    box.innerHTML = `<img class="welcome-icon" src="/icons/icon-192.png" alt="">
+      <h2 class="w-title" id="w-title">Add Cornerstone to your home screen</h2>
+      <p>Open the parent portal like an app, stay signed in, and get school alerts on your phone.</p>
+      <div class="w-perks"><span>Excused notes</span><span>Dismissal changes</span><span>Pick-up PINs</span><span>School alerts</span></div>
+      ${installEvt ? '' : isIOS ? `<ol class="w-steps"><li><span>Tap the Share button ${SHARE} at the bottom (or top) of Safari.</span></li><li><span>Scroll and tap <b>Add to Home Screen</b>, then <b>Add</b>.</span></li><li><span>Open <b>CCS Portal</b> from your home screen and turn on alerts.</span></li></ol>`
+        : `<ol class="w-steps"><li><span>Tap the <b>⋮</b> menu in your browser.</span></li><li><span>Tap <b>Install app</b> or <b>Add to Home screen</b>.</span></li><li><span>Open <b>CCS Portal</b> from your home screen and turn on alerts.</span></li></ol>`}
+      <div class="stack">${installEvt ? '<button class="btn big" id="w-install">Install the app</button>' : ''}<button class="w-later" id="w-later">Maybe later</button></div>`;
+    if ($('#w-install')) $('#w-install').onclick = async () => { installEvt.prompt(); const c = await installEvt.userChoice.catch(() => ({})); installEvt = null; if (c.outcome === 'accepted') $('#welcome').hidden = true; else sheet('install'); };
+    $('#w-later').onclick = () => { later.set('ccs_install_later'); $('#welcome').hidden = true; };
+  } else {
+    box.innerHTML = `<img class="welcome-icon" src="/icons/icon-192.png" alt="">
+      <h2 class="w-title" id="w-title">Turn on school alerts</h2>
+      <p>Get notified about closings, early dismissals, and updates on your notes and requests — straight from the Cornerstone front office.</p>
+      <div class="stack"><button class="btn big" id="w-push">Turn on alerts</button><button class="w-later" id="w-later">Not now</button></div><p class="err" id="w-err"></p>`;
+    $('#w-push').onclick = async () => { const ok = await enablePush(); if (ok) { $('#welcome').hidden = true; toast("Alerts are on. We'll notify you here."); } };
+    $('#w-later').onclick = () => { later.set('ccs_push_later'); $('#welcome').hidden = true; };
+  }
+  $('#welcome').hidden = false;
+}
+const b64u = s => { const p = '='.repeat((4 - s.length % 4) % 4); const r = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from([...r].map(c => c.charCodeAt(0))); };
+async function enablePush() {
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { if ($('#w-err')) $('#w-err').textContent = 'Alerts are blocked. Turn on notifications for this app in your phone Settings.'; syncAlertsBtn(); return false; }
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(VAPID_PUBLIC) });
+    await api('/api/parent', { action: 'push', subscription: sub.toJSON() });
+    syncAlertsBtn(); return true;
+  } catch (x) { if ($('#w-err')) $('#w-err').textContent = "Couldn't turn on alerts on this device."; return false; }
+}
+async function syncAlertsBtn() {
+  const b = $('#qa-alerts');
+  if (isPhone && !standalone) { b.hidden = false; $('#qa-alerts-s').textContent = 'Add the app to get alerts'; b.onclick = () => sheet('install'); return; }
+  if (!canPush) { b.hidden = true; return; }
+  const on = Notification.permission === 'granted' && await navigator.serviceWorker.ready.then(r => r.pushManager.getSubscription()).catch(() => null);
+  b.hidden = !!on;
+  $('#qa-alerts-s').textContent = Notification.permission === 'denied' ? 'Blocked in phone Settings' : 'Turn on notifications';
+  b.onclick = () => sheet('push');
+}
+async function afterSignIn() {
+  syncAlertsBtn();
+  // Keep this device's alert subscription linked to whoever is signed in.
+  if (canPush && Notification.permission === 'granted') navigator.serviceWorker.ready.then(r => r.pushManager.getSubscription()).then(sub => sub && api('/api/parent', { action: 'push', subscription: sub.toJSON() })).catch(() => {});
+  if (isPhone && !standalone) { if (later.get('ccs_install_later') < Date.now()) setTimeout(() => sheet('install'), 600); return; }
+  if (canPush && Notification.permission === 'default' && later.get('ccs_push_later') < Date.now()) setTimeout(() => sheet('push'), 600);
+}
+
 // ---------- history ----------
 const STATUS = { pending: ['Pending review', 'warn'], approved: ['Approved — excused', 'ok'], rejected: ['Not approved', ''], new: ['Sent to office', 'warn'], processed: ['Processed', 'ok'], cancelled: ['Cancelled', 'gray'] };
 async function loadHistory() {
@@ -466,5 +589,6 @@ async function loadHistory() {
     if (a.signedIn) { await loadHome(); }
   } catch {}
   route();
+  if (HOME) afterSignIn();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 })();

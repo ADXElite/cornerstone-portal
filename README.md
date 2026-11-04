@@ -24,6 +24,12 @@ Parent and front office web app for Cornerstone Christian School — **https://p
   - 5 wrong PINs lock the iPad for 3 minutes. A student can be checked out / signed in late once per day.
 - **Office → Sign-In/Sign-Out:** today's list (refreshes every 30 s), signatures, "Updated in FACTS" checkbox per entry (records who and when), CSV.
 
+## Phase 3 (live)
+- **Install & alerts:** after sign-in, phones get a prompt to add the portal to the home screen (iOS steps / Android install button), then to turn on alerts. Subscriptions in `portal_push_subs`; office sends from Home → *Send a parent alert* (all, grade, homeroom, one family) through the Supabase Edge Function `portal-push` (same VAPID keys as app.csjax.org). Parents are also alerted when a note is approved or not approved.
+- **Pick-up people:** parents/guardians add or remove pick-up people (Home → Pick-up people). Changes take effect right away (`portal_pickup_requests` overlaid on the FACTS list via view `portal_pickups_eff`), new people get a PIN immediately, and the office is emailed. When the FACTS import later includes/drops the person, the request is marked resolved and the PIN carries over to the FACTS Reference ID.
+- **Reference ID linking:** people are keyed by the FACTS Reference ID (`r:<id>`), and parents/guardians take the Reference ID of their matching contact row. Anyone with a phone/email in the file can sign in and sees every student they're linked to. Excused notes and pick-up list changes are limited to parents/guardians (FirstName LastName / … 1 columns); pick-up contacts can view students, see PINs and submit dismissal changes.
+- **Office Home:** Change requests (dismissal, pick-up person, other), Late sign-in & early sign-out (print 4"×2½" tardy / early-dismissal slip), Excused attendance notes (doctor's note download or generated PDF with student name, ID, date, reason, signature), Enter a change, Send a parent alert. Every item has an **Entered in FACTS** checkbox; "Needs entering in FACTS" is the default view.
+
 Phases to come: dismissal boards for teachers.
 
 ## Daily roster file

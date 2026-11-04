@@ -80,15 +80,7 @@ addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').hidden
 const TYPE = { one_day: 'One day', date_range: 'Date range', permanent: 'Permanent' };
 const when = c => c.change_type === 'date_range' ? `${nice(c.start_date)} – ${nice(c.end_date)}` : c.change_type === 'permanent' ? `From ${nice(c.start_date)}` : nice(c.start_date);
 const TS = { new: ['Not processed', 'warn'], processed: ['Processed', 'ok'], cancelled: ['Cancelled', 'gray'] };
-async function loadDash() {
-  await refreshBadges();
-  $('#st-notes').textContent = ME.pending_notes; $('#st-new').textContent = ME.new_changes; $('#st-today').textContent = ME.today_changes; $('#st-stu').textContent = ME.students; $('#st-sio').textContent = ME.signins_today;
-  const li = ME.last_import;
-  $('#dash-import').textContent = li ? `Roster last updated ${stamp(li.imported_at)} by ${li.imported_by} (${li.students} students).` : 'No roster has been uploaded yet.';
-  const rows = (await call('staff_transport', { p_from: TODAY, p_to: TODAY, p_by: 'effective', p_status: 'all' })).filter(c => c.status !== 'cancelled');
-  $('#dash-today').innerHTML = rows.map(tRow).join('') || '<tr><td colspan="6" class="empty">No dismissal changes for today.</td></tr>';
-  bindTRows($('#dash-today'), rows, loadDash);
-}
+async function loadDash() { return homeLoad(); }
 
 // ---------- notes ----------
 let NOTES = [];
@@ -148,7 +140,7 @@ async function openNote(id) {
     <p class="err" id="m-err"></p>`;
   $('#m-x').onclick = closeModal;
   const act = async st => {
-    try { await call('staff_note_review', { p_id: id, p_status: st, p_note: $('#m-note').value }); closeModal(); toast(st === 'approved' ? 'Approved' : st === 'rejected' ? 'Rejected' : 'Moved to pending'); loadNotes(); refreshBadges(); }
+    try { await call('staff_note_review', { p_id: id, p_status: st, p_note: $('#m-note').value }); closeModal(); toast(st === 'approved' ? 'Approved' : st === 'rejected' ? 'Rejected' : 'Moved to pending'); if (!$('#p-notes').hidden) loadNotes(); refreshBadges(); window.noteReviewed && window.noteReviewed(id, st); }
     catch (e) { $('#m-err').textContent = emsg(e); }
   };
   $('#m-ok').onclick = () => act('approved');

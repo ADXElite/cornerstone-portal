@@ -38,6 +38,32 @@ async function alertOffice(ch, req) {
   await C.sendEmail({ to, subject: `${sameDay ? 'TODAY: ' : ''}Dismissal change — ${ch.student_name} — ${when}`, html, text });
 }
 
+async function alertPickup(r, req) {
+  const to = await C.rpc('portal_staff_alert_emails', {});
+  if (!to || !to.length) return;
+  const add = r.action === 'add';
+  const who = [r.first_name, r.last_name].filter(Boolean).join(' ');
+  const rows = [
+    ['Student', `${r.student_name} (Grade ${r.grade || '—'}, ${r.teacher || 'no homeroom'})`],
+    ['Change', add ? 'ADD pick-up person' : 'REMOVE pick-up person'],
+    ['Person', who],
+    r.relationship ? ['Relationship', r.relationship] : null,
+    r.phone ? ['Phone', r.phone] : null,
+    r.email ? ['Email', r.email] : null,
+    add && r.pin ? ['Kiosk PIN', r.pin] : null,
+    r.comments ? ['Parent comments', r.comments] : null,
+    ['Submitted by', `${r.submitted_name || 'Parent'} (${r.submitted_by})`],
+    ['Submitted', new Date(r.created_at).toLocaleString('en-US', { timeZone: 'America/New_York', dateStyle: 'medium', timeStyle: 'short' })]
+  ].filter(Boolean);
+  const host = `https://${req.headers.host || 'portal.csjax.org'}`;
+  const html = C.emailHtml(add ? 'Pick-up person added' : 'Pick-up person removed',
+    `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;font-size:15px">${rows.map(([k, v]) =>
+      `<tr><td style="padding:7px 10px 7px 0;color:#6B6466;vertical-align:top;white-space:nowrap">${C.esc(k)}</td><td style="padding:7px 0;font-weight:600">${C.esc(v)}</td></tr>`).join('')}</table>
+<p style="margin:14px 0 0;color:#6B6466;font-size:13px">${add ? 'This person can use the front office iPad with their PIN right away.' : 'This person can no longer use their PIN for this student.'} Update FACTS, then check it off on the office home screen.</p>
+<p style="margin:16px 0 0"><a href="${host}/office" style="display:inline-block;background:#E4010D;color:#fff;text-decoration:none;font-weight:700;padding:10px 16px;border-radius:9px">Open the office portal</a></p>`);
+  await C.sendEmail({ to, subject: `Pick-up person ${add ? 'added' : 'removed'} — ${r.student_name} — ${who}`, html, text: rows.map(([k, v]) => `${k}: ${v}`).join('\n') + `\n\n${host}/office` });
+}
+
 module.exports = async (req, res) => {
   try {
     const id = C.readSession(req);
@@ -67,6 +93,20 @@ module.exports = async (req, res) => {
       let alerted = true;
       try { await alertOffice(ch, req); } catch (e) { alerted = false; console.error('office alert failed', e.message, e.detail || ''); }
       return C.send(res, 200, { ok: true, id: ch.id, alerted });
+    }
+    if (body.action === 'pickup') {
+      const { action, ...p } = body;
+      p.action = p.type;
+      const r = await C.rpc('portal_pickup_change', { p_id: id, p });
+      let alerted = true;
+      try { await alertPickup(r, req); } catch (e) { alerted = false; console.error('pickup alert failed', e.message, e.detail || ''); }
+      return C.send(res, 200, { ok: true, id: r.id, pin: r.pin, alerted });
+    }
+    if (body.action === 'push') {
+      const sub = body.subscription || {};
+      if (body.off) { await C.rpc('portal_push_delete', { p_endpoint: String(sub.endpoint || '') }); return C.send(res, 200, { ok: true }); }
+      await C.rpc('portal_push_save', { p_id: id, p_endpoint: String(sub.endpoint || ''), p_p256dh: String(sub.keys?.p256dh || ''), p_auth: String(sub.keys?.auth || ''), p_ua: String(req.headers['user-agent'] || '') });
+      return C.send(res, 200, { ok: true });
     }
     return C.send(res, 400, { error: 'bad_action' });
   } catch (e) { return C.fail(res, e); }

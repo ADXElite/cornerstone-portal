@@ -58,6 +58,8 @@
     <div class="quick">
       <a class="qa" href="#note"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg></span><div><b>Excused note</b><small>Parent note for an absence</small></div></a>
       <a class="qa" href="#doctor"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v12M6 12h12"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg></span><div><b>Doctor's note</b><small>Upload a photo or PDF</small></div></a>
+      <a class="qa" href="#pickups"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></span><div><b>Pick-up people</b><small>Add or remove, see PINs</small></div></a>
+      <button class="qa" id="qa-alerts" type="button" hidden style="text-align:left;font:inherit;color:inherit;cursor:pointer"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg></span><div><b>School alerts</b><small id="qa-alerts-s">Turn on notifications</small></div></button>
       <a class="qa wide" href="#dismissal"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="11" rx="2"/><path d="M3 11h18M7 17v2M17 17v2"/></svg></span><div><b>Change dismissal</b><small id="h-cut">Same-day changes by 1:00 PM</small></div></a>
     </div>
     <div><h2>My students</h2><div id="h-students" class="stack"></div></div>
@@ -216,6 +218,23 @@
     </form>
   </section>
 
+  <!-- ===== Pick-up people ===== -->
+  <section class="screen" id="s-pickups" hidden>
+    <div><h2>Authorized pick-up</h2><h1 class="pg">Pick-up people</h1></div>
+    <div class="card rules"><p>These people may pick up your student. Each has a 4-digit PIN for the front office iPad. Changes take effect right away, and the front office is notified to update school records.</p></div>
+    <div class="card form"><div class="step"><span>1</span>Student</div><div class="pick" id="pp-students"></div></div>
+    <div id="pp-list" class="stack"></div>
+    <form class="card form" id="f-pp" novalidate>
+      <div class="step"><span>2</span>Add a pick-up person</div>
+      <div class="two"><label>First name <input type="text" id="pp-first" autocomplete="off" maxlength="60" required></label><label>Last name <input type="text" id="pp-last" autocomplete="off" maxlength="60" required></label></div>
+      <div class="two"><label>Relationship <input type="text" id="pp-rel" placeholder="Grandmother, Aunt, Neighbor…" maxlength="40"></label><label>Cell phone <input type="tel" id="pp-phone" placeholder="xxx-xxx-xxxx" required></label></div>
+      <label>Email <small class="muted">(optional — lets them sign in to this app)</small><input type="email" id="pp-email" autocomplete="off" maxlength="120"></label>
+      <p class="muted small">They'll need a photo ID the first time they pick up.</p>
+      <button class="btn" type="submit">Add pick-up person</button>
+      <p class="err" id="pp-err" role="alert"></p>
+    </form>
+  </section>
+
   <!-- ===== History ===== -->
   <section class="screen" id="s-history" hidden>
     <div><h2>History</h2><h1 class="pg">My submissions</h1></div>
@@ -246,6 +265,11 @@
 </nav>
 
 <div class="toast" id="toast" role="status" hidden></div>
+
+<!-- Install / alerts prompt -->
+<div class="welcome" id="welcome" hidden role="dialog" aria-modal="true" aria-labelledby="w-title">
+  <div class="welcome-in" id="welcome-in"></div>
+</div>
 
 <script src="/app.js"></script>
 </body>

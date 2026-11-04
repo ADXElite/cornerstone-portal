@@ -163,3 +163,19 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
 /* Pick-up PINs */
 .pin{font-family:var(--display);font-weight:800;font-size:1.7rem;letter-spacing:.18em;background:var(--ink);color:var(--bg);border-radius:10px;padding:2px 10px 2px 14px;flex:none;align-self:center;font-variant-numeric:tabular-nums}
 .pin.sm{font-size:1.05rem;padding:1px 6px 1px 9px;border-radius:7px;letter-spacing:.14em;vertical-align:1px}
+
+/* Install / alerts sheet */
+.welcome{position:fixed;inset:0;z-index:30;background:rgba(10,9,9,.62);display:flex;align-items:flex-end;justify-content:center}
+.welcome-in{background:var(--surface);color:var(--ink);width:100%;max-width:560px;max-height:92vh;overflow-y:auto;border-radius:22px 22px 0 0;padding:22px max(20px,env(safe-area-inset-right,0px)) calc(22px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));display:grid;gap:16px}
+@media (min-width:600px){.welcome{align-items:center}.welcome-in{border-radius:22px}}
+.welcome-icon{width:72px;height:72px;border-radius:18px;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.w-title{font-family:var(--display);font-weight:800;font-size:1.9rem;line-height:1.05;text-transform:uppercase;letter-spacing:.01em;margin:0;text-wrap:balance}
+.w-steps{margin:0;padding:0;list-style:none;display:grid;gap:10px;counter-reset:s}
+.w-steps li{display:flex;gap:12px;align-items:flex-start;counter-increment:s;font-size:1rem}
+.w-steps li::before{content:counter(s);flex:none;width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;font-weight:700;display:grid;place-items:center;font-size:.9rem}
+.w-steps svg{width:18px;height:18px;vertical-align:-3px}
+.w-perks{display:flex;flex-wrap:wrap;gap:6px}
+.w-perks span{background:var(--chip);color:var(--chip-ink);border-radius:999px;padding:4px 10px;font-weight:700;font-size:.8rem}
+.w-later{background:none;border:0;color:var(--muted);font-weight:600;padding:8px;cursor:pointer}
+@media (prefers-reduced-motion:no-preference){.welcome:not([hidden]) .welcome-in{animation:up .25s ease-out}}
+@keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}

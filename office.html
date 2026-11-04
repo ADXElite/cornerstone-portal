@@ -46,6 +46,20 @@ tr.today td:first-child{box-shadow:inset 4px 0 0 var(--red)}
 .doc .cap{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;font-size:.85rem;background:var(--surface);border-top:1px solid var(--line)}
 .sigimg{background:#fff;border:1px solid var(--line);border-radius:10px;max-width:360px}
 .kv.wide{grid-template-columns:160px 1fr;padding:0}
+.hbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.seg.sm span{padding:7px 12px;font-size:.85rem}
+.hdate{display:flex;gap:6px;align-items:center;font-weight:700;font-size:.85rem;color:var(--muted)}
+.hdate input{min-height:38px;padding:6px 8px;width:auto}
+.jump{display:flex;flex-wrap:wrap;gap:8px}
+.jump a{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-weight:700;font-size:.88rem;text-decoration:none;display:flex;gap:6px;align-items:center}
+.hsec{display:grid;gap:10px;scroll-margin-top:90px}
+.hh{font-family:var(--display);font-weight:800;font-size:1.6rem;letter-spacing:.02em;text-transform:uppercase;color:var(--ink);margin:10px 0 0;border-bottom:3px solid var(--red);padding-bottom:6px}
+.hs{font-family:var(--display);font-weight:700;font-size:1.1rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0 0;display:flex;gap:8px;align-items:center}
+th.c{text-align:center}
+tr.done td{opacity:.6}
+.hits2{display:grid;gap:6px}
+.hits2 button{display:flex;justify-content:space-between;gap:10px;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:700;color:var(--ink)}
+.hits2 button small{color:var(--muted);font-weight:600}
 .fx{width:26px;height:26px;accent-color:var(--ok);cursor:pointer}
 td.c{text-align:center}
 td.c small{text-align:center}
@@ -73,10 +87,10 @@ td.c small{text-align:center}
 
   <section class="screen" id="v-app" hidden>
     <nav class="otabs">
-      <a href="#dash" data-v="dash">Today</a>
-      <a href="#notes" data-v="notes">Attendance notes <span class="badge" id="b-notes" hidden></span></a>
-      <a href="#transport" data-v="transport">Dismissal changes <span class="badge" id="b-trans" hidden></span></a>
-      <a href="#signins" data-v="signins">Sign-In/Sign-Out <span class="badge" id="b-sio" hidden></span></a>
+      <a href="#dash" data-v="dash">Home</a>
+      <a href="#notes" data-v="notes">Notes report <span class="badge" id="b-notes" hidden></span></a>
+      <a href="#transport" data-v="transport">Dismissal report <span class="badge" id="b-trans" hidden></span></a>
+      <a href="#signins" data-v="signins">Sign-In/Out report <span class="badge" id="b-sio" hidden></span></a>
       <a href="#students" data-v="students">Students</a>
       <a href="#roster" data-v="roster">Roster upload</a>
       <a href="#settings" data-v="settings">Settings</a>
@@ -84,14 +98,85 @@ td.c small{text-align:center}
 
     <!-- Today -->
     <div class="screen" id="p-dash" hidden>
-      <div class="stats">
-        <a class="stat hot" href="#notes"><b id="st-notes">–</b><span>Notes waiting for review</span></a>
-        <a class="stat hot" href="#transport"><b id="st-new">–</b><span>Dismissal changes not yet processed</span></a>
-        <a class="stat" href="#transport?today"><b id="st-today">–</b><span>Changes in effect today</span></a>
-        <a class="stat" href="#signins"><b id="st-sio">–</b><span>Late sign-ins &amp; early check-outs today</span></a>
-        <a class="stat" href="#students"><b id="st-stu">–</b><span>Active students</span></a>
+      <div class="hbar">
+        <div class="seg sm" role="radiogroup" aria-label="Show">
+          <label><input type="radio" name="h-show" value="todo" checked><span>Needs entering in FACTS</span></label>
+          <label><input type="radio" name="h-show" value="all"><span>Everything</span></label>
+        </div>
+        <label class="hdate" id="h-dates" hidden>From <input type="date" id="h-from"> to <input type="date" id="h-to"></label>
+        <span class="muted small" id="h-updated"></span>
       </div>
-      <div><h2>Today's dismissal changes</h2><div class="tw"><table><thead><tr><th>Student</th><th>Change</th><th>Pickup</th><th>Submitted</th><th>Status</th></tr></thead><tbody id="dash-today"></tbody></table></div></div>
+      <nav class="jump">
+        <a href="#sec-changes">Change requests <span class="badge" id="j-changes" hidden></span></a>
+        <a href="#sec-sio">Late sign-in &amp; early sign-out <span class="badge" id="j-sio" hidden></span></a>
+        <a href="#sec-notes">Excused attendance notes <span class="badge" id="j-notes" hidden></span></a>
+        <a href="#sec-enter">Enter a change</a>
+        <a href="#sec-alert">Send a parent alert</a>
+      </nav>
+
+      <section class="hsec" id="sec-changes">
+        <h2 class="hh">Change requests</h2>
+        <h3 class="hs">Dismissal changes <span class="cnt" id="c-trans"></span></h3>
+        <div class="tw"><table><thead><tr><th>Student</th><th>When</th><th>Change</th><th>Pick-up person</th><th>Submitted</th><th class="c">Entered in FACTS</th></tr></thead><tbody id="h-trans"></tbody></table></div>
+        <h3 class="hs">Pick-up person changes <span class="cnt" id="c-pick"></span></h3>
+        <div class="tw"><table><thead><tr><th>Student</th><th>Change</th><th>Person</th><th>Contact</th><th>Submitted</th><th class="c">Entered in FACTS</th></tr></thead><tbody id="h-pick"></tbody></table></div>
+        <div id="h-other-wrap">
+          <h3 class="hs">Other updates (entered by the office) <span class="cnt" id="c-other"></span></h3>
+          <div class="tw"><table><thead><tr><th>Student</th><th>Details</th><th>Entered</th><th class="c">Entered in FACTS</th></tr></thead><tbody id="h-other"></tbody></table></div>
+        </div>
+      </section>
+
+      <section class="hsec" id="sec-sio">
+        <h2 class="hh">Late sign-in and early sign-out</h2>
+        <div class="tw"><table><thead><tr><th>Time</th><th>Student</th><th>Signed by</th><th>Reason</th><th>Slip</th><th class="c">Entered in FACTS</th></tr></thead><tbody id="h-sio"></tbody></table></div>
+        <p class="muted small">Slips print on a 4" × 2½" label. In the print window choose your label printer (or Avery 2½" × 4" labels) and set margins to None.</p>
+      </section>
+
+      <section class="hsec" id="sec-notes">
+        <h2 class="hh">Excused attendance notes</h2>
+        <div class="tw"><table><thead><tr><th>Student</th><th>Type</th><th>Date absent</th><th>Reason</th><th>Review</th><th>Download</th><th class="c">Entered in FACTS</th></tr></thead><tbody id="h-notes"></tbody></table></div>
+      </section>
+
+      <section class="hsec" id="sec-enter">
+        <h2 class="hh">Enter a change</h2>
+        <div class="card form">
+          <label>Student <input type="search" id="e-q" placeholder="Type a student's name or ID" autocomplete="off"></label>
+          <div class="hits2" id="e-hits"></div>
+          <div id="e-student"></div>
+          <label>What's changing?
+            <select id="e-type">
+              <option value="">Choose…</option>
+              <option value="transport">Transportation / dismissal change</option>
+              <option value="pickup_add">Add a pick-up person</option>
+              <option value="pickup_remove">Remove a pick-up person</option>
+              <option value="late_in">Late sign-in</option>
+              <option value="early_out">Early check-out</option>
+              <option value="other">Other details</option>
+            </select>
+          </label>
+          <div id="e-fields" class="stack"></div>
+          <div class="actions"><button class="btn" id="e-save" type="button">Save change</button></div>
+          <p class="err" id="e-err"></p>
+        </div>
+      </section>
+
+      <section class="hsec" id="sec-alert">
+        <h2 class="hh">Send a parent alert</h2>
+        <div class="card form">
+          <p class="muted small" id="a-info">Push alerts go to parents who added the app to their phone and turned on alerts.</p>
+          <label>Title <input type="text" id="a-title" maxlength="80" placeholder="Early dismissal today"></label>
+          <label>Message <textarea id="a-body" rows="3" maxlength="300" placeholder="School will dismiss at 12:30 PM due to weather."></textarea></label>
+          <div class="two">
+            <label>Send to
+              <select id="a-aud"><option value="all">All families</option><option value="grade">One grade</option><option value="teacher">One homeroom</option><option value="student">One student's family</option></select>
+            </label>
+            <label id="a-pick-l" hidden>Which? <select id="a-pick"></select></label>
+          </div>
+          <div id="a-stu-wrap" hidden><label>Student <input type="search" id="a-q" placeholder="Type a student's name" autocomplete="off"></label><div class="hits2" id="a-hits"></div></div>
+          <div class="actions"><button class="btn" id="a-send" type="button">Send alert</button><span class="muted small" id="a-res"></span></div>
+          <div class="list" id="a-log"></div>
+        </div>
+      </section>
       <p class="muted small" id="dash-import"></p>
     </div>
 
@@ -204,6 +289,8 @@ td.c small{text-align:center}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="/office.js"></script>
+<script src="/office-home.js"></script>
 </body>
 </html>
