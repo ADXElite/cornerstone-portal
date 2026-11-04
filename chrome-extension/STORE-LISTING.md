@@ -23,6 +23,7 @@ Developer Dashboard → **+ New item** → upload the zip.
 | **Store icon** | icon128.png |
 | **Screenshots** | screenshot-1-board.png, screenshot-2-pick-class.png |
 | **Small promo tile** | promo-small-440x280.png |
+| **Marquee promo tile** | promo-marquee-1400x560.png |
 | **Homepage URL** | https://portal.csjax.org |
 | **Support URL** | https://www.csjax.org |
 
