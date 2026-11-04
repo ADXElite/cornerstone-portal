@@ -44,6 +44,8 @@ li .who{flex:none;font-size:.7rem;font-weight:700;letter-spacing:.04em;text-tran
 li .tag{flex:none;font-family:var(--display);font-weight:700;background:var(--chip);color:var(--chip-ink);border-radius:.3rem;padding:0 .35rem;font-size:.9rem;align-self:center}
 .absent{margin-top:.8rem;color:var(--muted);font-size:.8rem}
 li.chg{background:#FFF4DC}
+li > span:first-child{min-width:0}
+li .pu{display:block;font-size:.72rem;font-weight:700;color:var(--chip-ink)}
 li .chg{flex:none;font-family:var(--display);font-weight:800;background:var(--red);color:#fff;border-radius:.3rem;padding:0 .35rem;font-size:.75rem;letter-spacing:.05em;text-transform:uppercase;align-self:center}
 .legend{margin-top:.6rem;color:var(--muted);font-size:.7rem}
 .absent b{text-transform:uppercase;letter-spacing:.06em}
@@ -73,9 +75,9 @@ const fmtDate = d => new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday
 
 function kindOf(g){
   const s = (g.key+' '+g.method).toLowerCase();
+  if (/after|extended|care/.test(s)) return 'after';
   if (/car/.test(s)) return 'car';
   if (/bus/.test(s)) return 'bus';
-  if (/after|extended/.test(s)) return 'after';
   if (/walk/.test(s)) return 'walk';
   return 'other';
 }
@@ -105,8 +107,10 @@ function renderBoard(b){
     } else {
       // Show the sub-method (e.g. car number or program) only when it adds information
       html += '<ul>' + g.students.map(s => {
-        const d = s.detail && !/^car rider$/i.test(s.detail) ? `<span class="tag">${esc(s.detail)}</span>` : '';
-        return `<li class="${s.changed?'chg':''}"><span>${esc(s.name)}</span>${who(s)}${d}${s.changed?'<span class="chg">Changed</span>':''}</li>`;
+        // A changed car rider shows who is picking up under the name, so the badge always fits.
+        const pickup = k === 'car' && s.changed && s.detail;
+        const d = s.detail && !pickup && !/^car rider$/i.test(s.detail) ? `<span class="tag">${esc(s.detail)}</span>` : '';
+        return `<li class="${s.changed?'chg':''}"><span>${esc(s.name)}${pickup ? `<small class="pu">with ${esc(s.detail)}</small>` : ''}</span>${who(s)}${d}${s.changed?'<span class="chg">Changed</span>':''}</li>`;
       }).join('') + '</ul>';
     }
     html += '</section>';
