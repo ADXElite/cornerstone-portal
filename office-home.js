@@ -28,7 +28,7 @@ function drawHome() {
   const empty = (n, t) => `<tr><td colspan="${n}" class="empty">${t}</td></tr>`;
   const all = showMode() === 'all';
   const none = all ? 'Nothing in these dates.' : 'All caught up.';
-  const badge = (id, n) => { $(id).hidden = !n; $(id).textContent = n; };
+  const badge = (id, n) => { const el = $(id); if (!el) return; el.hidden = !n; el.textContent = n; };
   const todo = a => a.filter(x => x.sis_done === false || x.facts_done === false || x.status === 'new').length;
 
   $('#c-trans').textContent = `(${H.trans.length})`;
