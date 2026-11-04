@@ -305,7 +305,7 @@ $('#pf-csv').onclick = () => {
 
 // ---------- roster ----------
 let PARSED = null;
-$('#r-file').addEventListener('change', e => {
+$('#r-file') && $('#r-file').addEventListener('change', e => {
   const f = e.target.files[0]; $('#r-err').textContent = ''; $('#r-preview').innerHTML = '';
   if (!f) return;
   Papa.parse(f, { header: true, skipEmptyLines: true, transformHeader: h => h.trim(), complete: res => {
