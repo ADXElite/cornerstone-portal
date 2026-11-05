@@ -89,6 +89,11 @@ module.exports = async (req, res) => {
     }
     if (body.action === 'transport') {
       const { action, ...p } = body;
+      // Parents may only change afternoon dismissal; extended care is always the SP location.
+      p.period = 'afternoon';
+      if (p.new_method === 'Afternoon Extended Care') p.new_details = 'Afterschool Care - SP';
+      if (p.new_method === 'Student Driver and/or Passenger' && !/^Student driver: \S/.test(String(p.new_details || '').trim()))
+        return C.send(res, 400, { error: 'need_driver' });
       const ch = await C.rpc('portal_transport_submit', { p_id: id, p });
       let alerted = true;
       try { await alertOffice(ch, req); } catch (e) { alerted = false; console.error('office alert failed', e.message, e.detail || ''); }

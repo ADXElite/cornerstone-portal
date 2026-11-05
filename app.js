@@ -28,7 +28,7 @@ const ERR = {
   date_too_far: 'That date is too far in the future.', date_past: 'That date has already passed.',
   bad_range: 'Check the dates — the last day must be on or after the first day.',
   after_cutoff: 'Same-day dismissal changes must be submitted by 1:00 PM. Please call the front office at (904) 730-5500.',
-  morning_same_day: "Morning changes can't start today. Choose a later date.",
+  need_driver: "Enter the student driver's full name.",
   need_pickup: 'Choose who is picking up.', need_bus: 'Choose a bus stop.', bad_method: 'Choose a new transportation method.',
   not_your_student: "That student isn't linked to your account.",
   bad_file_type: 'Upload a photo (JPG, PNG, HEIC) or a PDF.', file_too_big: 'That file is too large. Try a photo instead of a scan, or a smaller PDF.',
@@ -137,11 +137,15 @@ function meter(s) {
   let h = ''; for (let i = 0; i < lim; i++) h += `<i class="${i < a ? 'on' : i < a + p ? 'pend' : ''}"></i>`;
   return `<span class="meter" aria-label="${a} of ${lim} approved">${h}</span> <span>${a} of ${lim} approved${p ? ` · ${p} pending` : ''}</span>`;
 }
+function semLabel(v) {
+  const m = String(v || '').match(/^(\d{4})-(\d{2,4})\s*Semester\s*(\d)/i);
+  return m ? `${m[1]}-${m[2].length === 2 ? m[1].slice(0, 2) + m[2] : m[2]} (Semester ${m[3]})` : (v || '');
+}
 function renderHome() {
   const first = (HOME.parent_name || '').split(' ')[0];
   $('#h-hello').textContent = first ? `Hi, ${first}` : 'Welcome';
   $('#h-date').textContent = niceLong(HOME.today);
-  $('#h-sem').textContent = HOME.semester;
+  $('#h-sem').textContent = semLabel(HOME.semester);
   $('#h-cut').textContent = `Same-day changes by ${fmt12(HOME.cutoff)}`;
   const box = $('#h-students');
   if (!HOME.students.length) { box.innerHTML = `<div class="card">No students are linked to your account. Please call the front office at (904) 730-5500.</div>`; return; }
@@ -161,10 +165,8 @@ function renderHome() {
     return `<article class="stu">
       <div class="stu-h"><div class="av">${esc((s.first_name || '?')[0])}</div><div><b>${esc(s.first_name)} ${esc(s.last_name)}</b><small>${esc(gradeLabel(s.grade))}${s.teacher ? ' · ' + esc(s.teacher) : ''}</small></div></div>
       <dl class="kv">
-        <dt>Morning</dt><dd>${esc(t.am)}</dd>
         <dt>Afternoon</dt><dd>${esc(t.pm)}</dd>
         ${up ? `<dt>Changes</dt><dd>${up}</dd>` : ''}
-        <dt>Parent notes</dt><dd>${meter(s)}</dd>
       </dl></article>`;
   }).join('');
 }
@@ -197,6 +199,8 @@ function renderNote() {
     disable: s => !s.is_guardian ? 'Only parents/guardians can submit notes' : s.parent_notes_approved >= HOME.parent_note_limit ? `${HOME.parent_note_limit} of ${HOME.parent_note_limit} used — doctor's note needed` : null,
     note: s => `${s.parent_notes_approved} of ${HOME.parent_note_limit} used this semester`
   });
+  $('#n-meters').innerHTML = `<dl class="kv" style="padding:8px 0 0">${HOME.students.filter(s => s.is_guardian).map(s =>
+    `<dt>${esc(s.first_name)}</dt><dd>${meter(s)}</dd>`).join('')}</dl><p class="muted small" style="margin:4px 0 0">Parent notes approved this semester</p>`;
   const d = $('#n-date');
   d.min = minusSchoolDays(HOME.today, HOME.note_days_limit); d.max = addDays(HOME.today, 60);
   if (!d.value) d.value = isWeekend(HOME.today) ? minusSchoolDays(HOME.today, 1) : HOME.today;
@@ -340,12 +344,11 @@ $('#f-doc').addEventListener('submit', async e => {
 const PM = [
   ['Car Rider', 'Picked up in car line'], ['Bus Rider', 'Rides a school bus'], ['Afternoon Extended Care', 'After-school care'],
   ['Student Walker', 'Walks home'], ['Student Driver and/or Passenger', 'Drives or rides with a student driver'], ['City Bus Rider', 'Rides the city bus']];
-const AM = [['Car Rider', 'Dropped off in car line'], ['Bus Rider', 'Rides a school bus'], ['Morning Extended Care', 'Before-school care'], ['Student Walker', 'Walks to school']];
 const afterCut = () => HOME.now_et >= HOME.cutoff || isWeekend(HOME.today);
 
 function renderTrans() {
   $('#t-cutnote').innerHTML = afterCut()
-    ? `<b class="t">It's past ${fmt12(HOME.cutoff)} — changes for today can't be made here.</b><p>For an emergency change today, call the front office at <a href="tel:9047305500">(904) 730-5500</a>. You can still submit changes for upcoming days.</p>`
+    ? `<b class="t">It's past ${fmt12(HOME.cutoff)} — changes for today can't be made here.</b><p>You can still submit changes for upcoming days.</p>`
     : `<b class="t">Same-day changes must be submitted by ${fmt12(HOME.cutoff)}.</b><p>The front office is emailed as soon as you submit.</p>`;
   picker($('#t-students'), { onchange: drawCurrent });
   const today = $('input[name=t-type][value=today]');
@@ -365,7 +368,7 @@ function drawCurrent() {
     const list = [...s.guardians.map(g => ({ ...g, kind: 'Parent/guardian' })), ...s.pickups.map(p => ({ ...p, kind: 'Pickup' }))].filter(p => p.name);
     list.forEach(p => { const k = p.name.toLowerCase(); if (!people.has(k)) people.set(k, p); });
     return `<div class="card" style="background:var(--bg)"><b class="t">${esc(s.first_name)} — now on file</b>
-      <dl class="kv" style="padding:0"><dt>Morning</dt><dd>${esc(t.am)}</dd><dt>Afternoon</dt><dd>${esc(t.pm)}</dd></dl>
+      <dl class="kv" style="padding:0"><dt>Afternoon</dt><dd>${esc(t.pm)}</dd></dl>
       <details><summary><b>Pickup people on file (${list.length})</b></summary>
         <div class="list" style="margin-top:8px">${list.map(p => `<div class="row"><div class="txt"><b>${esc(p.name)}</b><p>${esc([p.relationship, p.phone].filter(Boolean).join(' · ') || p.kind)}</p></div>${p.pin ? `<span class="pin sm">${p.pin}</span>` : ''}</div>`).join('') || '<div class="empty">No pickup people on file.</div>'}</div>
       </details></div>`;
@@ -380,15 +383,15 @@ function syncTrans() {
   const period = $('input[name=t-period]:checked').value;
   const type = $('input[name=t-type]:checked').value;
   const today = $('input[name=t-type][value=today]');
-  today.disabled = afterCut() || period === 'morning';
+  today.disabled = afterCut();
   if (today.disabled && type === 'today') { $('input[name=t-type][value=one_day]').checked = true; return syncTrans(); }
   $('#t-start-l').hidden = type === 'today';
   $('#t-start-l').firstChild.textContent = type === 'date_range' ? 'From ' : type === 'permanent' ? 'Starting ' : 'Date ';
   $('#t-end-l').hidden = type !== 'date_range';
-  const min = type === 'today' ? HOME.today : (afterCut() || period === 'morning') ? addDays(HOME.today, 1) : HOME.today;
+  const min = type === 'today' ? HOME.today : afterCut() ? addDays(HOME.today, 1) : HOME.today;
   $('#t-start').min = min; if ($('#t-start').value < min) $('#t-start').value = isWeekend(min) ? nextSchoolDay(min) : min;
   $('#t-end').min = $('#t-start').value;
-  const list = period === 'afternoon' ? PM : AM;
+  const list = PM;
   const cur = $('#t-methods input:checked')?.value;
   $('#t-methods').innerHTML = list.map(([v, d]) => `<label><input type="radio" name="t-method" value="${esc(v)}" ${v === cur ? 'checked' : ''}><span>${esc(v)}<small>${esc(d)}</small></span></label>`).join('');
   syncMethod();
@@ -397,7 +400,7 @@ function syncMethod() {
   const m = $('#t-methods input:checked')?.value;
   const period = $('input[name=t-period]:checked').value;
   $('#t-bus').hidden = m !== 'Bus Rider';
-  $('#t-care').hidden = m !== 'Afternoon Extended Care';
+  $('#t-driver').hidden = m !== 'Student Driver and/or Passenger';
   $('#t-pick').hidden = !(m === 'Car Rider' && period === 'afternoon');
   $('#t-other').hidden = $('#t-person').value !== '__other';
 }
@@ -421,7 +424,12 @@ $('#f-trans').addEventListener('submit', async e => {
   if (!method) return err.textContent = ERR.bad_method;
   let details = '', person = '', rel = '', phone = '';
   if (method === 'Bus Rider') { details = $('#t-stop').value; if (!details) return err.textContent = ERR.need_bus; }
-  if (method === 'Afternoon Extended Care') details = $('#t-carewhere').value;
+  if (method === 'Afternoon Extended Care') details = 'Afterschool Care - SP';
+  if (method === 'Student Driver and/or Passenger') {
+    const dn = $('#t-dname').value.trim();
+    if (!dn) return err.textContent = "Enter the student driver's full name.";
+    details = 'Student driver: ' + dn;
+  }
   if (method === 'Car Rider' && period === 'afternoon') {
     const sel = $('#t-person');
     if (!sel.value) return err.textContent = ERR.need_pickup;
@@ -585,7 +593,7 @@ async function loadHistory() {
     $('#hi-changes').innerHTML = h.changes.map(c => {
       const [l, k] = STATUS[c.status];
       const when = c.change_type === 'date_range' ? `${nice(c.start_date)} – ${nice(c.end_date)}` : c.change_type === 'permanent' ? `From ${nice(c.start_date)} (permanent)` : nice(c.start_date);
-      return `<div class="row"><div class="txt"><b>${esc(c.student)} — ${esc(c.new_method)}</b><p>${when} · ${c.period === 'afternoon' ? 'Afternoon' : 'Morning'}${c.pickup_person ? ' · ' + esc(c.pickup_person) : ''}${c.new_details && !c.pickup_person ? ' · ' + esc(c.new_details) : ''}</p></div><span class="tag ${k}">${l}</span></div>`;
+      return `<div class="row"><div class="txt"><b>${esc(c.student)} — ${esc(c.new_method)}</b><p>${when} · Afternoon${c.pickup_person ? ' · ' + esc(c.pickup_person) : ''}${c.new_details && !c.pickup_person ? ' · ' + esc(c.new_details) : ''}</p></div><span class="tag ${k}">${l}</span></div>`;
     }).join('') || '<div class="empty">No dismissal changes yet.</div>';
   } catch (x) { if (x.status === 401) return signedOut(); $('#hi-notes').innerHTML = `<div class="empty">${msg(x.message)}</div>`; }
 }

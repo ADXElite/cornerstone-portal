@@ -104,6 +104,7 @@
       <div class="card form">
         <div class="step"><span>1</span>Student</div>
         <div class="pick" id="n-students"></div>
+        <div id="n-meters" class="kv-meters"></div>
       </div>
       <div class="card form">
         <div class="step"><span>2</span>Absence</div>
@@ -116,7 +117,6 @@
             <option>Car Accident</option>
             <option>Compliance with a Court Order (e.g., visitation or a subpoena.)</option>
             <option>Death of an Immediate Family Member</option>
-            <option>DR Appointment</option>
             <option>Funeral Service or a Memorial Service of a Loved One</option>
             <option>Illness or Injury of a Family Member Related to the Student</option>
             <option>Illness or Injury of the Student</option>
@@ -197,11 +197,9 @@
         <div id="t-current"></div>
       </div>
       <div class="card form">
-        <div class="step"><span>2</span>What's changing</div>
-        <div class="seg" role="radiogroup" aria-label="Applies to">
-          <label><input type="radio" name="t-period" value="afternoon" checked><span>Afternoon dismissal</span></label>
-          <label><input type="radio" name="t-period" value="morning"><span>Morning arrival</span></label>
-        </div>
+        <div class="step"><span>2</span>When</div>
+        <input type="radio" name="t-period" value="afternoon" checked hidden>
+        <p class="muted small" style="margin:0">Changes apply to afternoon dismissal.</p>
         <div class="seg" role="radiogroup" aria-label="How long">
           <label><input type="radio" name="t-type" value="today"><span>Today only</span></label>
           <label><input type="radio" name="t-type" value="one_day" checked><span>Another day</span></label>
@@ -219,10 +217,8 @@
         <div id="t-bus" hidden>
           <label>Bus stop <select id="t-stop"></select></label>
         </div>
-        <div id="t-care" hidden>
-          <label>Extended care location
-            <select id="t-carewhere"><option>Afterschool Care - KHA</option><option>Afterschool Care - SP</option></select>
-          </label>
+        <div id="t-driver" hidden>
+          <label>Student driver's full name <input type="text" id="t-dname" maxlength="120" autocomplete="off"></label>
         </div>
         <div id="t-pick" hidden>
           <label>Who is picking up? <select id="t-person"></select></label>
