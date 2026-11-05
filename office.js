@@ -373,6 +373,8 @@ let SET = null;
 async function loadSettings() {
   const [staff, set] = await Promise.all([call('staff_staff_list'), call('staff_settings')]);
   SET = set;
+  $('#ap-on').checked = set.alerts_paused === true;
+  $('#ap-card').style.borderColor = set.alerts_paused === true ? 'var(--red)' : '';
   const ROLE = { office: ['Front Office', 'ok'], carline: ['Car Line', 'warn'], bus: ['Bus Driver', 'gray'] };
   $('#staff-list').innerHTML = staff.map(s => `<div class="row"><div class="txt"><b>${esc(s.name || s.email)} <span class="tag ${ROLE[s.role][1]}">${ROLE[s.role][0]}</span>${s.active ? '' : ' <span class="tag gray">Off</span>'}</b>
       <p>${esc(s.email)}${s.has_login ? (s.last_sign_in ? ' · last signed in ' + stamp(s.last_sign_in) : ' · has a sign-in') : ' · <b style="display:inline;color:var(--red)">no sign-in yet</b>'}</p></div>
@@ -436,3 +438,10 @@ $('#f-staff').addEventListener('submit', async e => {
 });
 
 boot();
+
+$('#ap-on').addEventListener('change', async e => {
+  const on = e.target.checked; e.target.disabled = true;
+  try { await call('staff_settings_set', { p_key: 'alerts_paused', p_value: on }); toast(on ? 'Alerts paused — only sign-in codes will send' : 'Alerts are back on'); $('#ap-card').style.borderColor = on ? 'var(--red)' : ''; }
+  catch (x) { e.target.checked = !on; toast(emsg(x)); }
+  e.target.disabled = false;
+});

@@ -46,6 +46,7 @@ module.exports = async (req, res) => {
         const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
         await C.rpc('portal_email_code_set', { p_id: id, p_hash: C.hmac(id + ':' + code) });
         await C.sendEmail({
+          loginCode: true,
           to: id,
           subject: `Your Cornerstone sign-in code: ${code}`,
           text: `Your Cornerstone Christian School sign-in code is ${code}. It expires in 10 minutes. If you didn't ask for this, you can ignore this email.`,

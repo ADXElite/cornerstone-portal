@@ -303,6 +303,7 @@ td.c small{text-align:center}
       <section class="hsec" id="sec-alert">
         <h2 class="hh">Send a Parent Alert</h2>
         <div class="card form">
+          <div class="card alert" id="a-paused" hidden><b class="t">Alerts are paused for testing.</b><p>Nothing will send. Turn alerts back on under Settings → Staff &amp; Rules.</p></div>
           <p class="muted small" id="a-info">Push alerts go to parents who added the app to their phone and turned on alerts.</p>
           <label>Title <input type="text" id="a-title" maxlength="80" placeholder="Early dismissal today"></label>
           <label>Message <textarea id="a-body" rows="3" maxlength="300" placeholder="School will dismiss at 12:30 PM due to weather."></textarea></label>
@@ -323,6 +324,11 @@ td.c small{text-align:center}
     <!-- Settings -->
     <div class="screen" id="p-settings" hidden>
       <nav class="subtabs noprint"><a href="#settings" data-s="settings">Staff &amp; Rules</a><a href="#roster" data-s="roster">Data Upload</a><a href="#alerts" data-s="alerts">Alerts</a></nav>
+      <div class="card" id="ap-card">
+        <b class="t">Alerts &amp; Emails</b>
+        <label class="actions" style="font-weight:600"><input type="checkbox" id="ap-on"> Pause all alerts and emails (testing mode)</label>
+        <p class="muted small" id="ap-note">While paused, nothing is sent to parents or staff — no office change emails, import warnings, push alerts, or excused-note notifications. Sign-in codes still send so people can log in.</p>
+      </div>
       <div class="card">
         <b class="t">Staff Sign-Ins</b>
         <p class="muted small"><b>Front Office</b> — the whole office portal, plus emails for every parent change. <b>Car Line</b> — only portal.csjax.org/carline. <b>Bus Driver</b> — only portal.csjax.org/bus.</p>

@@ -302,6 +302,7 @@ $('#e-save').onclick = async () => {
 let AINFO = null, ASTU = null;
 window.alertInfo = alertInfo;
 async function alertInfo() {
+  call('staff_settings').then(x => { $('#a-paused').hidden = x.alerts_paused !== true; }).catch(() => {});
   try {
     AINFO = await call('staff_push_info');
     $('#a-info').textContent = `${AINFO.devices} phone${AINFO.devices === 1 ? '' : 's'} from ${AINFO.families} famil${AINFO.families === 1 ? 'y' : 'ies'} have alerts turned on. Alerts reach parents who added the app to their phone and turned alerts on.`;
