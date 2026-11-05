@@ -90,10 +90,19 @@ async function loadBuses() {
   $('#bz-print').innerHTML = rosters.map((r, i) => rosterHtml(r, i)).join('') || '<div class="card">No bus riders today.</div>';
   $('#bz-buttons').onclick = e => {
     const b = e.target.closest('[data-b]'); if (!b) return;
-    document.querySelectorAll('#bz-print .roster').forEach((el, i) => el.classList.toggle('noprint', b.dataset.b !== 'all' && String(i) !== b.dataset.b));
+    const els = [...document.querySelectorAll('#bz-print .roster')];
+    els.forEach((el, i) => el.classList.toggle('noprint', b.dataset.b !== 'all' && String(i) !== b.dataset.b));
+    fitRosters(els);
     window.print();
-    setTimeout(() => document.querySelectorAll('#bz-print .roster').forEach(el => el.classList.remove('noprint')), 500);
+    setTimeout(() => els.forEach(el => { el.classList.remove('noprint'); el.style.zoom = ''; }), 500);
   };
+}
+// Shrink any roster that would still run past one letter page (10.2in of printable height at 96px/in).
+function fitRosters(els) {
+  document.body.classList.add('rprint');
+  const pageH = 10.2 * 96 - 8;
+  els.forEach(el => { el.style.zoom = ''; const h = el.scrollHeight; if (h > pageH) el.style.zoom = (pageH / h).toFixed(3); });
+  document.body.classList.remove('rprint');
 }
 function rosterHtml(r, i) {
   // Students arrive sorted by afternoon drop-off time; group by stop in that order.

@@ -76,6 +76,14 @@ tr.grp td{background:var(--bg);border-top:2px solid var(--line);padding-top:12px
 .roster .abs td{color:#8a8486;text-decoration:line-through}
 .roster .chk{width:22px;height:22px;border:2px solid #141213;border-radius:4px;display:inline-block}
 @media print{.roster{border:0;break-after:page;padding:0}.roster:last-child{break-after:auto}#bz-print{display:block}}
+@page{size:letter;margin:.4in}
+/* Compact bus roster: one page per bus. body.rprint mirrors print so the page can measure and shrink-to-fit before printing. */
+@media print{.roster{font-size:9pt;line-height:1.15}.roster h3{font-size:15pt}.roster h3 small{font-size:9pt!important}.roster>p{font-size:8pt!important;margin:0 0 2px!important}
+.roster h4{font-size:9pt;margin:5px 0 1px;padding-bottom:1px;border-bottom-width:1px}.roster table{width:100%;border-collapse:collapse}.roster table td{padding:1px 5px;font-size:9pt}.roster .chk{width:11px;height:11px;border-width:1.5px;border-radius:2px;vertical-align:middle}.roster td:first-child{width:16px!important}}
+body.rprint #bz-print{width:7.7in}
+.roster table{width:100%;table-layout:fixed}.roster td:nth-child(1){width:26px}.roster td:nth-child(3){width:9%}.roster td:nth-child(4){width:24%}.roster td:nth-child(5){width:17%}
+body.rprint .roster{font-size:9pt;line-height:1.15;border:0;padding:0}body.rprint .roster h3{font-size:15pt}body.rprint .roster h3 small{font-size:9pt!important}body.rprint .roster>p{font-size:8pt!important;margin:0 0 2px!important}
+body.rprint .roster h4{font-size:9pt;margin:5px 0 1px;padding-bottom:1px;border-bottom-width:1px}body.rprint .roster table{width:100%;border-collapse:collapse}body.rprint .roster table td{padding:1px 5px;font-size:9pt}body.rprint .roster .chk{width:11px;height:11px;border-width:1.5px;border-radius:2px}
 .fx{width:26px;height:26px;accent-color:var(--ok);cursor:pointer}
 td.c{text-align:center}
 td.c small{text-align:center}
