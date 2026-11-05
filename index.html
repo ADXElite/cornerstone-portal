@@ -56,8 +56,7 @@
       <p style="opacity:.85" id="h-sem"></p>
     </div>
     <div class="quick">
-      <a class="qa" href="#note"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg></span><div><b>Excused note</b><small>Parent note for an absence</small></div></a>
-      <a class="qa" href="#doctor"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v12M6 12h12"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg></span><div><b>Doctor's note</b><small>Upload a photo or PDF</small></div></a>
+      <a class="qa wide" href="#absence"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg></span><div><b>Report an Absence</b><small>Excused note from home or a doctor's note</small></div></a>
       <a class="qa" href="#pickups"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></span><div><b>Pick-up people</b><small>Add or remove, see PINs</small></div></a>
       <button class="qa" id="qa-alerts" type="button" hidden style="text-align:left;font:inherit;color:inherit;cursor:pointer"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg></span><div><b>School alerts</b><small id="qa-alerts-s">Turn on notifications</small></div></button>
       <a class="qa wide" href="#dismissal"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="11" rx="2"/><path d="M3 11h18M7 17v2M17 17v2"/></svg></span><div><b>Change dismissal</b><small id="h-cut">Same-day changes by 1:00 PM</small></div></a>
@@ -71,8 +70,28 @@
   </section>
 
   <!-- ===== Parent excused note ===== -->
+  <section class="screen" id="s-absence" hidden>
+    <div><h2>Excused absence</h2><h1 class="pg">Report an Absence</h1></div>
+    <p class="muted">What kind of note are you sending?</p>
+    <div class="stack">
+      <a class="card choice" href="#doctor">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v12M6 12h12"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg></span>
+        <span><b>Doctor's note</b><small>Your child saw a doctor, dentist or other provider. Upload a photo or PDF of the note. No limit.</small><small class="req">You'll need: the date(s) absent and a photo or PDF of the note.</small></span>
+      </a>
+      <a class="card choice" href="#note">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg></span>
+        <span><b>Excused note from home</b><small>A note from you, the parent or guardian. Up to <b class="lim">5</b> approved per student each semester, one note per day absent.</small><small class="req">You'll need: the date absent, the reason, your name and phone, and your signature.</small></span>
+      </a>
+    </div>
+  </section>
+
   <section class="screen" id="s-note" hidden>
-    <div><h2>Excused absence</h2><h1 class="pg">Parent excused note</h1></div>
+    <div><h2>Report an Absence</h2><h1 class="pg">Excused note from home</h1></div>
+    <div class="seg" role="tablist" aria-label="Type of note">
+      <label><input type="radio" name="sw-note" value="note" checked><span>Excused note from home</span></label>
+      <label><input type="radio" name="sw-note" value="doctor" ><span>Doctor's note</span></label>
+    </div>
+
     <div class="card rules">
       <b class="t">Before you submit</b>
       <ol>
@@ -128,7 +147,12 @@
 
   <!-- ===== Doctor's note ===== -->
   <section class="screen" id="s-doctor" hidden>
-    <div><h2>Excused absence</h2><h1 class="pg">Doctor's note</h1></div>
+    <div><h2>Report an Absence</h2><h1 class="pg">Doctor's note</h1></div>
+    <div class="seg" role="tablist" aria-label="Type of note">
+      <label><input type="radio" name="sw-doc" value="note" ><span>Excused note from home</span></label>
+      <label><input type="radio" name="sw-doc" value="doctor" checked><span>Doctor's note</span></label>
+    </div>
+
     <div class="card rules">
       <b class="t">Upload a doctor's note</b>
       <p>Take a photo of the note or upload a PDF. The front office will review it and update your student's attendance to excused. There is no limit on doctor's notes.</p>
@@ -259,7 +283,7 @@
 
 <nav class="tabs" id="tabs" hidden>
   <a href="#home" data-t="home"><svg viewBox="0 0 24 24"><path d="M3 11 12 3l9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>Home</a>
-  <a href="#note" data-t="note"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6"/></svg>Absences</a>
+  <a href="#absence" data-t="note"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6"/></svg>Absences</a>
   <a href="#dismissal" data-t="dismissal"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="11" rx="2"/><path d="M3 11h18M7 17v2M17 17v2"/></svg>Dismissal</a>
   <a href="#history" data-t="history"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History</a>
 </nav>

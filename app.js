@@ -66,18 +66,19 @@ let HOME = null, ident = null;
 const S = { files: [] };
 
 // ---------- routing ----------
-const SCREENS = ['login', 'home', 'note', 'doctor', 'dismissal', 'pickups', 'history', 'done'];
+const SCREENS = ['login', 'home', 'absence', 'note', 'doctor', 'dismissal', 'pickups', 'history', 'done'];
 function show(name) {
   SCREENS.forEach(s => $('#s-' + s).hidden = s !== name);
   $('#tabs').hidden = name === 'login';
-  const tab = name === 'doctor' ? 'note' : name === 'pickups' ? 'home' : name;
+  const tab = ['doctor', 'absence'].includes(name) ? 'note' : name === 'pickups' ? 'home' : name;
   $$('.tabs a').forEach(a => { if (a.dataset.t === tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   window.scrollTo(0, 0);
 }
 async function route() {
   const h = (location.hash || '#home').slice(1);
   if (!HOME) return show('login');
-  if (h === 'note') { renderNote(); show('note'); }
+  if (h === 'absence') { $$('.lim').forEach(e => e.textContent = HOME.parent_note_limit); show('absence'); }
+  else if (h === 'note') { renderNote(); show('note'); }
   else if (h === 'doctor') { renderDoctor(); show('doctor'); }
   else if (h === 'dismissal') { renderTrans(); show('dismissal'); }
   else if (h === 'pickups') { renderPickups(); show('pickups'); }
@@ -179,6 +180,13 @@ function picker(el, opts = {}) {
   el.onchange = opts.onchange || null;
 }
 const picked = el => [...el.querySelectorAll('input:checked')].map(i => HOME.students.find(s => String(s.student_id) === i.value));
+
+// ---------- switch between the two note types ----------
+document.querySelectorAll('input[name=sw-note],input[name=sw-doc]').forEach(r => r.addEventListener('change', () => {
+  if (r.checked) location.hash = r.value === 'doctor' ? '#doctor' : '#note';
+  // keep both switches in sync for the next visit
+  document.querySelectorAll(`input[name=sw-note][value=note],input[name=sw-doc][value=doctor]`).forEach(x => x.checked = true);
+}));
 
 // ---------- parent note ----------
 let sigDirty = false;

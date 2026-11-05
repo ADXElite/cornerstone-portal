@@ -179,3 +179,13 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
 .w-later{background:none;border:0;color:var(--muted);font-weight:600;padding:8px;cursor:pointer}
 @media (prefers-reduced-motion:no-preference){.welcome:not([hidden]) .welcome-in{animation:up .25s ease-out}}
 @keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
+
+/* Report an Absence choice */
+.choice{display:flex!important;gap:14px;align-items:flex-start;text-decoration:none;color:var(--ink);border:2px solid var(--line);cursor:pointer}
+.choice:hover,.choice:focus-visible{border-color:var(--red)}
+.choice .ic{width:44px;height:44px;border-radius:12px;background:var(--chip);color:var(--chip-ink);display:grid;place-items:center;flex:none}
+.choice .ic svg{width:24px;height:24px}
+.choice > span > b{display:block;font-size:1.1rem}
+.choice small b{display:inline;font-size:inherit}
+.choice small{display:block;color:var(--muted);margin-top:2px}
+.choice small.req{color:var(--ink);font-weight:600;margin-top:6px}
