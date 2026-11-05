@@ -43,9 +43,9 @@ async function rpc(fn, args = {}) {
 // ---------- clock, idle timer ----------
 function tick() {
   const n = new Date();
-  $('#clock').innerHTML = `${n.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' })}<small>${n.toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric' })}</small>`;
+  $('#clock').innerHTML = `${n.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' })} <span style="font-size:.6em;opacity:.7">ET</span><small>${n.toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric' })}</small>`;
 }
-setInterval(tick, 10000); tick();
+setInterval(tick, 5000); tick();
 let idle;
 function resetIdle() { clearTimeout(idle); if (S.screen !== 'home' && S.screen !== 'setup') idle = setTimeout(() => home(), S.screen === 'done' ? 9000 : 90000); }
 addEventListener('pointerdown', resetIdle, { passive: true });
@@ -62,10 +62,10 @@ function home() {
   if (!TOKEN) return setup();
   S = {};
   go('home', `<div class="kscreen">
-    <div><h1 class="kh">Front office</h1><p class="ksub" style="margin-top:6px">Tap what you're here to do.</p></div>
+    <div><h1 class="kh">Front Office</h1><p class="ksub" style="margin-top:6px">Tap what you're here to do.</p></div>
     <div class="big2">
-      <button class="bigbtn out" id="b-out">${ICON_OUT}<b>Early check-out</b><span>Picking up a student before dismissal</span></button>
-      <button class="bigbtn in" id="b-in">${ICON_IN}<b>Late sign-in</b><span>Signing a student in after 8:30 AM</span></button>
+      <button class="bigbtn in" id="b-in">${ICON_IN}<b>Late Sign-In</b><span>Signing a student in after 8:30 AM</span></button>
+      <button class="bigbtn out" id="b-out">${ICON_OUT}<b>Early Check-Out</b><span>Picking up a student before dismissal</span></button>
     </div></div>`);
   $('#b-out').onclick = () => { S.kind = 'early_out'; S.method = 'pin'; pinScreen(); };
   $('#b-in').onclick = () => { S.kind = 'late_in'; lateChoice(); };
@@ -103,60 +103,50 @@ function pinScreen() {
 }
 
 // ---------- late sign-in: who? ----------
+const ICON_STU = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/><path d="M22 10v6"/></svg>';
+const ICON_PAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85"/></svg>';
 function lateChoice() {
   go('late', `<div class="kscreen">
     <button class="back" id="bk">‹ Back</button>
-    <h1 class="kh">Late sign-in</h1>
-    <div class="choices">
-      <button class="choice" id="c-adult"><b>I'm dropping off a student</b><span>Parent, guardian or pickup person — use your 4-digit PIN</span></button>
-      <button class="choice" id="c-student"><b>I'm a student signing myself in</b><span>Scan your student badge or type your student ID</span></button>
+    <h1 class="kh">Late Sign-In</h1>
+    <div class="big2">
+      <button class="bigbtn in" id="c-student">${ICON_STU}<span>I am a</span><b>Student</b></button>
+      <button class="bigbtn out" id="c-adult">${ICON_PAR}<span>I am a</span><b>Parent</b></button>
     </div></div>`);
   $('#bk').onclick = home;
   $('#c-adult').onclick = () => { S.method = 'pin'; pinScreen(); };
   $('#c-student').onclick = studentEntry;
 }
 
-// ---------- student: badge / ID / name ----------
-function studentEntry(tab) {
-  tab = tab || 'scan'; S.sid = '';
+// ---------- student: scan badge or type name, same screen ----------
+function studentEntry() {
   go('student', `<div class="kscreen">
     <button class="back" id="bk">‹ Back</button>
-    <h1 class="kh">Find your name</h1>
-    <div class="chips2" role="tablist">
-      <button data-t="scan" aria-pressed="${tab === 'scan'}">Scan my badge</button>
-      <button data-t="id" aria-pressed="${tab === 'id'}">Type my student ID</button>
-      <button data-t="name" aria-pressed="${tab === 'name'}">Search my name</button>
-    </div>
-    <div id="pane"></div><div class="kerr" id="serr"></div></div>`);
+    <div><h1 class="kh">Scan Your Badge</h1><p class="ksub" style="margin-top:6px">Hold your badge's barcode up to the camera — or type your name.</p></div>
+    <div class="sgrid2">
+      <div><div class="scanbox"><div id="scanner"></div><div class="scanline"></div>
+        <button class="kbtn ghost" id="flip" style="position:absolute;right:10px;bottom:10px;min-width:0;padding:8px 14px;font-size:.95rem;background:rgba(0,0,0,.55);color:#fff;border-color:rgba(255,255,255,.4)">Switch camera</button></div>
+        <div class="kerr" id="serr" style="margin-top:8px"></div></div>
+      <div class="stack" style="gap:12px;align-content:start">
+        <b style="font-size:1.3rem">Or type your name</b>
+        <input class="search" id="q" type="search" placeholder="First or last name" autocomplete="off" autocapitalize="words" enterkeyhint="search" style="-webkit-user-select:text;user-select:text">
+        <div class="hits" id="hits"></div>
+      </div>
+    </div></div>`);
   $('#bk').onclick = lateChoice;
-  K.querySelector('[role=tablist]').onclick = e => { const b = e.target.closest('button'); if (b) studentEntry(b.dataset.t); };
-  if (tab === 'scan') {
-    $('#pane').innerHTML = `<p class="ksub" style="margin:0 0 12px">Hold your badge's barcode up to the camera.</p>
-      <div class="scanbox"><div id="scanner"></div><div class="scanline"></div></div>
-      <div class="row2" style="justify-content:center;margin-top:12px"><button class="kbtn ghost" id="flip" style="min-width:0">Switch camera</button></div>`;
-    S.facing = S.facing || 'user';
-    startScan();
-    $('#flip').onclick = async () => { S.facing = S.facing === 'user' ? 'environment' : 'user'; await stopScan(); startScan(); };
-  } else if (tab === 'id') {
-    $('#pane').innerHTML = `<div class="pinwrap" style="margin:0"><div class="kh" id="sidv" style="font-size:3rem;min-height:3.2rem;letter-spacing:.12em">&nbsp;</div>
-      <div class="pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button data-n="${n}">${n}</button>`).join('')}<button class="fn" data-c="del">⌫</button><button data-n="0">0</button><button class="fn" data-c="go" style="color:var(--red)">Go</button></div></div>`;
-    K.querySelector('.pad').onclick = e => {
-      const b = e.target.closest('button'); if (!b) return;
-      if (b.dataset.c === 'del') S.sid = S.sid.slice(0, -1); else if (b.dataset.c === 'go') return findId(S.sid, 'student_id'); else if (S.sid.length < 12) S.sid += b.dataset.n;
-      $('#sidv').innerHTML = S.sid || '&nbsp;'; $('#serr').textContent = '';
-    };
-  } else {
-    $('#pane').innerHTML = `<input class="search" id="q" type="search" placeholder="Start typing your first or last name" autocomplete="off" autocapitalize="words" style="-webkit-user-select:text;user-select:text"><div class="hits" id="hits" style="margin-top:12px"></div>`;
-    let t; $('#q').oninput = () => { clearTimeout(t); t = setTimeout(async () => {
-      const q = $('#q').value.trim(); if (q.length < 2) return $('#hits').innerHTML = '';
-      try {
-        const list = await rpc('kiosk_search', { p_q: q });
-        $('#hits').innerHTML = list.map((s, i) => `<button class="hit" data-i="${i}"><span>${esc(s.first_name)} ${esc(s.last_name)}</span><small>${esc(grade(s.grade))}</small></button>`).join('') || '<p class="ksub">No matches.</p>';
-        $('#hits').onclick = e => { const b = e.target.closest('.hit'); if (b) confirmStudent(list[+b.dataset.i], 'name'); };
-      } catch (x) { $('#serr').textContent = errText(x.message); }
-    }, 250); };
-    $('#q').focus();
-  }
+  S.facing = S.facing || 'user';
+  startScan();
+  $('#flip').onclick = async () => { S.facing = S.facing === 'user' ? 'environment' : 'user'; await stopScan(); startScan(); };
+  let t; $('#q').oninput = () => { clearTimeout(t); t = setTimeout(async () => {
+    const q = $('#q').value.trim(); $('#serr').textContent = '';
+    if (q.length < 2) return $('#hits').innerHTML = '';
+    if (/^\d+$/.test(q)) { $('#hits').innerHTML = `<button class="hit" id="byid"><span>Student ID ${esc(q)}</span><small>Tap to continue</small></button>`; $('#byid').onclick = () => findId(q, 'student_id'); return; }
+    try {
+      const list = await rpc('kiosk_search', { p_q: q });
+      $('#hits').innerHTML = list.map((s, i) => `<button class="hit" data-i="${i}"><span>${esc(s.first_name)} ${esc(s.last_name)}</span><small>${esc(grade(s.grade))}</small></button>`).join('') || '<p class="ksub">No matches.</p>';
+      $('#hits').onclick = e => { const b = e.target.closest('.hit'); if (b) confirmStudent(list[+b.dataset.i], 'name'); };
+    } catch (x) { $('#serr').textContent = errText(x.message); }
+  }, 250); };
 }
 async function findId(id, method) {
   if (!id) return;
@@ -165,7 +155,7 @@ async function findId(id, method) {
 }
 let scanner = null, scanBusy = false;
 function startScan() {
-  if (!window.Html5Qrcode) { $('#serr').textContent = "The camera scanner didn't load. Type your student ID instead."; return; }
+  if (!window.Html5Qrcode) { $('#serr').textContent = "The camera didn't load. Type your name below instead."; return; }
   const F = Html5QrcodeSupportedFormats;
   scanner = new Html5Qrcode('scanner', { verbose: false, useBarCodeDetectorIfSupported: true,
     formatsToSupport: [F.CODE_128, F.CODE_39, F.CODE_93, F.CODABAR, F.ITF, F.EAN_13, F.EAN_8, F.UPC_A, F.QR_CODE, F.PDF_417, F.DATA_MATRIX] });
@@ -176,7 +166,7 @@ function startScan() {
       try { const s = await rpc('kiosk_student', { p_id: digits }); await stopScan(); confirmStudent(s, 'badge'); }
       catch (x) { if ($('#serr')) $('#serr').textContent = errText(x.message); setTimeout(() => scanBusy = false, 1500); return; }
       scanBusy = false;
-    }, () => {}).catch(() => { if ($('#serr')) $('#serr').textContent = 'Camera is blocked. Allow camera access in Safari, or type your student ID.'; });
+    }, () => {}).catch(() => { if ($('#serr')) $('#serr').textContent = 'Camera is blocked. Allow camera access in Safari, or type your name below.'; });
 }
 async function stopScan() {
   const s = scanner; scanner = null;
