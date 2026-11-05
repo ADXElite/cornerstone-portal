@@ -177,14 +177,17 @@ function notePdf(n, filename) {
   doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.text('9039 Beach Boulevard · Jacksonville, FL 32216 · (904) 730-5500', M, 58);
   doc.setTextColor(20, 18, 19); doc.setFont('helvetica', 'bold'); doc.setFontSize(20);
   doc.text('Parent Excused Absence Note', M, 118);
-  const absent = new Date(n.absent_date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  // mm/dd/yyyy dates (with time where it matters), New York time.
+  const md = s => { const [y, m, d] = String(s).slice(0, 10).split('-'); return `${m}/${d}/${y}`; };
+  const mdt = t => t ? new Date(t).toLocaleString('en-US', { timeZone: 'America/New_York', month: '2-digit', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }).replace(',', '') : '';
+  const absent = md(n.absent_date) + (n.absent_end ? ' – ' + md(n.absent_end) : '');
   const rows = [
-    ["Student's name", n.student], ['Student ID', String(n.student_id)], ['Grade / homeroom', `${grade(n.grade)} · ${n.teacher || ''}`],
-    ['Absent date', absent], ['Absent reason', n.reason + (n.reason_other ? ': ' + n.reason_other : '')],
-    ["Parent's name", n.parent_name || ''], ["Parent's phone", n.parent_phone || ''],
-    ['Submitted', stamp(n.created_at) + ' (Cornerstone Parent Portal)'],
-    ['Office review', n.status === 'pending' ? 'Pending' : `${n.status[0].toUpperCase() + n.status.slice(1)} by ${n.reviewed_by || ''} ${n.reviewed_at ? '· ' + stamp(n.reviewed_at) : ''}`],
-    ['Semester', n.semester]
+    ["Student's Name", n.student], ['Student ID', String(n.student_id)], ['Grade / Homeroom', `${grade(n.grade)} · ${n.teacher || ''}`],
+    ['Absent Date', absent], ['Absent Reason', n.reason + (n.reason_other ? ': ' + n.reason_other : '')],
+    ["Parent's Name", n.parent_name || ''], ["Parent's Phone", n.parent_phone || ''],
+    ['Submitted', mdt(n.created_at) + ' (Cornerstone Parent Portal)'],
+    ['Office Review', n.status === 'pending' ? 'Pending' : `${n.status[0].toUpperCase() + n.status.slice(1)} by ${n.reviewed_by || ''} ${n.reviewed_at ? '· ' + mdt(n.reviewed_at) : ''}`],
+    ['Semester', String(n.semester || '').replace(/^(\d{4})-(\d{2})\s*Semester\s*(\d)$/i, (_, a, b, c) => `${a}-${a.slice(0, 2)}${b} (Semester ${c})`)]
   ];
   let y = 150; doc.setFontSize(11);
   for (const [k, v] of rows) {
@@ -192,7 +195,7 @@ function notePdf(n, filename) {
     doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 18, 19);
     const lines = doc.splitTextToSize(String(v || '—'), W - M - 190); doc.text(lines, M + 150, y); y += 22 * Math.max(1, lines.length);
   }
-  y += 14; doc.setFont('helvetica', 'normal'); doc.setTextColor(107, 100, 102); doc.text("Parent's signature", M, y);
+  y += 14; doc.setFont('helvetica', 'normal'); doc.setTextColor(107, 100, 102); doc.text("Parent's Signature", M, y);
   doc.setDrawColor(200, 195, 195); doc.rect(M + 150, y - 14, 300, 96);
   if (n.signature) { try { doc.addImage(n.signature, 'PNG', M + 154, y - 10, 292, 88); } catch {} }
   doc.setFontSize(8.5); doc.setTextColor(107, 100, 102);
