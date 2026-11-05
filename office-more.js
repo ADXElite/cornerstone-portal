@@ -112,3 +112,63 @@ function rosterHtml(r, i) {
   </section>`;
 }
 window.loadBuses = loadBuses;
+
+
+// ---------- Reports: car line roster ----------
+async function loadCars() {
+  $('#cr-print-area').innerHTML = '<p class="muted">Loading roster…</p>';
+  let d; try { d = await call('duty_cars'); } catch (e) { $('#cr-print-area').innerHTML = `<div class="card">${esc(emsg(e))}</div>`; return; }
+  const st = d.students;
+  const here = st.filter(s => s.status === 'present' || s.status === 'late').length, done = st.filter(s => s.done).length;
+  $('#cr-count').textContent = `${st.length} car riders · ${here} here today · ${done} picked up`;
+  const date = new Date(d.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const label = s => s.status === 'absent' ? 'ABSENT' : s.status === 'dismissed' ? 'Checked out early' : s.status === 'late' ? 'Present (late)' : 'Present';
+  const t = x => new Date(x).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
+  $('#cr-print-area').innerHTML = st.length ? `<section class="croster">
+    <h3>Car line</h3>
+    <p class="small" style="margin:2px 0 8px;color:#6B6466">Cornerstone Christian School · ${date} · ${here} here of ${st.length} · printed ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}${d.attendance_in ? '' : ' · attendance not in yet'}</p>
+    <div class="tw" style="border:0"><table><thead><tr><th style="width:30px"></th><th>Student</th><th>Grade</th><th>Teacher</th><th>Today</th><th>Pick-up today</th><th>Picked up</th></tr></thead><tbody>
+    ${st.map(s => `<tr class="${s.status === 'absent' || s.status === 'dismissed' ? 'abs' : ''}">
+      <td><span class="chk"></span></td>
+      <td><b>${esc(s.last)}, ${esc(s.first)}</b>${s.changed ? ' <b style="color:#E4010D">· changed today</b>' : ''}</td>
+      <td>${esc(grade(s.grade))}</td><td>${esc((s.teacher || '').replace(/^(Mr|Mrs|Ms|Miss|Dr)\.?\s+/, ''))}</td>
+      <td style="text-decoration:none"><b>${label(s)}</b></td>
+      <td>${esc(s.pickup_person || '')}</td>
+      <td style="text-decoration:none">${s.done ? `${t(s.done_at)} · ${esc(s.picked_by || '')}${s.picked_rel ? ' (' + esc(s.picked_rel) + ')' : ''}` : ''}</td></tr>`).join('')}
+    </tbody></table></div></section>` : '<div class="card">No car riders today.</div>';
+}
+$('#cr-print').onclick = () => window.print();
+window.loadCars = loadCars;
+
+// ---------- Changes: pick-up people changes ----------
+let PK = [];
+async function loadPickChanges() {
+  if (!$('#pk-from').value) { const d = D(TODAY); d.setDate(d.getDate() - 30); $('#pk-from').value = d.toLocaleDateString('en-CA'); $('#pk-to').value = TODAY; }
+  $('#pk-rows').innerHTML = '<tr><td colspan="6" class="empty">Loading…</td></tr>';
+  try { PK = await call('staff_pickup_requests', { p_sis: $('#pk-facts').value, p_from: $('#pk-from').value || null, p_to: $('#pk-to').value || null }); }
+  catch (e) { toast(emsg(e)); return; }
+  drawPickChanges();
+}
+function drawPickChanges() {
+  const q = $('#pk-q').value.trim().toLowerCase();
+  const rows = PK.map((r, i) => ({ r, i })).filter(({ r }) => !q || [r.student, r.first_name, r.last_name, r.phone, r.email].join(' ').toLowerCase().includes(q));
+  $('#pk-count').textContent = `${rows.length} change${rows.length === 1 ? '' : 's'}`;
+  $('#pk-rows').innerHTML = rows.map(({ r, i }) => `<tr class="${r.sis_done ? 'done' : ''}">
+    <td><b>${esc(r.student)}</b><small>Gr ${esc(grade(r.grade))} · ${esc(r.teacher || '')}</small></td>
+    <td><span class="tag ${r.action === 'add' ? 'ok' : ''}">${r.action === 'add' ? 'Add' : 'Remove'}</span>${r.status === 'cancelled' ? '<small>Cancelled</small>' : ''}</td>
+    <td><b>${esc([r.first_name, r.last_name].filter(Boolean).join(' '))}${r.pin && r.action === 'add' ? ` <span class="pin sm">${r.pin}</span>` : ''}</b><small>${esc(r.relationship || '')}</small></td>
+    <td>${esc(r.phone || '')}<small>${esc(r.email || '')}</small></td>
+    <td>${esc(r.submitted_name || r.submitted_by || '')}<small>${r.source === 'office' ? 'Office · ' : ''}${stamp(r.created_at)}</small>${r.comments ? `<small>“${esc(r.comments)}”</small>` : ''}</td>
+    <td class="c"><input type="checkbox" data-pk="${i}" ${r.sis_done ? 'checked' : ''} aria-label="Entered in FACTS">${r.sis_done && r.sis_by ? `<small>${esc(String(r.sis_by).split('@')[0])}${r.sis_at ? ' · ' + stamp(r.sis_at) : ''}</small>` : ''}</td></tr>`).join('')
+    || '<tr><td colspan="6" class="empty">No pick-up people changes in these dates.</td></tr>';
+}
+['#pk-from', '#pk-to', '#pk-facts'].forEach(id => $(id).addEventListener('change', loadPickChanges));
+$('#pk-q').addEventListener('input', debounce(drawPickChanges, 200));
+$('#pk-rows').addEventListener('change', async e => {
+  const cb = e.target.closest('[data-pk]'); if (!cb) return;
+  const r = PK[+cb.dataset.pk], on = cb.checked; cb.disabled = true;
+  try { await call('staff_pickup_sis', { p_id: r.id, p_done: on }); r.sis_done = on; cb.closest('tr').classList.toggle('done', on); refreshBadges(); }
+  catch (x) { cb.checked = !on; toast(emsg(x)); }
+  cb.disabled = false;
+});
+window.loadPickChanges = loadPickChanges;

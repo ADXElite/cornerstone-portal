@@ -52,7 +52,9 @@ sb.auth.onAuthStateChange(async (ev) => {
 });
 function badges(m) {
   $('#b-notes').hidden = !m.pending_notes; $('#b-notes').textContent = m.pending_notes;
-  $('#b-trans').hidden = !m.new_changes; $('#b-trans').textContent = m.new_changes;
+  const ch = (m.new_changes || 0) + (m.pickup_todo || 0);
+  $('#b-trans').hidden = !ch; $('#b-trans').textContent = ch;
+  $('#b-pick').hidden = !m.pickup_todo; $('#b-pick').textContent = m.pickup_todo;
   $('#b-sio').hidden = !m.signins_todo; $('#b-sio').textContent = m.signins_todo;
   const home = (m.new_changes || 0) + (m.pickup_todo || 0) + (m.notes_todo || 0) + (m.other_todo || 0) + (m.signins_todo || 0);
   $('#b-home').hidden = !home; $('#b-home').textContent = home;
@@ -60,20 +62,25 @@ function badges(m) {
 async function refreshBadges() { try { ME = await call('staff_me'); badges(ME); } catch {} }
 
 // ---------- routing ----------
-const VIEWS = ['dash', 'students', 'student', 'buses', 'alerts', 'notes', 'transport', 'signins', 'pins', 'roster', 'settings'];
+const VIEWS = ['dash', 'students', 'student', 'buses', 'cars', 'alerts', 'notes', 'transport', 'pickchanges', 'signins', 'pins', 'settings', 'roster'];
+// Which top menu item each screen belongs to.
+const MENU = { student: 'students', buses: 'reports', cars: 'reports', pins: 'reports', pickchanges: 'transport', alerts: 'settings', roster: 'settings' };
 let sioTimer = null;
 function route() {
   if (!ME) return;
-  const [v, q] = (location.hash.slice(1) || 'dash').split('?');
+  let [v, q] = (location.hash.slice(1) || 'dash').split('?');
+  if (v === 'reports') v = 'buses';
   const view = VIEWS.includes(v) ? v : 'dash';
   VIEWS.forEach(x => $('#p-' + x).hidden = x !== view);
   clearInterval(sioTimer);
-  const tab = view === 'student' ? 'students' : view;
+  const tab = MENU[view] || view;
   $$('.otabs a').forEach(a => a.dataset.v === tab ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
+  $$('.subtabs a').forEach(a => a.dataset.s === view ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
   ({ dash: loadDash, notes: loadNotes, transport: () => { if (q === 'today') { $('#tf-by').value = 'effective'; $('#tf-from').value = $('#tf-to').value = TODAY; } loadTrans(); },
      signins: () => { loadSignins(); sioTimer = setInterval(() => { if (!document.hidden && $('#modal').hidden) loadSignins(true); }, 30000); },
      pins: loadPins, students: () => loadStudentList(), student: () => loadStudent(new URLSearchParams(q || '').get('id')),
-     buses: loadBuses, alerts: () => window.alertInfo && alertInfo(), roster: loadImports, settings: loadSettings })[view]();
+     buses: loadBuses, cars: () => loadCars(), pickchanges: () => loadPickChanges(), alerts: () => window.alertInfo && alertInfo(),
+     settings: loadSettings, roster: loadImports })[view]();
 }
 addEventListener('hashchange', route);
 const closeModal = () => { $('#modal').hidden = true; $('#modal-in').innerHTML = ''; $$('[data-blob]').forEach(u => URL.revokeObjectURL(u.dataset.blob)); };

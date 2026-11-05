@@ -66,6 +66,9 @@ tr.grp td{background:var(--bg);border-top:2px solid var(--line);padding-top:12px
 .azbar a{min-width:30px;text-align:center;padding:4px 6px;border:1px solid var(--line);border-radius:6px;text-decoration:none;font-weight:700;font-size:.85rem;background:var(--surface)}
 .sgrid{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;align-items:start}
 @media (max-width:900px){.sgrid{grid-template-columns:1fr}}
+.subtabs{display:flex;gap:6px;flex-wrap:wrap}.subtabs a{padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);text-decoration:none;font-weight:600;font-size:.9rem}.subtabs a[aria-current]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.croster{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}.croster h3{font-family:var(--display);font-weight:800;font-size:1.6rem;text-transform:uppercase;margin:0}.croster td{padding:5px 8px;border-top:1px solid #E4DFDF}.croster .abs td{color:#8a8486;text-decoration:line-through}.croster .chk{width:22px;height:22px;border:2px solid #141213;border-radius:4px;display:inline-block}
+@media print{.croster{border:0;padding:0}}
 .roster{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;color:#141213}
 .roster h3{font-family:var(--display);font-weight:800;font-size:1.6rem;text-transform:uppercase;margin:0;display:flex;justify-content:space-between;align-items:baseline}
 .roster h4{margin:12px 0 4px;font-size:.95rem;border-bottom:2px solid #141213;padding-bottom:2px}
@@ -101,15 +104,12 @@ td.c small{text-align:center}
   <section class="screen" id="v-app" hidden>
     <nav class="otabs">
       <a href="#dash" data-v="dash">Home <span class="badge" id="b-home" hidden></span></a>
-      <a href="#notes" data-v="notes">Absent Notes <span class="badge" id="b-notes" hidden></span></a>
-      <a href="#alerts" data-v="alerts">Alerts</a>
-      <a href="#buses" data-v="buses">Buses &amp; car line</a>
-      <a href="#roster" data-v="roster">Data upload</a>
-      <a href="#transport" data-v="transport">Dismissal changes <span class="badge" id="b-trans" hidden></span></a>
-      <a href="#pins" data-v="pins">PINs</a>
-      <a href="#settings" data-v="settings">Settings</a>
-      <a href="#signins" data-v="signins">Sign-in/out <span class="badge" id="b-sio" hidden></span></a>
       <a href="#students" data-v="students">Students</a>
+      <a href="#transport" data-v="transport">Changes <span class="badge" id="b-trans" hidden></span></a>
+      <a href="#notes" data-v="notes">Excused Notes <span class="badge" id="b-notes" hidden></span></a>
+      <a href="#signins" data-v="signins">Sign-In / Sign-Out <span class="badge" id="b-sio" hidden></span></a>
+      <a href="#settings" data-v="settings">Settings</a>
+      <a href="#buses" data-v="reports">Reports</a>
     </nav>
 
     <!-- Today -->
@@ -158,6 +158,7 @@ td.c small{text-align:center}
 
     <!-- Transport report -->
     <div class="screen" id="p-transport" hidden>
+      <nav class="subtabs noprint"><a href="#transport" data-s="transport">Dismissal changes</a><a href="#pickchanges" data-s="pickchanges">Pick-up people changes <span class="badge" id="b-pick" hidden></span></a></nav>
       <div class="bar">
         <label>Dates are<select id="tf-by"><option value="submitted">Submitted</option><option value="effective">In effect</option></select></label>
         <label>From<input type="date" id="tf-from"></label>
@@ -189,6 +190,7 @@ td.c small{text-align:center}
 
     <!-- Pick-up & PIN report -->
     <div class="screen" id="p-pins" hidden>
+      <nav class="subtabs noprint"><a href="#buses" data-s="buses">Bus rosters</a><a href="#cars" data-s="cars">Car line roster</a><a href="#pins" data-s="pins">Pick-up PINs</a></nav>
       <div id="pf-warn"></div>
       <div class="bar noprint">
         <label class="grow">Search<input type="search" id="pf-q" placeholder="Student, person, phone or PIN"></label>
@@ -246,8 +248,33 @@ td.c small{text-align:center}
       </div>
     </div>
 
+    <!-- Pick-up people changes -->
+    <div class="screen" id="p-pickchanges" hidden>
+      <nav class="subtabs noprint"><a href="#transport" data-s="transport">Dismissal changes</a><a href="#pickchanges" data-s="pickchanges">Pick-up people changes <span class="badge" id="b-pick" hidden></span></a></nav>
+      <div class="bar">
+        <label>Submitted from<input type="date" id="pk-from"></label>
+        <label>To<input type="date" id="pk-to"></label>
+        <label>FACTS<select id="pk-facts"><option value="all">All</option><option value="todo">Not entered yet</option><option value="done">Entered</option></select></label>
+        <label class="grow">Search<input type="search" id="pk-q" placeholder="Student or person"></label>
+      </div>
+      <span class="cnt" id="pk-count"></span>
+      <div class="tw"><table><thead><tr><th>Student</th><th>Change</th><th>Person</th><th>Contact</th><th>Submitted</th><th style="text-align:center">Entered in FACTS</th></tr></thead><tbody id="pk-rows"></tbody></table></div>
+    </div>
+
+    <!-- Car line roster -->
+    <div class="screen" id="p-cars" hidden>
+      <nav class="subtabs noprint"><a href="#buses" data-s="buses">Bus rosters</a><a href="#cars" data-s="cars">Car line roster</a><a href="#pins" data-s="pins">Pick-up PINs</a></nav>
+      <div class="card noprint">
+        <b class="t">Car line roster for today</b>
+        <p class="muted small">Every car rider today, A–Z, including parent and office changes for today and today's attendance. Shows who picked each student up once car line staff mark them.</p>
+        <div class="actions"><button class="btn sm" id="cr-print" type="button">Print car line roster</button><span class="cnt" id="cr-count"></span></div>
+      </div>
+      <div id="cr-print-area"></div>
+    </div>
+
     <!-- Buses & car line -->
     <div class="screen" id="p-buses" hidden>
+      <nav class="subtabs noprint"><a href="#buses" data-s="buses">Bus rosters</a><a href="#cars" data-s="cars">Car line roster</a><a href="#pins" data-s="pins">Pick-up PINs</a></nav>
       <div class="card noprint" id="h-today" style="padding:10px 14px"></div>
       <div class="card noprint" id="bz-progress" style="padding:10px 14px"></div>
       <div class="card noprint">
@@ -264,6 +291,7 @@ td.c small{text-align:center}
 
     <!-- Alerts -->
     <div class="screen" id="p-alerts" hidden>
+      <nav class="subtabs noprint"><a href="#settings" data-s="settings">Staff &amp; rules</a><a href="#roster" data-s="roster">Data upload</a><a href="#alerts" data-s="alerts">Alerts</a></nav>
       <section class="hsec" id="sec-alert">
         <h2 class="hh">Send a parent alert</h2>
         <div class="card form">
@@ -284,23 +312,9 @@ td.c small{text-align:center}
       </section>
     </div>
 
-    <!-- Roster -->
-    <div class="screen" id="p-roster" hidden>
-      <div class="card">
-        <b class="t">Daily file from the SFTP server</b>
-        <p>Upload the student &amp; parent CSV to the <b>uploads</b> folder on the SFTP server (141.148.36.44, login <b>ccsftp</b>). On school days the portal checks at <b>10:00 AM</b> and <b>5:00 PM</b> for the student &amp; parent file and at <b>11:30 AM</b> for the daily attendance file (and keeps checking every 5 minutes for half an hour in case a file is late), imports the newest of each, and moves them to <b>processed</b>.</p>
-        <div id="sftp-errors"></div>
-        <div class="actions">
-          <button class="btn sm" id="sftp-go" type="button">Check SFTP now</button>
-          <label class="actions" style="font-weight:600"><input type="checkbox" id="sftp-force"> I'm sure — allow turning off many students</label>
-        </div>
-        <div id="sftp-result"></div>
-      </div>
-      <div><h2>Recent imports</h2><div class="tw"><table><thead><tr><th>When</th><th>By</th><th>Rows</th><th>Students</th><th>Parents</th><th>Pickup people</th><th>Archived</th></tr></thead><tbody id="r-hist"></tbody></table></div></div>
-    </div>
-
     <!-- Settings -->
     <div class="screen" id="p-settings" hidden>
+      <nav class="subtabs noprint"><a href="#settings" data-s="settings">Staff &amp; rules</a><a href="#roster" data-s="roster">Data upload</a><a href="#alerts" data-s="alerts">Alerts</a></nav>
       <div class="card">
         <b class="t">Staff sign-ins</b>
         <p class="muted small"><b>Front office</b> — the whole office portal, plus emails for every parent change. <b>Car line</b> — only portal.csjax.org/carline. <b>Bus driver</b> — only portal.csjax.org/bus.</p>
@@ -337,6 +351,22 @@ td.c small{text-align:center}
         </div>
       </div>
       <p class="err" id="set-err"></p>
+    </div>
+
+    <!-- Data upload -->
+    <div class="screen" id="p-roster" hidden>
+      <nav class="subtabs noprint"><a href="#settings" data-s="settings">Staff &amp; rules</a><a href="#roster" data-s="roster">Data upload</a><a href="#alerts" data-s="alerts">Alerts</a></nav>
+      <div class="card">
+        <b class="t">Data upload — daily file from the SFTP server</b>
+        <p>Upload the student &amp; parent CSV to the <b>uploads</b> folder on the SFTP server (141.148.36.44, login <b>ccsftp</b>). On school days the portal checks at <b>10:00 AM</b> and <b>5:00 PM</b> for the student &amp; parent file and at <b>11:30 AM</b> for the daily attendance file (and keeps checking every 5 minutes for half an hour in case a file is late), imports the newest of each, and moves them to <b>processed</b>.</p>
+        <div id="sftp-errors"></div>
+        <div class="actions">
+          <button class="btn sm" id="sftp-go" type="button">Check SFTP now</button>
+          <label class="actions" style="font-weight:600"><input type="checkbox" id="sftp-force"> I'm sure — allow turning off many students</label>
+        </div>
+        <div id="sftp-result"></div>
+      </div>
+      <div class="card"><b class="t">Recent imports</b><div class="tw"><table><thead><tr><th>When</th><th>By</th><th>Rows</th><th>Students</th><th>Parents</th><th>Pickup people</th><th>Archived</th></tr></thead><tbody id="r-hist"></tbody></table></div></div>
     </div>
   </section>
 </main>
