@@ -57,8 +57,8 @@ function drawHome() {
     return `<tr class="${r.facts_done ? 'done' : ''}">
     <td><b>${tm(r.created_at)}</b><small>${multi || d !== TODAY ? nice(d) + ' · ' : ''}<span class="tag ${KIND[r.kind][1]}" style="margin-top:4px">${KIND[r.kind][0]}</span></small></td>
     <td><b>${esc(r.student)}</b><small>Gr ${esc(grade(r.grade))} · ${esc(r.teacher || '')}</small></td>
-    <td>${r.method === 'pin' || r.method === 'office' ? `<b>${esc(r.person_name)}${r.pin ? ` <span class="pin sm">${esc(r.pin)}</span>` : ''}</b><small>${esc(r.relationship || '')}${r.method === 'office' ? ' · entered by office' : ''}</small>` : `<b>Student (self)</b><small>${HOW[r.method]}</small>`}</td>
-    <td>${esc(r.reason || '')}${r.has_signature ? `<small><button class="link" data-sig="${i}" style="padding:0">View signature</button></small>` : ''}</td>
+    <td>${r.method === 'pin' || r.method === 'office' ? `<b>${esc(r.person_name)}${r.pin ? ` <span class="pin sm">${esc(r.pin)}</span>` : ''}</b><small>${esc(r.relationship || '')}${r.method === 'office' ? ' · entered by office' : ''}</small>` : `<b>Student (Self)</b><small>${HOW[r.method]}</small>`}</td>
+    <td>${esc(r.reason || '')}${r.has_signature ? `<small><button class="link" data-sig="${i}" style="padding:0">View Signature</button></small>` : ''}</td>
     <td><button class="btn ghost sm" data-print="${i}">Print</button></td>${fx('sio', i, r.facts_done, r.facts_by, r.facts_at)}</tr>`; }).join('') || empty(6, none);
 
   const NS = { pending: ['Pending', 'warn'], approved: ['Approved', 'ok'], rejected: ['Rejected', ''] };
@@ -232,25 +232,25 @@ function pickEStudent(s) {
   drawEFields();
 }
 const people = s => [...s.guardians.filter(g => g.name).map(g => ({ ...g, g: 1 })), ...s.pickups.filter(p => p.name)];
-const personOpts = (s, extra = '') => '<option value="">Choose…</option>' + people(s).map((p, i) => `<option value="${i}">${esc(p.name)}${p.relationship ? ' (' + esc(p.relationship) + ')' : ''}${p.pin ? ' · PIN ' + p.pin : ''}</option>`).join('') + extra + '<option value="other">Someone else…</option>';
+const personOpts = (s, extra = '') => '<option value="">Choose…</option>' + people(s).map((p, i) => `<option value="${i}">${esc(p.name)}${p.relationship ? ' (' + esc(p.relationship) + ')' : ''}${p.pin ? ' · PIN ' + p.pin : ''}</option>`).join('') + extra + '<option value="other">Someone Else…</option>';
 function drawEFields() {
   const t = $('#e-type').value, s = ESTU, F = $('#e-fields'); $('#e-err').textContent = '';
   if (!t) return F.innerHTML = '';
   if (!s) return F.innerHTML = '<p class="muted">Choose a student first.</p>';
   const nowT = new Date().toLocaleTimeString('en-GB', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit' });
-  if (t === 'transport') F.innerHTML = `<div class="two"><label>Applies to <select id="ef-period"><option value="afternoon">Afternoon dismissal</option><option value="morning">Morning arrival</option></select></label>
-      <label>How long <select id="ef-ct"><option value="one_day">One day</option><option value="date_range">Date range</option><option value="permanent">Permanent</option></select></label></div>
+  if (t === 'transport') F.innerHTML = `<div class="two"><label>Applies To <select id="ef-period"><option value="afternoon">Afternoon Dismissal</option><option value="morning">Morning Arrival</option></select></label>
+      <label>How Long <select id="ef-ct"><option value="one_day">One Day</option><option value="date_range">Date Range</option><option value="permanent">Permanent</option></select></label></div>
     <div class="two"><label>Date <input type="date" id="ef-start" value="${TODAY}"></label><label id="ef-end-l" hidden>Through <input type="date" id="ef-end"></label></div>
-    <label>New method <select id="ef-method"></select></label>
+    <label>New Method <select id="ef-method"></select></label>
     <label>Details <small class="muted">(bus stop, care location…)</small><input type="text" id="ef-details" list="ef-stops"></label>
-    <label>Picked up by <select id="ef-person">${personOpts(s)}</select></label>
+    <label>Picked Up By <select id="ef-person">${personOpts(s)}</select></label>
     <div id="ef-other" class="two" hidden><label>Name <input type="text" id="ef-oname"></label><label>Relationship <input type="text" id="ef-orel"></label></div>
     <label>Notes <input type="text" id="ef-comments"></label>`;
-  if (t === 'pickup_add') F.innerHTML = `<div class="two"><label>First name <input type="text" id="ef-first"></label><label>Last name <input type="text" id="ef-last"></label></div>
-    <div class="two"><label>Relationship <input type="text" id="ef-rel"></label><label>Cell phone <input type="tel" id="ef-phone"></label></div>
+  if (t === 'pickup_add') F.innerHTML = `<div class="two"><label>First Name <input type="text" id="ef-first"></label><label>Last Name <input type="text" id="ef-last"></label></div>
+    <div class="two"><label>Relationship <input type="text" id="ef-rel"></label><label>Cell Phone <input type="tel" id="ef-phone"></label></div>
     <label>Email <small class="muted">(optional)</small><input type="email" id="ef-email"></label><label>Notes <input type="text" id="ef-comments"></label>`;
   if (t === 'pickup_remove') F.innerHTML = `<label>Remove <select id="ef-rm"><option value="">Choose…</option>${s.pickups.map(p => `<option value="${esc(p.key)}">${esc(p.name)}${p.relationship ? ' (' + esc(p.relationship) + ')' : ''}</option>`).join('')}</select></label><label>Notes <input type="text" id="ef-comments"></label>`;
-  if (t === 'late_in' || t === 'early_out') F.innerHTML = `<div class="two"><label>${t === 'late_in' ? 'Signed in by' : 'Picked up by'} <select id="ef-person">${personOpts(s, t === 'late_in' ? '<option value="self">Student (self)</option>' : '')}</select></label>
+  if (t === 'late_in' || t === 'early_out') F.innerHTML = `<div class="two"><label>${t === 'late_in' ? 'Signed in by' : 'Picked up by'} <select id="ef-person">${personOpts(s, t === 'late_in' ? '<option value="self">Student (Self)</option>' : '')}</select></label>
       <label>Time <input type="time" id="ef-time" value="${nowT}"></label></div>
     <div id="ef-other" class="two" hidden><label>Name <input type="text" id="ef-oname"></label><label>Relationship <input type="text" id="ef-orel"></label></div>
     <label>Reason <input type="text" id="ef-reason" maxlength="300"></label>`;
@@ -315,7 +315,7 @@ $('#a-aud').onchange = () => {
   if (a === 'transport') {
     $('#a-pick').innerHTML = (AINFO?.methods || []).filter(Boolean).sort().map(m => `<option>${esc(m)}</option>`).join('');
     const syncBus = () => { const bus = $('#a-pick').value === 'Bus Rider'; $('#a-bus-l').hidden = !bus;
-      $('#a-bus').innerHTML = '<option value="">All buses</option>' + (AINFO?.buses || []).sort((x, y) => +x - +y).map(b => `<option value="${esc(b)}">Bus ${esc(b)}</option>`).join(''); };
+      $('#a-bus').innerHTML = '<option value="">All Buses</option>' + (AINFO?.buses || []).sort((x, y) => +x - +y).map(b => `<option value="${esc(b)}">Bus ${esc(b)}</option>`).join(''); };
     $('#a-pick').onchange = syncBus; syncBus();
   } else $('#a-pick').onchange = null;
   if (a === 'grade') $('#a-pick').innerHTML = (AINFO?.grades || []).sort((x, y) => (x === 'K' ? -1 : y === 'K' ? 1 : +x - +y)).map(g => `<option value="${esc(g)}">${esc(g === 'K' ? 'Kindergarten' : 'Grade ' + String(g).replace(/^0/, ''))}</option>`).join('');

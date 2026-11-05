@@ -259,7 +259,7 @@ $('#f-note').addEventListener('submit', async e => {
   if (done.length) {
     $('#f-note').reset(); $('#n-other-l').hidden = true; $('#sig-clear').click(); $('#n-date').value = '';
     await loadHome().catch(() => {});
-    finish('Note submitted', `Excused note for ${done.join(' and ')} on ${niceLong(dateVal)} was sent to the front office for review.`, failed.length);
+    finish('Note Submitted', `Excused note for ${done.join(' and ')} on ${niceLong(dateVal)} was sent to the front office for review.`, failed.length);
   }
 });
 
@@ -357,7 +357,7 @@ function renderTrans() {
   if (!$('#t-start').value) $('#t-start').value = afterCut() ? nextSchoolDay(HOME.today) : HOME.today;
   $('#t-start').min = afterCut() ? addDays(HOME.today, 1) : HOME.today; $('#t-start').max = addDays(HOME.today, 180);
   const stops = HOME.bus_stops; const buses = [...new Set(stops.map(s => s.bus))];
-  $('#t-stop').innerHTML = '<option value="">Choose a stop…</option>' + buses.map(b => `<optgroup label="${esc(b)}">${stops.filter(s => s.bus === b).map(s => `<option>${esc(s.stop)}</option>`).join('')}</optgroup>`).join('');
+  $('#t-stop').innerHTML = '<option value="">Choose a Stop…</option>' + buses.map(b => `<optgroup label="${esc(b)}">${stops.filter(s => s.bus === b).map(s => `<option>${esc(s.stop)}</option>`).join('')}</optgroup>`).join('');
   syncTrans(); drawCurrent();
 }
 function drawCurrent() {
@@ -367,16 +367,16 @@ function drawCurrent() {
     const t = transportLines(s);
     const list = [...s.guardians.map(g => ({ ...g, kind: 'Parent/guardian' })), ...s.pickups.map(p => ({ ...p, kind: 'Pickup' }))].filter(p => p.name);
     list.forEach(p => { const k = p.name.toLowerCase(); if (!people.has(k)) people.set(k, p); });
-    return `<div class="card" style="background:var(--bg)"><b class="t">${esc(s.first_name)} — now on file</b>
+    return `<div class="card" style="background:var(--bg)"><b class="t">${esc(s.first_name)} — Now on File</b>
       <dl class="kv" style="padding:0"><dt>Afternoon</dt><dd>${esc(t.pm)}</dd></dl>
-      <details><summary><b>Pickup people on file (${list.length})</b></summary>
+      <details><summary><b>Pick-Up People on File (${list.length})</b></summary>
         <div class="list" style="margin-top:8px">${list.map(p => `<div class="row"><div class="txt"><b>${esc(p.name)}</b><p>${esc([p.relationship, p.phone].filter(Boolean).join(' · ') || p.kind)}</p></div>${p.pin ? `<span class="pin sm">${p.pin}</span>` : ''}</div>`).join('') || '<div class="empty">No pickup people on file.</div>'}</div>
       </details></div>`;
   }).join('');
   const cur = $('#t-person').value;
-  $('#t-person').innerHTML = '<option value="">Choose a person…</option>' +
+  $('#t-person').innerHTML = '<option value="">Choose a Person…</option>' +
     [...people.values()].sort((a, b) => a.name.localeCompare(b.name)).map(p => `<option value="${esc(p.name)}" data-r="${esc(p.relationship || '')}" data-p="${esc(p.phone || '')}">${esc(p.name)}${p.relationship ? ' (' + esc(p.relationship) + ')' : ''}</option>`).join('') +
-    '<option value="__other">Someone else…</option>';
+    '<option value="__other">Someone Else…</option>';
   if (cur) $('#t-person').value = cur;
 }
 function syncTrans() {
@@ -457,7 +457,7 @@ $('#f-trans').addEventListener('submit', async e => {
     const when = type === 'date_range' ? `${nice(start)} – ${nice(endVal)}` : type === 'permanent' ? `starting ${nice(start)}` : niceLong(start);
     $('#f-trans').reset(); $('#t-start').value = '';
     await loadHome().catch(() => {});
-    finish('Change submitted', `${done.join(' and ')}: ${method}${person ? ' with ' + person : ''} — ${when}. ${alertFail ? 'Please also call the front office at (904) 730-5500 to confirm.' : 'The front office has been notified.'}`, failed.length);
+    finish('Change Submitted', `${done.join(' and ')}: ${method}${person ? ' with ' + person : ''} — ${when}. ${alertFail ? 'Please also call the front office at (904) 730-5500 to confirm.' : 'The front office has been notified.'}`, failed.length);
   }
 });
 
@@ -478,10 +478,10 @@ function drawPickups() {
   if (!s) { $('#pp-list').innerHTML = HOME.students.some(x => x.is_guardian) ? '' : '<div class="card">Only a parent or guardian on file can change the pick-up list.</div>'; return; }
   const rows = [
     ...s.guardians.filter(g => g.name).map(g => `<div class="row"><div class="txt"><b>${esc(g.name)}</b><p>${esc(g.relationship || 'Parent/guardian')}${g.phone ? ' · ' + esc(g.phone) : ''}</p></div>${g.pin ? `<span class="pin sm">${g.pin}</span>` : ''}</div>`),
-    ...s.pickups.map(p => `<div class="row"><div class="txt"><b>${esc(p.name)}${p.pending ? ' <span class="tag warn">Added in app</span>' : ''}</b><p>${esc([p.relationship, p.phone].filter(Boolean).join(' · ') || 'Pick-up')}</p>
+    ...s.pickups.map(p => `<div class="row"><div class="txt"><b>${esc(p.name)}${p.pending ? ' <span class="tag warn">Added in App</span>' : ''}</b><p>${esc([p.relationship, p.phone].filter(Boolean).join(' · ') || 'Pick-up')}</p>
       <button class="link" data-rm="${esc(p.key)}" data-nm="${esc(p.name)}" style="padding:4px 0">Remove</button></div>${p.pin ? `<span class="pin sm">${p.pin}</span>` : ''}</div>`)
   ];
-  $('#pp-list').innerHTML = `<div><h2>${esc(s.first_name)}'s pick-up list</h2><div class="list">${rows.join('') || '<div class="empty">No one on file.</div>'}</div></div>`;
+  $('#pp-list').innerHTML = `<div><h2>${esc(s.first_name)}'s Pick-Up List</h2><div class="list">${rows.join('') || '<div class="empty">No one on file.</div>'}</div></div>`;
 }
 $('#pp-list').addEventListener('click', async e => {
   const b = e.target.closest('[data-rm]'); if (!b) return;
@@ -531,19 +531,19 @@ function sheet(mode) {
   const box = $('#welcome-in');
   if (mode === 'install') {
     box.innerHTML = `<img class="welcome-icon" src="/icons/icon-192.png" alt="">
-      <h2 class="w-title" id="w-title">Add Cornerstone to your home screen</h2>
+      <h2 class="w-title" id="w-title">Add Cornerstone to Your Home Screen</h2>
       <p>Open the parent portal like an app, stay signed in, and get school alerts on your phone.</p>
       <div class="w-perks"><span>Excused notes</span><span>Dismissal changes</span><span>Pick-up PINs</span><span>School alerts</span></div>
       ${installEvt ? '' : isIOS ? `<ol class="w-steps"><li><span>Tap the Share button ${SHARE} at the bottom (or top) of Safari.</span></li><li><span>Scroll and tap <b>Add to Home Screen</b>, then <b>Add</b>.</span></li><li><span>Open <b>CCS Portal</b> from your home screen and turn on alerts.</span></li></ol>`
         : `<ol class="w-steps"><li><span>Tap the <b>⋮</b> menu in your browser.</span></li><li><span>Tap <b>Install app</b> or <b>Add to Home screen</b>.</span></li><li><span>Open <b>CCS Portal</b> from your home screen and turn on alerts.</span></li></ol>`}
-      <div class="stack">${installEvt ? '<button class="btn big" id="w-install">Install the app</button>' : ''}<button class="w-later" id="w-later">Maybe later</button></div>`;
+      <div class="stack">${installEvt ? '<button class="btn big" id="w-install">Install the App</button>' : ''}<button class="w-later" id="w-later">Maybe Later</button></div>`;
     if ($('#w-install')) $('#w-install').onclick = async () => { installEvt.prompt(); const c = await installEvt.userChoice.catch(() => ({})); installEvt = null; if (c.outcome === 'accepted') $('#welcome').hidden = true; else sheet('install'); };
     $('#w-later').onclick = () => { later.set('ccs_install_later'); $('#welcome').hidden = true; };
   } else {
     box.innerHTML = `<img class="welcome-icon" src="/icons/icon-192.png" alt="">
-      <h2 class="w-title" id="w-title">Turn on school alerts</h2>
+      <h2 class="w-title" id="w-title">Turn On School Alerts</h2>
       <p>Get notified about closings, early dismissals, and updates on your notes and requests — straight from the Cornerstone front office.</p>
-      <div class="stack"><button class="btn big" id="w-push">Turn on alerts</button><button class="w-later" id="w-later">Not now</button></div><p class="err" id="w-err"></p>`;
+      <div class="stack"><button class="btn big" id="w-push">Turn On Alerts</button><button class="w-later" id="w-later">Not Now</button></div><p class="err" id="w-err"></p>`;
     $('#w-push').onclick = async () => { const ok = await enablePush(); if (ok) { $('#welcome').hidden = true; toast("Alerts are on. We'll notify you here."); } };
     $('#w-later').onclick = () => { later.set('ccs_push_later'); $('#welcome').hidden = true; };
   }
@@ -579,7 +579,7 @@ async function afterSignIn() {
 }
 
 // ---------- history ----------
-const STATUS = { pending: ['Pending review', 'warn'], approved: ['Approved — excused', 'ok'], rejected: ['Not approved', ''], new: ['Sent to office', 'warn'], processed: ['Processed', 'ok'], cancelled: ['Cancelled', 'gray'] };
+const STATUS = { pending: ['Pending Review', 'warn'], approved: ['Approved — Excused', 'ok'], rejected: ['Not Approved', ''], new: ['Sent to Office', 'warn'], processed: ['Processed', 'ok'], cancelled: ['Cancelled', 'gray'] };
 async function loadHistory() {
   $('#hi-who').textContent = HOME.parent_name || HOME.identifier;
   $('#hi-notes').innerHTML = $('#hi-changes').innerHTML = '<div class="empty">Loading…</div>';

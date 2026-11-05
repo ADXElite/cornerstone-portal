@@ -99,11 +99,11 @@ td.c small{text-align:center}
 
 <main>
   <section class="screen" id="v-login" hidden>
-    <div class="today"><div class="date">Front Office</div><h1>Staff sign in</h1></div>
+    <div class="today"><div class="date">Front Office</div><h1>Staff Sign In</h1></div>
     <form class="card form" id="f-login" style="max-width:460px">
-      <label>School email <input type="email" id="lg-email" autocomplete="username" required></label>
+      <label>School Email <input type="email" id="lg-email" autocomplete="username" required></label>
       <label>Password <input type="password" id="lg-pass" autocomplete="current-password" required></label>
-      <button class="btn" type="submit">Sign in</button>
+      <button class="btn" type="submit">Sign In</button>
       <button class="link" type="button" id="lg-forgot">Forgot password?</button>
       <p class="err" id="lg-err" role="alert"></p>
     </form>
@@ -123,32 +123,32 @@ td.c small{text-align:center}
     <!-- Today -->
     <div class="screen" id="p-dash" hidden>
       <div class="hbar">
-        <div><h1 style="font-size:1.8rem">Needs attention</h1><p class="muted small">Changes, notes and sign-ins/outs that still need to be approved or entered in FACTS. Checked items drop off this list.</p></div>
+        <div><h1 style="font-size:1.8rem">Needs Attention</h1><p class="muted small">Changes, notes and sign-ins/outs that still need to be approved or entered in FACTS. Checked items drop off this list.</p></div>
         <span class="muted small" id="h-updated"></span>
       </div>
       <input type="radio" name="h-show" value="todo" checked hidden>
 
       <section class="hsec" id="sec-changes">
-        <h2 class="hh">Change requests</h2>
-        <h3 class="hs">Dismissal changes <span class="cnt" id="c-trans"></span></h3>
-        <div class="tw"><table><thead><tr><th>Student</th><th>When</th><th>Change</th><th>Pick-up person</th><th>Submitted</th><th class="c">Entered in FACTS</th></tr></thead><tbody id="h-trans"></tbody></table></div>
-        <h3 class="hs">Pick-up person changes <span class="cnt" id="c-pick"></span></h3>
+        <h2 class="hh">Change Requests</h2>
+        <h3 class="hs">Dismissal Changes <span class="cnt" id="c-trans"></span></h3>
+        <div class="tw"><table><thead><tr><th>Student</th><th>When</th><th>Change</th><th>Pick-Up Person</th><th>Submitted</th><th class="c">Entered in FACTS</th></tr></thead><tbody id="h-trans"></tbody></table></div>
+        <h3 class="hs">Pick-Up Person Changes <span class="cnt" id="c-pick"></span></h3>
         <div class="tw"><table><thead><tr><th>Student</th><th>Change</th><th>Person</th><th>Contact</th><th>Submitted</th><th class="c">Entered in FACTS</th></tr></thead><tbody id="h-pick"></tbody></table></div>
         <div id="h-other-wrap">
-          <h3 class="hs">Other updates (entered by the office) <span class="cnt" id="c-other"></span></h3>
+          <h3 class="hs">Other Updates (Entered by the Office) <span class="cnt" id="c-other"></span></h3>
           <div class="tw"><table><thead><tr><th>Student</th><th>Details</th><th>Entered</th><th class="c">Entered in FACTS</th></tr></thead><tbody id="h-other"></tbody></table></div>
         </div>
       </section>
 
       <section class="hsec" id="sec-sio">
-        <h2 class="hh">Late sign-in and early sign-out</h2>
-        <div class="tw"><table><thead><tr><th>Time</th><th>Student</th><th>Signed by</th><th>Reason</th><th>Slip</th><th class="c">Entered in FACTS</th></tr></thead><tbody id="h-sio"></tbody></table></div>
+        <h2 class="hh">Late Sign-In and Early Sign-Out</h2>
+        <div class="tw"><table><thead><tr><th>Time</th><th>Student</th><th>Signed By</th><th>Reason</th><th>Slip</th><th class="c">Entered in FACTS</th></tr></thead><tbody id="h-sio"></tbody></table></div>
         <p class="muted small">Slips print on a 4" × 2½" label. In the print window choose your label printer (or Avery 2½" × 4" labels) and set margins to None.</p>
       </section>
 
       <section class="hsec" id="sec-notes">
-        <h2 class="hh">Excused attendance notes</h2>
-        <div class="tw"><table><thead><tr><th>Student</th><th>Type</th><th>Date absent</th><th>Reason</th><th>Review</th><th>Download</th><th class="c">Entered in FACTS</th></tr></thead><tbody id="h-notes"></tbody></table></div>
+        <h2 class="hh">Excused Attendance Notes</h2>
+        <div class="tw"><table><thead><tr><th>Student</th><th>Type</th><th>Date Absent</th><th>Reason</th><th>Review</th><th>Download</th><th class="c">Entered in FACTS</th></tr></thead><tbody id="h-notes"></tbody></table></div>
       </section>
 
     </div>
@@ -157,27 +157,27 @@ td.c small{text-align:center}
     <div class="screen" id="p-notes" hidden>
       <div class="bar">
         <label>Status<select id="nf-status"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="all">All</option></select></label>
-        <label>Type<select id="nf-kind"><option value="">All</option><option value="parent">Parent notes</option><option value="doctor">Doctor's notes</option></select></label>
+        <label>Type<select id="nf-kind"><option value="">All</option><option value="parent">Parent Notes</option><option value="doctor">Doctor's Notes</option></select></label>
         <label class="grow">Student<input type="search" id="nf-q" placeholder="Name or student ID"></label>
         <span class="cnt" id="nf-count"></span>
       </div>
-      <div class="tw"><table><thead><tr><th>Student</th><th>Type</th><th>Date absent</th><th>Reason</th><th>Parent notes used</th><th>Submitted</th><th>Status</th></tr></thead><tbody id="n-rows"></tbody></table></div>
+      <div class="tw"><table><thead><tr><th>Student</th><th>Type</th><th>Date Absent</th><th>Reason</th><th>Parent Notes Used</th><th>Submitted</th><th>Status</th></tr></thead><tbody id="n-rows"></tbody></table></div>
     </div>
 
     <!-- Transport report -->
     <div class="screen" id="p-transport" hidden>
-      <nav class="subtabs noprint"><a href="#transport" data-s="transport">Dismissal changes</a><a href="#pickchanges" data-s="pickchanges">Pick-up people changes <span class="badge" id="b-pick" hidden></span></a></nav>
+      <nav class="subtabs noprint"><a href="#transport" data-s="transport">Dismissal Changes</a><a href="#pickchanges" data-s="pickchanges">Pick-Up People Changes <span class="badge" id="b-pick" hidden></span></a></nav>
       <div class="bar">
-        <label>Dates are<select id="tf-by"><option value="submitted">Submitted</option><option value="effective">In effect</option></select></label>
+        <label>Dates Are<select id="tf-by"><option value="submitted">Submitted</option><option value="effective">In Effect</option></select></label>
         <label>From<input type="date" id="tf-from"></label>
         <label>To<input type="date" id="tf-to"></label>
-        <label>Status<select id="tf-status"><option value="all">All</option><option value="new">Not processed</option><option value="processed">Processed</option><option value="cancelled">Cancelled</option></select></label>
+        <label>Status<select id="tf-status"><option value="all">All</option><option value="new">Not Processed</option><option value="processed">Processed</option><option value="cancelled">Cancelled</option></select></label>
         <label class="grow">Search<input type="search" id="tf-q" placeholder="Student, parent or pickup person"></label>
         <button class="btn ghost sm" id="tf-today" type="button">Today</button>
         <button class="btn ghost sm" id="tf-csv" type="button">Download CSV</button>
       </div>
       <span class="cnt" id="tf-count"></span>
-      <div class="tw"><table><thead><tr><th>Student</th><th>When</th><th>From → To</th><th>Pickup person</th><th>Submitted by</th><th>Status</th></tr></thead><tbody id="t-rows"></tbody></table></div>
+      <div class="tw"><table><thead><tr><th>Student</th><th>When</th><th>From → To</th><th>Pick-Up Person</th><th>Submitted By</th><th>Status</th></tr></thead><tbody id="t-rows"></tbody></table></div>
     </div>
 
     <!-- Sign-In / Sign-Out -->
@@ -185,20 +185,20 @@ td.c small{text-align:center}
       <div class="bar">
         <label>From<input type="date" id="sio-from"></label>
         <label>To<input type="date" id="sio-to"></label>
-        <label>Type<select id="sio-kind"><option value="all">All</option><option value="early_out">Early check-outs</option><option value="late_in">Late sign-ins</option></select></label>
-        <label>FACTS<select id="sio-facts"><option value="all">All</option><option value="todo">Not updated yet</option><option value="done">Updated</option></select></label>
+        <label>Type<select id="sio-kind"><option value="all">All</option><option value="early_out">Early Check-Outs</option><option value="late_in">Late Sign-Ins</option></select></label>
+        <label>FACTS<select id="sio-facts"><option value="all">All</option><option value="todo">Not Updated Yet</option><option value="done">Updated</option></select></label>
         <label class="grow">Search<input type="search" id="sio-q" placeholder="Student, person or PIN"></label>
         <button class="btn ghost sm" id="sio-today" type="button">Today</button>
         <button class="btn ghost sm" id="sio-csv" type="button">Download CSV</button>
       </div>
       <span class="cnt" id="sio-count"></span>
-      <div class="tw"><table><thead><tr><th>Time</th><th>Type</th><th>Student</th><th>Signed by</th><th>Reason</th><th>Signature</th><th style="text-align:center">Updated in FACTS</th></tr></thead><tbody id="sio-rows"></tbody></table></div>
+      <div class="tw"><table><thead><tr><th>Time</th><th>Type</th><th>Student</th><th>Signed By</th><th>Reason</th><th>Signature</th><th style="text-align:center">Updated in FACTS</th></tr></thead><tbody id="sio-rows"></tbody></table></div>
       <p class="muted small">Kiosk: open <b>portal.csjax.org/kiosk</b> on the front office iPad. Updates every 30 seconds.</p>
     </div>
 
     <!-- Pick-up & PIN report -->
     <div class="screen" id="p-pins" hidden>
-      <nav class="subtabs noprint"><a href="#buses" data-s="buses">Bus rosters</a><a href="#cars" data-s="cars">Car line roster</a><a href="#pins" data-s="pins">Pick-up PINs</a></nav>
+      <nav class="subtabs noprint"><a href="#buses" data-s="buses">Bus Rosters</a><a href="#cars" data-s="cars">Car Line Roster</a><a href="#pins" data-s="pins">Pick-Up PINs</a></nav>
       <div id="pf-warn"></div>
       <div class="bar noprint">
         <label class="grow">Search<input type="search" id="pf-q" placeholder="Student, person, phone or PIN"></label>
@@ -215,7 +215,7 @@ td.c small{text-align:center}
     <div class="screen" id="p-students" hidden>
       <div class="bar">
         <div class="seg sm" role="radiogroup" aria-label="Which students">
-          <label><input type="radio" name="sl-arch" value="0" checked><span>Current students</span></label>
+          <label><input type="radio" name="sl-arch" value="0" checked><span>Current Students</span></label>
           <label><input type="radio" name="sl-arch" value="1"><span>Archived</span></label>
         </div>
         <label>Grade<select id="sl-grade"></select></label>
@@ -223,7 +223,7 @@ td.c small{text-align:center}
         <span class="cnt" id="sl-count"></span>
       </div>
       <div class="azbar" id="sl-az"></div>
-      <div class="tw"><table><thead><tr><th>Student</th><th>Grade</th><th>Homeroom / board</th><th>Today</th><th>Going home</th></tr></thead><tbody id="sl-rows"></tbody></table></div>
+      <div class="tw"><table><thead><tr><th>Student</th><th>Grade</th><th>Homeroom / Board</th><th>Today</th><th>Going Home</th></tr></thead><tbody id="sl-rows"></tbody></table></div>
     </div>
 
     <div class="screen" id="p-student" hidden>
@@ -233,21 +233,21 @@ td.c small{text-align:center}
         <div class="stack" id="st-left"></div>
         <div class="stack">
           <section class="card form" id="sec-enter">
-            <b class="t">Enter a change for this student</b>
+            <b class="t">Enter a Change for This Student</b>
             <div id="e-student" hidden></div>
             <label>What's changing?
               <select id="e-type">
                 <option value="">Choose…</option>
-                <option value="transport">Transportation / dismissal change</option>
-                <option value="pickup_add">Add a pick-up person</option>
-                <option value="pickup_remove">Remove a pick-up person</option>
-                <option value="late_in">Late sign-in</option>
-                <option value="early_out">Early check-out</option>
-                <option value="other">Other details</option>
+                <option value="transport">Transportation / Dismissal Change</option>
+                <option value="pickup_add">Add a Pick-Up Person</option>
+                <option value="pickup_remove">Remove a Pick-Up Person</option>
+                <option value="late_in">Late Sign-In</option>
+                <option value="early_out">Early Check-Out</option>
+                <option value="other">Other Details</option>
               </select>
             </label>
             <div id="e-fields" class="stack"></div>
-            <div class="actions"><button class="btn" id="e-save" type="button">Save change</button></div>
+            <div class="actions"><button class="btn" id="e-save" type="button">Save Change</button></div>
             <p class="err" id="e-err"></p>
             <p class="muted small">Saved changes go on the Home list to enter in FACTS.</p>
           </section>
@@ -258,11 +258,11 @@ td.c small{text-align:center}
 
     <!-- Pick-up people changes -->
     <div class="screen" id="p-pickchanges" hidden>
-      <nav class="subtabs noprint"><a href="#transport" data-s="transport">Dismissal changes</a><a href="#pickchanges" data-s="pickchanges">Pick-up people changes <span class="badge" id="b-pick" hidden></span></a></nav>
+      <nav class="subtabs noprint"><a href="#transport" data-s="transport">Dismissal Changes</a><a href="#pickchanges" data-s="pickchanges">Pick-Up People Changes <span class="badge" id="b-pick" hidden></span></a></nav>
       <div class="bar">
-        <label>Submitted from<input type="date" id="pk-from"></label>
+        <label>Submitted From<input type="date" id="pk-from"></label>
         <label>To<input type="date" id="pk-to"></label>
-        <label>FACTS<select id="pk-facts"><option value="all">All</option><option value="todo">Not entered yet</option><option value="done">Entered</option></select></label>
+        <label>FACTS<select id="pk-facts"><option value="all">All</option><option value="todo">Not Entered Yet</option><option value="done">Entered</option></select></label>
         <label class="grow">Search<input type="search" id="pk-q" placeholder="Student or person"></label>
       </div>
       <span class="cnt" id="pk-count"></span>
@@ -271,50 +271,50 @@ td.c small{text-align:center}
 
     <!-- Car line roster -->
     <div class="screen" id="p-cars" hidden>
-      <nav class="subtabs noprint"><a href="#buses" data-s="buses">Bus rosters</a><a href="#cars" data-s="cars">Car line roster</a><a href="#pins" data-s="pins">Pick-up PINs</a></nav>
+      <nav class="subtabs noprint"><a href="#buses" data-s="buses">Bus Rosters</a><a href="#cars" data-s="cars">Car Line Roster</a><a href="#pins" data-s="pins">Pick-Up PINs</a></nav>
       <div class="card noprint">
-        <b class="t">Car line roster for today</b>
+        <b class="t">Car Line Roster for Today</b>
         <p class="muted small">Every car rider today, A–Z, including parent and office changes for today and today's attendance. Shows who picked each student up once car line staff mark them.</p>
-        <div class="actions"><button class="btn sm" id="cr-print" type="button">Print car line roster</button><span class="cnt" id="cr-count"></span></div>
+        <div class="actions"><button class="btn sm" id="cr-print" type="button">Print Car Line Roster</button><span class="cnt" id="cr-count"></span></div>
       </div>
       <div id="cr-print-area"></div>
     </div>
 
     <!-- Buses & car line -->
     <div class="screen" id="p-buses" hidden>
-      <nav class="subtabs noprint"><a href="#buses" data-s="buses">Bus rosters</a><a href="#cars" data-s="cars">Car line roster</a><a href="#pins" data-s="pins">Pick-up PINs</a></nav>
+      <nav class="subtabs noprint"><a href="#buses" data-s="buses">Bus Rosters</a><a href="#cars" data-s="cars">Car Line Roster</a><a href="#pins" data-s="pins">Pick-Up PINs</a></nav>
       <div class="card noprint" id="h-today" style="padding:10px 14px"></div>
       <div class="card noprint" id="bz-progress" style="padding:10px 14px"></div>
       <div class="card noprint">
-        <b class="t">Bus rosters for today</b>
+        <b class="t">Bus Rosters for Today</b>
         <p class="muted small">Built from today's transportation (including parent and office changes for today) and today's attendance. Print right before dismissal for the most current list.</p>
         <div class="actions noprint" id="bz-buttons"></div>
       </div>
       <div id="bz-print" class="stack"></div>
       <div class="card noprint">
-        <b class="t">Driver and car line screens</b>
+        <b class="t">Driver and Car Line Screens</b>
         <p>Bus drivers: <b>portal.csjax.org/bus</b> · Car line: <b>portal.csjax.org/carline</b>. They sign in with the staff accounts you create under Settings → Staff sign-ins.</p>
       </div>
     </div>
 
     <!-- Alerts -->
     <div class="screen" id="p-alerts" hidden>
-      <nav class="subtabs noprint"><a href="#settings" data-s="settings">Staff &amp; rules</a><a href="#roster" data-s="roster">Data upload</a><a href="#alerts" data-s="alerts">Alerts</a></nav>
+      <nav class="subtabs noprint"><a href="#settings" data-s="settings">Staff &amp; Rules</a><a href="#roster" data-s="roster">Data Upload</a><a href="#alerts" data-s="alerts">Alerts</a></nav>
       <section class="hsec" id="sec-alert">
-        <h2 class="hh">Send a parent alert</h2>
+        <h2 class="hh">Send a Parent Alert</h2>
         <div class="card form">
           <p class="muted small" id="a-info">Push alerts go to parents who added the app to their phone and turned on alerts.</p>
           <label>Title <input type="text" id="a-title" maxlength="80" placeholder="Early dismissal today"></label>
           <label>Message <textarea id="a-body" rows="3" maxlength="300" placeholder="School will dismiss at 12:30 PM due to weather."></textarea></label>
           <div class="two">
-            <label>Send to
-              <select id="a-aud"><option value="all">All families</option><option value="transport">By transportation (today)</option><option value="grade">One grade</option><option value="teacher">One homeroom</option><option value="student">One student's family</option></select>
+            <label>Send To
+              <select id="a-aud"><option value="all">All Families</option><option value="transport">By Transportation (Today)</option><option value="grade">One Grade</option><option value="teacher">One Homeroom</option><option value="student">One Student's Family</option></select>
             </label>
             <label id="a-pick-l" hidden>Which? <select id="a-pick"></select></label>
             <label id="a-bus-l" hidden>Bus <select id="a-bus"></select></label>
           </div>
           <div id="a-stu-wrap" hidden><label>Student <input type="search" id="a-q" placeholder="Type a student's name" autocomplete="off"></label><div class="hits2" id="a-hits"></div></div>
-          <div class="actions"><button class="btn" id="a-send" type="button">Send alert</button><span class="muted small" id="a-res"></span></div>
+          <div class="actions"><button class="btn" id="a-send" type="button">Send Alert</button><span class="muted small" id="a-res"></span></div>
           <div class="list" id="a-log"></div>
         </div>
       </section>
@@ -322,24 +322,24 @@ td.c small{text-align:center}
 
     <!-- Settings -->
     <div class="screen" id="p-settings" hidden>
-      <nav class="subtabs noprint"><a href="#settings" data-s="settings">Staff &amp; rules</a><a href="#roster" data-s="roster">Data upload</a><a href="#alerts" data-s="alerts">Alerts</a></nav>
+      <nav class="subtabs noprint"><a href="#settings" data-s="settings">Staff &amp; Rules</a><a href="#roster" data-s="roster">Data Upload</a><a href="#alerts" data-s="alerts">Alerts</a></nav>
       <div class="card">
-        <b class="t">Staff sign-ins</b>
-        <p class="muted small"><b>Front office</b> — the whole office portal, plus emails for every parent change. <b>Car line</b> — only portal.csjax.org/carline. <b>Bus driver</b> — only portal.csjax.org/bus.</p>
+        <b class="t">Staff Sign-Ins</b>
+        <p class="muted small"><b>Front Office</b> — the whole office portal, plus emails for every parent change. <b>Car Line</b> — only portal.csjax.org/carline. <b>Bus Driver</b> — only portal.csjax.org/bus.</p>
         <div class="list" id="staff-list"></div>
         <form class="stack" id="f-staff" style="margin-top:6px">
           <div class="bar">
             <label class="grow">Name<input type="text" id="sa-name" required></label>
             <label class="grow">Email<input type="email" id="sa-email" required></label>
-            <label>Role<select id="sa-role"><option value="carline">Car line</option><option value="bus">Bus driver</option><option value="office">Front office</option></select></label>
+            <label>Role<select id="sa-role"><option value="carline">Car Line</option><option value="bus">Bus Driver</option><option value="office">Front Office</option></select></label>
             <label>Password<input type="text" id="sa-pass" minlength="8" placeholder="At least 8 characters" autocomplete="off" required></label>
-            <button class="btn sm">Create sign-in</button>
+            <button class="btn sm">Create Sign-In</button>
           </div>
         </form>
         <p class="err" id="sa-err"></p>
       </div>
       <div class="card">
-        <b class="t">Front office iPads (sign-in / sign-out kiosk)</b>
+        <b class="t">Front Office iPads (Sign-In / Sign-Out Kiosk)</b>
         <p class="muted small">To add an iPad, open <b>portal.csjax.org/kiosk</b> in Safari on it and sign in with a staff account once. Tap Share → Add to Home Screen for full-screen mode. Turning an iPad off here stops it from working until it's set up again.</p>
         <div class="list" id="kiosk-list"></div>
       </div>
@@ -347,15 +347,15 @@ td.c small{text-align:center}
         <b class="t">Semesters</b>
         <p class="muted small">The 5-note limit counts approved parent notes within each semester.</p>
         <div id="sem-list" class="stack"></div>
-        <div class="actions"><button class="btn ghost sm" id="sem-add" type="button">Add semester</button><button class="btn sm" id="sem-save" type="button">Save semesters</button></div>
+        <div class="actions"><button class="btn ghost sm" id="sem-add" type="button">Add Semester</button><button class="btn sm" id="sem-save" type="button">Save Semesters</button></div>
       </div>
       <div class="card">
         <b class="t">Rules</b>
         <div class="bar">
-          <label>Parent notes per semester<input type="number" id="set-limit" min="0" max="60" style="width:110px"></label>
-          <label>Note deadline (school days)<input type="number" id="set-days" min="0" max="60" style="width:110px"></label>
-          <label>Same-day dismissal cutoff<input type="time" id="set-cut" style="width:140px"></label>
-          <button class="btn sm" id="set-save" type="button">Save rules</button>
+          <label>Parent Notes per Semester<input type="number" id="set-limit" min="0" max="60" style="width:110px"></label>
+          <label>Note Deadline (School Days)<input type="number" id="set-days" min="0" max="60" style="width:110px"></label>
+          <label>Same-Day Dismissal Cutoff<input type="time" id="set-cut" style="width:140px"></label>
+          <button class="btn sm" id="set-save" type="button">Save Rules</button>
         </div>
       </div>
       <p class="err" id="set-err"></p>
@@ -363,18 +363,18 @@ td.c small{text-align:center}
 
     <!-- Data upload -->
     <div class="screen" id="p-roster" hidden>
-      <nav class="subtabs noprint"><a href="#settings" data-s="settings">Staff &amp; rules</a><a href="#roster" data-s="roster">Data upload</a><a href="#alerts" data-s="alerts">Alerts</a></nav>
+      <nav class="subtabs noprint"><a href="#settings" data-s="settings">Staff &amp; Rules</a><a href="#roster" data-s="roster">Data Upload</a><a href="#alerts" data-s="alerts">Alerts</a></nav>
       <div class="card">
-        <b class="t">Data upload — daily file from the SFTP server</b>
+        <b class="t">Data Upload — Daily File from the SFTP Server</b>
         <p>Upload the student &amp; parent CSV to the <b>uploads</b> folder on the SFTP server (141.148.36.44, login <b>ccsftp</b>). On school days the portal checks at <b>10:00 AM</b> and <b>5:00 PM</b> for the student &amp; parent file and at <b>11:30 AM</b> for the daily attendance file (and keeps checking every 5 minutes for half an hour in case a file is late), imports the newest of each, and moves them to <b>processed</b>.</p>
         <div id="sftp-errors"></div>
         <div class="actions">
-          <button class="btn sm" id="sftp-go" type="button">Check SFTP now</button>
+          <button class="btn sm" id="sftp-go" type="button">Check SFTP Now</button>
           <label class="actions" style="font-weight:600"><input type="checkbox" id="sftp-force"> I'm sure — allow turning off many students</label>
         </div>
         <div id="sftp-result"></div>
       </div>
-      <div class="card"><b class="t">Recent imports</b><div class="tw"><table><thead><tr><th>When</th><th>By</th><th>Rows</th><th>Students</th><th>Parents</th><th>Pickup people</th><th>Archived</th></tr></thead><tbody id="r-hist"></tbody></table></div></div>
+      <div class="card"><b class="t">Recent Imports</b><div class="tw"><table><thead><tr><th>When</th><th>By</th><th>Rows</th><th>Students</th><th>Parents</th><th>Pick-Up People</th><th>Archived</th></tr></thead><tbody id="r-hist"></tbody></table></div></div>
     </div>
   </section>
 </main>

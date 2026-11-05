@@ -10,9 +10,9 @@ async function loadStudentList() {
   if (!SLF) {
     SLF = true;
     const all = await call('staff_student_list', { p_archived: false });
-    $('#sl-grade').innerHTML = '<option value="">All grades</option>' + [...new Set(all.map(s => s.grade).filter(Boolean))].sort((a, b) => a === 'K' ? -1 : b === 'K' ? 1 : +a - +b)
+    $('#sl-grade').innerHTML = '<option value="">All Grades</option>' + [...new Set(all.map(s => s.grade).filter(Boolean))].sort((a, b) => a === 'K' ? -1 : b === 'K' ? 1 : +a - +b)
       .map(g => `<option value="${esc(g)}">${esc(g === 'K' ? 'Kindergarten' : 'Grade ' + String(g).replace(/^0/, ''))}</option>`).join('');
-    $('#sl-teacher').innerHTML = '<option value="">All teachers</option>' + [...new Set(all.flatMap(s => [s.teacher, s.board]).filter(Boolean))].sort().map(t => `<option>${esc(t)}</option>`).join('');
+    $('#sl-teacher').innerHTML = '<option value="">All Teachers</option>' + [...new Set(all.flatMap(s => [s.teacher, s.board]).filter(Boolean))].sort().map(t => `<option>${esc(t)}</option>`).join('');
   }
   drawStudentList();
 }
@@ -54,23 +54,23 @@ async function loadStudent(id) {
     <div><b style="font-size:1.4rem">${esc(s.name.split(', ').reverse().join(' '))}</b><small>ID ${s.student_id} · ${esc(grade(s.grade) === 'K' ? 'Kindergarten' : 'Grade ' + grade(s.grade))} · Homeroom ${esc(s.teacher || '—')}${s.board && s.board !== s.teacher ? ' · Dismissal board ' + esc(s.board) : ''}</small></div>
     <span style="margin-left:auto">${arch ? `<span class="tag gray">Archived ${s.archived_at ? stamp(s.archived_at) : ''}</span>` : s.today ? `<span class="tag ${TODAY_TAG[s.today][1]}">${TODAY_TAG[s.today][0]}</span>` : ''}</span></div></div>`;
   const people = [
-    ...s.guardians.filter(g => g.name).map(g => `<div class="row"><div class="txt"><b>${esc(g.name)} <span class="tag ok">Parent/guardian</span></b><p>${esc([g.relationship, g.phone, g.email].filter(Boolean).join(' · '))}</p></div>${g.pin ? `<span class="pin sm">${g.pin}</span>` : ''}</div>`),
-    ...s.pickups.filter(p => p.name).map(p => `<div class="row"><div class="txt"><b>${esc(p.name)}${p.pending ? ' <span class="tag warn">Added in portal</span>' : ''}</b><p>${esc([p.relationship, p.phone].filter(Boolean).join(' · '))}</p></div>${p.pin ? `<span class="pin sm">${p.pin}</span>` : ''}</div>`)];
+    ...s.guardians.filter(g => g.name).map(g => `<div class="row"><div class="txt"><b>${esc(g.name)} <span class="tag ok">Parent/Guardian</span></b><p>${esc([g.relationship, g.phone, g.email].filter(Boolean).join(' · '))}</p></div>${g.pin ? `<span class="pin sm">${g.pin}</span>` : ''}</div>`),
+    ...s.pickups.filter(p => p.name).map(p => `<div class="row"><div class="txt"><b>${esc(p.name)}${p.pending ? ' <span class="tag warn">Added in Portal</span>' : ''}</b><p>${esc([p.relationship, p.phone].filter(Boolean).join(' · '))}</p></div>${p.pin ? `<span class="pin sm">${p.pin}</span>` : ''}</div>`)];
   $('#st-left').innerHTML = `
     ${arch ? '' : `<div class="card"><b class="t">Today</b><dl class="kv" style="padding:0">
-      <dt>Going home</dt><dd>${esc(pl.method || '—')}${pl.bus ? ' · Bus ' + esc(pl.bus) : ''}${pl.stop && pl.method === 'Bus Rider' ? `<small style="display:block;color:var(--muted)">${esc(pl.stop)}</small>` : ''}${pl.changed ? ' <span class="tag warn">Changed today</span>' : ''}${pl.pickup_person ? ` · with ${esc(pl.pickup_person)}` : ''}</dd>
+      <dt>Going home</dt><dd>${esc(pl.method || '—')}${pl.bus ? ' · Bus ' + esc(pl.bus) : ''}${pl.stop && pl.method === 'Bus Rider' ? `<small style="display:block;color:var(--muted)">${esc(pl.stop)}</small>` : ''}${pl.changed ? ' <span class="tag warn">Changed Today</span>' : ''}${pl.pickup_person ? ` · with ${esc(pl.pickup_person)}` : ''}</dd>
       <dt>Dismissed</dt><dd>${dis ? `${dis.kind === 'bus' ? 'On Bus ' + esc(dis.bus || '') : 'Picked up by ' + esc(dis.person || '')} · ${stamp(dis.at)} <small style="color:var(--muted)">(${esc(dis.by)})</small>` : 'Not yet'}</dd></dl></div>`}
-    <div class="card"><b class="t">On file</b><dl class="kv" style="padding:0"><dt>Morning</dt><dd>${esc(s.am || '—')}</dd><dt>Afternoon</dt><dd>${esc(s.pm || '—')}</dd>
+    <div class="card"><b class="t">On File</b><dl class="kv" style="padding:0"><dt>Morning</dt><dd>${esc(s.am || '—')}</dd><dt>Afternoon</dt><dd>${esc(s.pm || '—')}</dd>
       <dt>Parent notes</dt><dd>${s.parent_notes_approved} of ${LIMIT} approved this semester · ${s.doctor_notes} doctor's note${s.doctor_notes === 1 ? '' : 's'}</dd></dl></div>
-    <div><h2>Parents &amp; pick-up people</h2><div class="list">${people.join('') || '<div class="empty">None on file.</div>'}</div></div>`;
+    <div><h2>Parents &amp; Pick-Up People</h2><div class="list">${people.join('') || '<div class="empty">None on file.</div>'}</div></div>`;
   const hist = (title, rows, fn) => `<details class="card" ${rows.length ? 'open' : ''}><summary><b class="t">${title} (${rows.length})</b></summary><div class="list" style="margin-top:8px">${rows.map(fn).join('') || '<div class="empty">None.</div>'}</div></details>`;
   $('#st-right').innerHTML =
-    hist('Excused notes', s.notes, n => `<div class="row"><div class="txt"><b>${n.kind === 'doctor' ? "Doctor's note" : 'Parent note'} · ${nice(n.absent_date)}${n.absent_end ? ' – ' + nice(n.absent_end) : ''}</b><p>${esc(n.reason || '')} · ${stamp(n.created_at)}</p></div><span class="tag ${STATUS_NOTE[n.status][1]}">${STATUS_NOTE[n.status][0]}</span></div>`)
-    + hist('Dismissal changes', s.changes, c => `<div class="row"><div class="txt"><b>${esc(c.new_method)}${c.new_details ? ' — ' + esc(c.new_details) : ''}</b><p>${when(c)} · ${c.period} · ${esc(c.submitted_name || '')}${c.pickup_person ? ' · with ' + esc(c.pickup_person) : ''}</p></div><span class="tag ${TS[c.status][1]}">${TS[c.status][0]}</span></div>`)
-    + hist('Late sign-ins & early check-outs', s.signins, r => `<div class="row"><div class="txt"><b>${KIND[r.kind][0]} · ${stamp(r.created_at)}</b><p>${esc(r.person_name || '')} · ${esc(r.reason || '')}</p></div>${r.facts_done ? '<span class="tag ok">In FACTS</span>' : ''}</div>`)
-    + hist('Pick-up list changes', s.pickup_requests, r => `<div class="row"><div class="txt"><b>${r.action === 'add' ? 'Added' : 'Removed'} ${esc(r.name)}</b><p>${r.source === 'office' ? 'Office' : 'Parent'} · ${stamp(r.created_at)}</p></div>${r.sis_done ? '<span class="tag ok">In FACTS</span>' : ''}</div>`)
-    + hist('Attendance (last 30 school days)', s.attendance, a => `<div class="row"><div class="txt"><b>${nice(a.date)}</b></div><span class="tag ${a.status === 'P' ? 'ok' : ''}">${a.status === 'P' ? 'Present' : 'Absent'}</span></div>`)
-    + hist('Afternoon dismissals', s.dismissals, d => `<div class="row"><div class="txt"><b>${nice(d.day)}</b><p>${d.kind === 'bus' ? 'Bus ' + esc(d.bus || '') : 'Car line · ' + esc(d.person || '')} · ${new Date(d.at).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' })}</p></div></div>`);
+    hist('Excused Notes', s.notes, n => `<div class="row"><div class="txt"><b>${n.kind === 'doctor' ? "Doctor's note" : 'Parent note'} · ${nice(n.absent_date)}${n.absent_end ? ' – ' + nice(n.absent_end) : ''}</b><p>${esc(n.reason || '')} · ${stamp(n.created_at)}</p></div><span class="tag ${STATUS_NOTE[n.status][1]}">${STATUS_NOTE[n.status][0]}</span></div>`)
+    + hist('Dismissal Changes', s.changes, c => `<div class="row"><div class="txt"><b>${esc(c.new_method)}${c.new_details ? ' — ' + esc(c.new_details) : ''}</b><p>${when(c)} · ${c.period} · ${esc(c.submitted_name || '')}${c.pickup_person ? ' · with ' + esc(c.pickup_person) : ''}</p></div><span class="tag ${TS[c.status][1]}">${TS[c.status][0]}</span></div>`)
+    + hist('Late Sign-Ins & Early Check-Outs', s.signins, r => `<div class="row"><div class="txt"><b>${KIND[r.kind][0]} · ${stamp(r.created_at)}</b><p>${esc(r.person_name || '')} · ${esc(r.reason || '')}</p></div>${r.facts_done ? '<span class="tag ok">In FACTS</span>' : ''}</div>`)
+    + hist('Pick-Up List Changes', s.pickup_requests, r => `<div class="row"><div class="txt"><b>${r.action === 'add' ? 'Added' : 'Removed'} ${esc(r.name)}</b><p>${r.source === 'office' ? 'Office' : 'Parent'} · ${stamp(r.created_at)}</p></div>${r.sis_done ? '<span class="tag ok">In FACTS</span>' : ''}</div>`)
+    + hist('Attendance (Last 30 School Days)', s.attendance, a => `<div class="row"><div class="txt"><b>${nice(a.date)}</b></div><span class="tag ${a.status === 'P' ? 'ok' : ''}">${a.status === 'P' ? 'Present' : 'Absent'}</span></div>`)
+    + hist('Afternoon Dismissals', s.dismissals, d => `<div class="row"><div class="txt"><b>${nice(d.day)}</b><p>${d.kind === 'bus' ? 'Bus ' + esc(d.bus || '') : 'Car line · ' + esc(d.person || '')} · ${new Date(d.at).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' })}</p></div></div>`);
 }
 window.loadStudent = loadStudent;
 
@@ -86,7 +86,7 @@ async function loadBuses() {
   }).catch(() => {});
   $('#bz-print').innerHTML = '<p class="muted">Loading rosters…</p>';
   const rosters = await call('staff_bus_rosters');
-  $('#bz-buttons').innerHTML = rosters.map((r, i) => `<button class="btn ghost sm" data-b="${i}">Print Bus ${esc(r.bus)}</button>`).join('') + '<button class="btn sm" data-b="all">Print all buses</button>';
+  $('#bz-buttons').innerHTML = rosters.map((r, i) => `<button class="btn ghost sm" data-b="${i}">Print Bus ${esc(r.bus)}</button>`).join('') + '<button class="btn sm" data-b="all">Print All Buses</button>';
   $('#bz-print').innerHTML = rosters.map((r, i) => rosterHtml(r, i)).join('') || '<div class="card">No bus riders today.</div>';
   $('#bz-buttons').onclick = e => {
     const b = e.target.closest('[data-b]'); if (!b) return;
@@ -134,9 +134,9 @@ async function loadCars() {
   const label = s => s.status === 'absent' ? 'ABSENT' : s.status === 'dismissed' ? 'Checked out early' : s.status === 'late' ? 'Present (late)' : 'Present';
   const t = x => new Date(x).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
   $('#cr-print-area').innerHTML = st.length ? `<section class="croster">
-    <h3>Car line</h3>
+    <h3>Car Line</h3>
     <p class="small" style="margin:2px 0 8px;color:#6B6466">Cornerstone Christian School · ${date} · ${here} here of ${st.length} · printed ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}${d.attendance_in ? '' : ' · attendance not in yet'}</p>
-    <div class="tw" style="border:0"><table><thead><tr><th style="width:30px"></th><th>Student</th><th>Grade</th><th>Teacher</th><th>Today</th><th>Pick-up today</th><th>Picked up</th></tr></thead><tbody>
+    <div class="tw" style="border:0"><table><thead><tr><th style="width:30px"></th><th>Student</th><th>Grade</th><th>Teacher</th><th>Today</th><th>Pick-Up Today</th><th>Picked Up</th></tr></thead><tbody>
     ${st.map(s => `<tr class="${s.status === 'absent' || s.status === 'dismissed' ? 'abs' : ''}">
       <td><span class="chk"></span></td>
       <td><b>${esc(s.last)}, ${esc(s.first)}</b>${s.changed ? ' <b style="color:#E4010D">· changed today</b>' : ''}</td>

@@ -26,7 +26,7 @@ async function boot() {
   catch (e) { await sb.auth.signOut(); return showLogin(emsg(e)); }
   TODAY = ME.today; try { LIMIT = +(await call('staff_settings')).parent_note_limit || 5; } catch {}
   $('#who').hidden = false;
-  $('#who').innerHTML = `${esc(ME.name || ME.email)}<br><button id="b-out">Sign out</button>`;
+  $('#who').innerHTML = `${esc(ME.name || ME.email)}<br><button id="b-out">Sign Out</button>`;
   $('#b-out').onclick = async () => { await sb.auth.signOut(); location.reload(); };
   $('#v-login').hidden = true; $('#v-app').hidden = false;
   badges(ME); route();
@@ -90,7 +90,7 @@ addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').hidden
 // ---------- today ----------
 const TYPE = { one_day: 'One day', date_range: 'Date range', permanent: 'Permanent' };
 const when = c => c.change_type === 'date_range' ? `${nice(c.start_date)} – ${nice(c.end_date)}` : c.change_type === 'permanent' ? `From ${nice(c.start_date)}` : nice(c.start_date);
-const TS = { new: ['Not processed', 'warn'], processed: ['Processed', 'ok'], cancelled: ['Cancelled', 'gray'] };
+const TS = { new: ['Not Processed', 'warn'], processed: ['Processed', 'ok'], cancelled: ['Cancelled', 'gray'] };
 async function loadDash() { return homeLoad(); }
 
 // ---------- notes ----------
@@ -140,13 +140,13 @@ async function openNote(id) {
       ${n.reviewed_by ? `<dt>Reviewed</dt><dd>${esc(n.status)} by ${esc(n.reviewed_by)} · ${stamp(n.reviewed_at)}</dd>` : ''}
     </dl>
     ${n.signature ? `<div><h2>Signature</h2><img class="sigimg" src="${n.signature}" alt="Parent signature"></div>` : ''}
-    ${n.kind === 'doctor' ? `<div class="stack"><h2>Doctor's note</h2>${files || '<p class="err">No file was attached. Ask the parent to resubmit.</p>'}</div>` : ''}
+    ${n.kind === 'doctor' ? `<div class="stack"><h2>Doctor's Note</h2>${files || '<p class="err">No file was attached. Ask the parent to resubmit.</p>'}</div>` : ''}
     ${overLimit ? `<p class="err">This student already has ${lim} approved parent notes this semester. This absence needs a doctor's note to be excused.</p>` : ''}
-    <label class="f">Note to parent <small class="muted">(optional — shown in the parent's history)</small><textarea id="m-note" rows="2">${esc(n.review_note || '')}</textarea></label>
+    <label class="f">Note to Parent <small class="muted">(optional — shown in the parent's history)</small><textarea id="m-note" rows="2">${esc(n.review_note || '')}</textarea></label>
     <div class="actions">
-      <button class="btn ok" id="m-ok" ${overLimit ? 'disabled' : ''}>Approve — mark excused</button>
+      <button class="btn ok" id="m-ok" ${overLimit ? 'disabled' : ''}>Approve — Mark Excused</button>
       <button class="btn" id="m-no">Reject</button>
-      ${n.status !== 'pending' ? '<button class="btn ghost" id="m-reset">Move back to pending</button>' : ''}
+      ${n.status !== 'pending' ? '<button class="btn ghost" id="m-reset">Move Back to Pending</button>' : ''}
     </div>
     <p class="err" id="m-err"></p>`;
   $('#m-x').onclick = closeModal;
@@ -176,21 +176,21 @@ function bindTRows(tbody, rows, reload) {
 }
 function openChange(c, reload) {
   $('#modal').hidden = false;
-  $('#modal-in').innerHTML = `<div class="mh"><div><h2 style="margin:0">Dismissal change</h2><h1 style="font-size:1.7rem">${esc(c.student)}</h1></div><button class="x" id="m-x" aria-label="Close">×</button></div>
+  $('#modal-in').innerHTML = `<div class="mh"><div><h2 style="margin:0">Dismissal Change</h2><h1 style="font-size:1.7rem">${esc(c.student)}</h1></div><button class="x" id="m-x" aria-label="Close">×</button></div>
     <dl class="kv wide">
-      <dt>Applies to</dt><dd>${c.period === 'afternoon' ? 'Afternoon dismissal' : 'Morning arrival'}</dd>
+      <dt>Applies To</dt><dd>${c.period === 'afternoon' ? 'Afternoon dismissal' : 'Morning arrival'}</dd>
       <dt>When</dt><dd>${when(c)} · ${TYPE[c.change_type]}</dd>
       <dt>Was</dt><dd>${esc(c.current_method || '—')}</dd>
       <dt>Change to</dt><dd>${esc(c.new_method)}${c.new_details ? ' — ' + esc(c.new_details) : ''}</dd>
-      ${c.pickup_person ? `<dt>Picked up by</dt><dd>${esc([c.pickup_person, c.pickup_relationship, c.pickup_phone].filter(Boolean).join(' · '))}</dd>` : ''}
+      ${c.pickup_person ? `<dt>Picked Up By</dt><dd>${esc([c.pickup_person, c.pickup_relationship, c.pickup_phone].filter(Boolean).join(' · '))}</dd>` : ''}
       ${c.comments ? `<dt>Comments</dt><dd>${esc(c.comments)}</dd>` : ''}
       <dt>Submitted by</dt><dd>${esc(c.submitted_name || '')} (${esc(c.submitted_by)}) · ${stamp(c.created_at)}</dd>
       ${c.processed_by ? `<dt>${esc(TS[c.status][0])}</dt><dd>${esc(c.processed_by)} · ${stamp(c.processed_at)}</dd>` : ''}
     </dl>
     <div class="actions">
-      ${c.status !== 'processed' ? '<button class="btn ok" data-s="processed">Mark processed (KidAccount updated)</button>' : ''}
-      ${c.status !== 'new' ? '<button class="btn ghost" data-s="new">Mark not processed</button>' : ''}
-      ${c.status !== 'cancelled' ? '<button class="btn ghost" data-s="cancelled">Cancel this change</button>' : ''}
+      ${c.status !== 'processed' ? '<button class="btn ok" data-s="processed">Mark Processed (KidAccount Updated)</button>' : ''}
+      ${c.status !== 'new' ? '<button class="btn ghost" data-s="new">Mark Not Processed</button>' : ''}
+      ${c.status !== 'cancelled' ? '<button class="btn ghost" data-s="cancelled">Cancel This Change</button>' : ''}
     </div><p class="err" id="m-err"></p>`;
   $('#m-x').onclick = closeModal;
   $$('#modal-in [data-s]').forEach(b => b.onclick = async () => {
@@ -222,7 +222,7 @@ $('#tf-csv').onclick = () => {
 
 // ---------- sign-in / sign-out ----------
 let SIO = [];
-const KIND = { early_out: ['Early check-out', ''], late_in: ['Late sign-in', 'warn'] };
+const KIND = { early_out: ['Early Check-Out', ''], late_in: ['Late Sign-In', 'warn'] };
 const HOW = { pin: 'PIN', student_id: 'Student ID typed', badge: 'Badge scanned', name: 'Name search' };
 const tm = t => new Date(t).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
 async function loadSignins(quiet) {
@@ -275,15 +275,15 @@ $('#sio-csv').onclick = () => {
 };
 
 // ---------- students ----------
-const TODAY_TAG = { present: ['Present', 'ok'], late: ['Late — present', 'warn'], absent: ['Absent', ''], dismissed: ['Checked out early', 'gray'] };
+const TODAY_TAG = { present: ['Present', 'ok'], late: ['Late — Present', 'warn'], absent: ['Absent', ''], dismissed: ['Checked Out Early', 'gray'] };
 
 // ---------- pick-up & PIN report ----------
 let PINS = [], PINF = null;
 async function loadPins() {
   if (!PINF) {
     PINF = await call('staff_pin_filters');
-    $('#pf-grade').innerHTML = '<option value="">All grades</option>' + (PINF.grades || []).sort((a, b) => a === 'K' ? -1 : b === 'K' ? 1 : +a - +b).map(g => `<option value="${esc(g)}">${esc(g === 'K' ? 'Kindergarten' : 'Grade ' + String(g).replace(/^0/, ''))}</option>`).join('');
-    $('#pf-teacher').innerHTML = '<option value="">All teachers</option>' + (PINF.teachers || []).sort().map(t => `<option>${esc(t)}</option>`).join('');
+    $('#pf-grade').innerHTML = '<option value="">All Grades</option>' + (PINF.grades || []).sort((a, b) => a === 'K' ? -1 : b === 'K' ? 1 : +a - +b).map(g => `<option value="${esc(g)}">${esc(g === 'K' ? 'Kindergarten' : 'Grade ' + String(g).replace(/^0/, ''))}</option>`).join('');
+    $('#pf-teacher').innerHTML = '<option value="">All Teachers</option>' + (PINF.teachers || []).sort().map(t => `<option>${esc(t)}</option>`).join('');
     $('#pf-warn').innerHTML = (PINF.warnings || []).map(w => `<p class="err">⚠ ${esc(w.note)}</p>`).join('');
   }
   $('#pin-rows').innerHTML = '<tr><td colspan="7" class="empty">Loading…</td></tr>';
@@ -294,7 +294,7 @@ async function loadPins() {
   $('#pin-rows').innerHTML = PINS.map(r => {
     const first = r.sid !== last; last = r.sid;
     return `${first ? `<tr class="grp"><td colspan="7"><b>${esc(r.last)}, ${esc(r.first)}</b> <small style="display:inline">ID ${r.sid} · Grade ${esc(grade(r.grade))} · ${esc(r.teacher || '')}${r.board && r.board !== r.teacher ? ' · board: ' + esc(r.board) : ''}</small></td></tr>` : ''}
-    <tr><td>${esc(r.name)}${r.pending ? ' <span class="tag warn">Added in portal</span>' : ''}</td><td>${r.type === 'Parent/guardian' ? '<span class="tag ok">Parent/guardian</span>' : '<span class="tag gray">Pick-up</span>'}</td>
+    <tr><td>${esc(r.name)}${r.pending ? ' <span class="tag warn">Added in Portal</span>' : ''}</td><td>${r.type === 'Parent/guardian' ? '<span class="tag ok">Parent/Guardian</span>' : '<span class="tag gray">Pick-Up</span>'}</td>
       <td>${esc(r.relationship || '')}</td><td>${esc(r.phone || '')}<small>${esc(r.email || '')}</small></td><td>${esc(r.id || '')}</td>
       <td>${r.pin ? `<span class="pin sm">${esc(r.pin)}</span>` : '—'}</td><td><small>${r.pin_source === 'file' ? 'From FACTS' : r.pin ? 'Portal' : ''}</small></td></tr>`;
   }).join('') || '<tr><td colspan="7" class="empty">No matches.</td></tr>';
@@ -321,13 +321,13 @@ $('#r-file') && $('#r-file').addEventListener('change', e => {
     if (!PARSED.length || (!att && !('Student ID (System)' in PARSED[0]))) { PARSED = null; return $('#r-err').textContent = 'That file is neither the student & parent file nor the daily attendance file.'; }
     if (att) {
       const a = PARSED.filter(r => /^a/i.test(r.Attendance || '')).length;
-      $('#r-preview').innerHTML = `<div class="card" style="background:var(--bg)"><b class="t">${esc(f.name)} — daily attendance for today</b><p>${PARSED.length} students · ${a} absent · ${PARSED.length - a} present</p>
-        <div class="actions"><button class="btn" id="r-go">Update today's attendance</button></div></div>`;
+      $('#r-preview').innerHTML = `<div class="card" style="background:var(--bg)"><b class="t">${esc(f.name)} — Daily Attendance for Today</b><p>${PARSED.length} students · ${a} absent · ${PARSED.length - a} present</p>
+        <div class="actions"><button class="btn" id="r-go">Update Today's Attendance</button></div></div>`;
     } else {
       const ids = new Set(PARSED.map(r => r['Student ID (System)']).filter(Boolean));
-      $('#r-preview').innerHTML = `<div class="card" style="background:var(--bg)"><b class="t">${esc(f.name)} — student &amp; parent file</b><p>${PARSED.length} rows · ${ids.size} students</p>
+      $('#r-preview').innerHTML = `<div class="card" style="background:var(--bg)"><b class="t">${esc(f.name)} — Student &amp; Parent File</b><p>${PARSED.length} rows · ${ids.size} students</p>
         <label class="actions" style="font-weight:600"><input type="checkbox" id="r-force"> I'm sure — allow turning off many students</label>
-        <div class="actions"><button class="btn" id="r-go">Update roster</button></div></div>`;
+        <div class="actions"><button class="btn" id="r-go">Update Roster</button></div></div>`;
     }
     $('#r-go').onclick = async () => {
       const b = $('#r-go'); b.disabled = true; b.textContent = 'Updating…';
@@ -373,7 +373,7 @@ let SET = null;
 async function loadSettings() {
   const [staff, set] = await Promise.all([call('staff_staff_list'), call('staff_settings')]);
   SET = set;
-  const ROLE = { office: ['Front office', 'ok'], carline: ['Car line', 'warn'], bus: ['Bus driver', 'gray'] };
+  const ROLE = { office: ['Front Office', 'ok'], carline: ['Car Line', 'warn'], bus: ['Bus Driver', 'gray'] };
   $('#staff-list').innerHTML = staff.map(s => `<div class="row"><div class="txt"><b>${esc(s.name || s.email)} <span class="tag ${ROLE[s.role][1]}">${ROLE[s.role][0]}</span>${s.active ? '' : ' <span class="tag gray">Off</span>'}</b>
       <p>${esc(s.email)}${s.has_login ? (s.last_sign_in ? ' · last signed in ' + stamp(s.last_sign_in) : ' · has a sign-in') : ' · <b style="display:inline;color:var(--red)">no sign-in yet</b>'}</p></div>
     <span class="actions"><button class="btn ghost sm" data-pw="${esc(s.email)}">${s.has_login ? 'Reset password' : 'Create sign-in'}</button>
@@ -390,7 +390,7 @@ async function loadSettings() {
   drawSems(set.semesters);
   call('staff_kiosks').then(ks => {
     $('#kiosk-list').innerHTML = ks.map(k => `<div class="row"><div class="txt"><b>${esc(k.label)}</b><p>Set up by ${esc(k.created_by)} · ${stamp(k.created_at)}${k.last_seen_at ? ' · last used ' + stamp(k.last_seen_at) : ''}</p></div>
-      <button class="btn ghost sm" data-k="${k.id}">Turn off</button></div>`).join('') || '<div class="empty">No iPads set up yet.</div>';
+      <button class="btn ghost sm" data-k="${k.id}">Turn Off</button></div>`).join('') || '<div class="empty">No iPads set up yet.</div>';
     $('#kiosk-list').querySelectorAll('[data-k]').forEach(b => b.onclick = async () => {
       if (!confirm('Turn off this iPad? It will need to be set up again.')) return;
       await call('staff_kiosk_revoke', { p_id: b.dataset.k }); loadSettings();
