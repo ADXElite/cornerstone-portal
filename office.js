@@ -391,7 +391,7 @@ async function loadSettings() {
   });
   drawSems(set.semesters);
   call('staff_kiosks').then(ks => {
-    $('#kiosk-list').innerHTML = ks.map(k => `<div class="row"><div class="txt"><b>${esc(k.label)}</b><p>Set up by ${esc(k.created_by)} · ${stamp(k.created_at)}${k.last_seen_at ? ' · last used ' + stamp(k.last_seen_at) : ''}</p></div>
+    $('#kiosk-list').innerHTML = ks.map(k => `<div class="row"><div class="txt"><b>${esc(k.label)}</b><p>Set up ${/^campus /.test(k.created_by) ? "on the school network" : "by " + esc(k.created_by)} · ${stamp(k.created_at)}${k.last_seen_at ? ' · last used ' + stamp(k.last_seen_at) : ''}</p></div>
       <button class="btn ghost sm" data-k="${k.id}">Turn Off</button></div>`).join('') || '<div class="empty">No iPads set up yet.</div>';
     $('#kiosk-list').querySelectorAll('[data-k]').forEach(b => b.onclick = async () => {
       if (!confirm('Turn off this iPad? It will need to be set up again.')) return;

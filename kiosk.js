@@ -1,7 +1,5 @@
 // Front office iPad kiosk — early check-out and late sign-in.
-// The iPad is turned on once by a staff member (staff sign-in -> device key saved on this iPad).
-const SB_URL = 'https://cvvdwhgdiqnoqgxtgzfw.supabase.co';
-const SB_KEY = 'sb_publishable_hnUHrqYS2un679djbzsXxg_oLYDQDp0';
+// Set up once with just a name, from the school network (device key saved on this iPad). All calls go through /api/kiosk, which checks the school IP.
 const $ = s => document.querySelector(s);
 const K = $('#k');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -18,6 +16,7 @@ const ERR = {
   already_checked_out: 'was already checked out today. Please see the front desk.',
   need_reason: 'Please type a reason.', need_signature: 'Please sign in the box.', pick_student: 'Tap at least one student.',
   pin_required: 'Early check-out needs a parent or pickup PIN.', one_student: 'Choose one student.',
+  campus_only: 'This only works on the school network.', need_label: 'Type a name for this iPad.',
   server_error: 'Something went wrong. Please try again or see the front desk.'
 };
 function errText(m) {
@@ -26,18 +25,27 @@ function errText(m) {
   return ERR[code] || ERR.server_error;
 }
 
-async function rpc(fn, args = {}) {
-  const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {
-    method: 'POST', headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ p_token: TOKEN, ...args })
-  });
+async function api(body) {
+  const r = await fetch('/api/kiosk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const t = await r.text(); let d = null; try { d = t ? JSON.parse(t) : null; } catch {}
-  if (!r.ok) {
-    const m = (d && d.message) || 'server_error';
-    if (m === 'kiosk_not_active') { TOKEN = null; store.set('ccs_kiosk_token', null); setup('This iPad needs to be set up again by front office staff.'); }
-    throw new Error(m);
-  }
+  if (!r.ok) throw new Error((d && d.message) || 'server_error');
   return d;
+}
+async function rpc(fn, args = {}) {
+  try { return await api({ fn, args: { p_token: TOKEN, ...args } }); }
+  catch (x) {
+    if (x.message === 'kiosk_not_active') { TOKEN = null; store.set('ccs_kiosk_token', null); setup('This iPad needs to be set up again.'); }
+    if (x.message === 'campus_only') offCampus();
+    throw x;
+  }
+}
+function offCampus() {
+  S = { screen: 'setup' };
+  go('setup', `<div class="setup kscreen">
+    <h1 class="kh">School Network Only</h1>
+    <p class="ksub" style="margin:0">The sign-in / sign-out screen only works on the Cornerstone campus network. Connect this iPad to the school Wi-Fi, then tap Try Again.</p>
+    <button class="kbtn" id="retry">Try Again</button></div>`);
+  $('#retry').onclick = () => location.reload();
 }
 
 // ---------- clock, idle timer ----------
@@ -267,28 +275,23 @@ function done(r) {
   $('#fin').onclick = home;
 }
 
-// ---------- one-time setup by staff ----------
+// ---------- one-time setup: just a name, school network only ----------
 function setup(note) {
   S = { screen: 'setup' };
   go('setup', `<div class="setup kscreen">
-    <h1 class="kh">Set up this iPad</h1>
-    <p class="ksub" style="margin:0">${esc(note || 'A front office staff member signs in once to turn on the sign-in / sign-out screen on this iPad.')}</p>
+    <h1 class="kh">Set Up This iPad</h1>
+    <p class="ksub" style="margin:0">${esc(note || 'Give this iPad a name to turn on the sign-in / sign-out screen. This only works on the school network.')}</p>
     <form class="card form" id="f-setup">
-      <label>Staff email <input type="email" id="se" autocomplete="username" required style="-webkit-user-select:text;user-select:text"></label>
-      <label>Password <input type="password" id="sp" autocomplete="current-password" required style="-webkit-user-select:text;user-select:text"></label>
-      <label>Name for this iPad <input type="text" id="sl" value="Front Office iPad" maxlength="60" style="-webkit-user-select:text;user-select:text"></label>
-      <button class="btn" type="submit">Turn on kiosk</button>
+      <label>Name for This iPad <input type="text" id="sl" value="Front Office iPad" maxlength="60" required style="-webkit-user-select:text;user-select:text"></label>
+      <button class="btn" type="submit">Turn On Kiosk</button>
       <p class="err" id="serr2"></p>
     </form></div>`);
   $('#f-setup').onsubmit = async e => {
     e.preventDefault(); $('#serr2').textContent = '';
-    const sb = supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false } });
-    const { error } = await sb.auth.signInWithPassword({ email: $('#se').value.trim().toLowerCase(), password: $('#sp').value });
-    if (error) return $('#serr2').textContent = 'Email or password is incorrect.';
-    const { data, error: e2 } = await sb.rpc('staff_kiosk_register', { p_label: $('#sl').value });
-    await sb.auth.signOut();
-    if (e2) return $('#serr2').textContent = e2.message === 'not_staff' ? 'That account is not on the front office staff list.' : 'Could not set up this iPad.';
-    TOKEN = data; store.set('ccs_kiosk_token', data); home();
+    const label = $('#sl').value.trim();
+    if (!label) return $('#serr2').textContent = ERR.need_label;
+    try { const r = await api({ fn: 'register', label }); TOKEN = r.token; store.set('ccs_kiosk_token', r.token); home(); }
+    catch (x) { $('#serr2').textContent = x.message === 'campus_only' ? 'This iPad is not on the school network. Connect to the school Wi-Fi and try again.' : 'Could not set up this iPad. Please try again.'; }
   };
 }
 
@@ -298,6 +301,9 @@ $('.top img').addEventListener('pointerdown', () => { hold = setTimeout(() => { 
 ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => $('.top img').addEventListener(t, () => clearTimeout(hold)));
 
 (async () => {
-  if (!TOKEN) return setup();
-  try { await rpc('kiosk_hello'); home(); } catch (x) { if (TOKEN) home(); }
+  if (!TOKEN) {
+    try { await api({ fn: 'ping' }); } catch (x) { if (x.message === 'campus_only') return offCampus(); }
+    return setup();
+  }
+  try { await rpc('kiosk_hello'); home(); } catch (x) { if (TOKEN && x.message !== 'campus_only') home(); }
 })();
