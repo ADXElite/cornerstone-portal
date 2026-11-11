@@ -357,27 +357,16 @@ function renderTrans() {
   if (!$('#t-start').value) $('#t-start').value = afterCut() ? nextSchoolDay(HOME.today) : HOME.today;
   $('#t-start').min = afterCut() ? addDays(HOME.today, 1) : HOME.today; $('#t-start').max = addDays(HOME.today, 180);
   const stops = HOME.bus_stops; const buses = [...new Set(stops.map(s => s.bus))];
-  $('#t-stop').innerHTML = '<option value="">Choose a Stop…</option>' + buses.map(b => `<optgroup label="${esc(b)}">${stops.filter(s => s.bus === b).map(s => `<option>${esc(s.stop)}</option>`).join('')}</optgroup>`).join('');
+  $('#t-stop').innerHTML = '<option value="">Choose a Stop…</option>' + buses.map(b => `<optgroup label="${esc(b)}">${stops.filter(s => s.bus === b).map(s => `<option value="${esc(s.stop)}">${esc(s.label || s.stop)}</option>`).join('')}</optgroup>`).join('');
   syncTrans(); drawCurrent();
 }
 function drawCurrent() {
   const kids = picked($('#t-students'));
-  const people = new Map();
   $('#t-current').innerHTML = kids.map(s => {
     const t = transportLines(s);
-    const list = [...s.guardians.map(g => ({ ...g, kind: 'Parent/guardian' })), ...s.pickups.map(p => ({ ...p, kind: 'Pickup' }))].filter(p => p.name);
-    list.forEach(p => { const k = p.name.toLowerCase(); if (!people.has(k)) people.set(k, p); });
     return `<div class="card" style="background:var(--bg)"><b class="t">${esc(s.first_name)} — Now on File</b>
-      <dl class="kv" style="padding:0"><dt>Afternoon</dt><dd>${esc(t.pm)}</dd></dl>
-      <details><summary><b>Pick-Up People on File (${list.length})</b></summary>
-        <div class="list" style="margin-top:8px">${list.map(p => `<div class="row"><div class="txt"><b>${esc(p.name)}</b><p>${esc([p.relationship, p.phone].filter(Boolean).join(' · ') || p.kind)}</p></div>${p.pin ? `<span class="pin sm">${p.pin}</span>` : ''}</div>`).join('') || '<div class="empty">No pickup people on file.</div>'}</div>
-      </details></div>`;
+      <dl class="kv" style="padding:0"><dt>Afternoon</dt><dd>${esc(t.pm)}</dd></dl></div>`;
   }).join('');
-  const cur = $('#t-person').value;
-  $('#t-person').innerHTML = '<option value="">Choose a Person…</option>' +
-    [...people.values()].sort((a, b) => a.name.localeCompare(b.name)).map(p => `<option value="${esc(p.name)}" data-r="${esc(p.relationship || '')}" data-p="${esc(p.phone || '')}">${esc(p.name)}${p.relationship ? ' (' + esc(p.relationship) + ')' : ''}</option>`).join('') +
-    '<option value="__other">Someone Else…</option>';
-  if (cur) $('#t-person').value = cur;
 }
 function syncTrans() {
   const period = $('input[name=t-period]:checked').value;
@@ -401,12 +390,9 @@ function syncMethod() {
   const period = $('input[name=t-period]:checked').value;
   $('#t-bus').hidden = m !== 'Bus Rider';
   $('#t-driver').hidden = m !== 'Student Driver and/or Passenger';
-  $('#t-pick').hidden = !(m === 'Car Rider' && period === 'afternoon');
-  $('#t-other').hidden = $('#t-person').value !== '__other';
 }
 $$('input[name=t-period],input[name=t-type]').forEach(i => i.addEventListener('change', syncTrans));
 $('#t-methods').addEventListener('change', syncMethod);
-$('#t-person').addEventListener('change', syncMethod);
 $('#t-start').addEventListener('change', () => { $('#t-end').min = $('#t-start').value; });
 
 $('#f-trans').addEventListener('submit', async e => {
@@ -429,15 +415,6 @@ $('#f-trans').addEventListener('submit', async e => {
     const dn = $('#t-dname').value.trim();
     if (!dn) return err.textContent = "Enter the student driver's full name.";
     details = 'Student driver: ' + dn;
-  }
-  if (method === 'Car Rider' && period === 'afternoon') {
-    const sel = $('#t-person');
-    if (!sel.value) return err.textContent = ERR.need_pickup;
-    if (sel.value === '__other') {
-      person = $('#t-oname').value.trim(); rel = $('#t-orel').value.trim(); phone = $('#t-ophone').value.trim();
-      if (!person) return err.textContent = "Enter the pickup person's name.";
-      details = 'Not on pickup list';
-    } else { const o = sel.selectedOptions[0]; person = sel.value; rel = o.dataset.r; phone = o.dataset.p; }
   }
   const endVal = $('#t-end').value;
   const btn = e.submitter || $('#f-trans .btn'); busy(btn, true, 'Submitting…');

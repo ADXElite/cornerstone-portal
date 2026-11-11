@@ -238,21 +238,11 @@
         <div class="step"><span>3</span>New Way Home</div>
         <div class="opts" id="t-methods"></div>
         <div id="t-bus" hidden>
-          <label>Bus Stop <select id="t-stop"></select></label>
+          <label>Bus Stop <small class="muted">(required — listed in afternoon drop-off order)</small><select id="t-stop"></select></label>
         </div>
         <div id="t-driver" hidden>
           <label>Student Driver's Full Name <input type="text" id="t-dname" maxlength="120" autocomplete="off"></label>
         </div>
-        <div id="t-pick" hidden>
-          <label>Who is picking up? <select id="t-person"></select></label>
-          <div id="t-other" hidden class="stack">
-            <label>Their Full Name <input type="text" id="t-oname" maxlength="120"></label>
-            <div class="two">
-              <label>Relationship <input type="text" id="t-orel" maxlength="60"></label>
-              <label>Phone <input type="tel" id="t-ophone" maxlength="20"></label>
-            </div>
-            <p class="muted small">Anyone not on your student's pickup list will be asked for a photo ID at pickup.</p>
-          </div>
         </div>
         <label>Comments for the Office <small class="muted">(optional)</small><textarea id="t-comments" rows="2" maxlength="1000"></textarea></label>
       </div>

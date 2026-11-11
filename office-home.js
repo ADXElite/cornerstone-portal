@@ -236,6 +236,8 @@ function pickEStudent(s) {
 }
 const people = s => [...s.guardians.filter(g => g.name).map(g => ({ ...g, g: 1 })), ...s.pickups.filter(p => p.name)];
 const personOpts = (s, extra = '') => '<option value="">Choose…</option>' + people(s).map((p, i) => `<option value="${i}">${esc(p.name)}${p.relationship ? ' (' + esc(p.relationship) + ')' : ''}${p.pin ? ' · PIN ' + p.pin : ''}</option>`).join('') + extra + '<option value="other">Someone Else…</option>';
+let STOPS = null;
+const busStops = async () => STOPS || (STOPS = await call('staff_bus_stop_list'));
 function drawEFields() {
   const t = $('#e-type').value, s = ESTU, F = $('#e-fields'); $('#e-err').textContent = '';
   if (!t) return F.innerHTML = '';
@@ -245,9 +247,9 @@ function drawEFields() {
       <label>How Long <select id="ef-ct"><option value="one_day">One Day</option><option value="date_range">Date Range</option><option value="permanent">Permanent</option></select></label></div>
     <div class="two"><label>Date <input type="date" id="ef-start" value="${TODAY}"></label><label id="ef-end-l" hidden>Through <input type="date" id="ef-end"></label></div>
     <label>New Method <select id="ef-method"></select></label>
-    <label>Details <small class="muted">(bus stop, care location…)</small><input type="text" id="ef-details" list="ef-stops"></label>
-    <label>Picked Up By <select id="ef-person">${personOpts(s)}</select></label>
-    <div id="ef-other" class="two" hidden><label>Name <input type="text" id="ef-oname"></label><label>Relationship <input type="text" id="ef-orel"></label></div>
+    <label id="ef-stop-l" hidden>Bus Stop <small class="muted">(required — afternoon drop-off order)</small><select id="ef-stop"><option value="">Loading stops…</option></select></label>
+    <label id="ef-care-l" hidden>Afterschool Care Location <select id="ef-care"><option value="Afterschool Care - SP">Afterschool Care - SP</option><option value="Afterschool Care - KHA">Afterschool Care - KHA</option></select></label>
+    <label id="ef-drv-l" hidden>Student Driver's Full Name <input type="text" id="ef-drv" maxlength="120"></label>
     <label>Notes <input type="text" id="ef-comments"></label>`;
   if (t === 'pickup_add') F.innerHTML = `<div class="two"><label>First Name <input type="text" id="ef-first"></label><label>Last Name <input type="text" id="ef-last"></label></div>
     <div class="two"><label>Relationship <input type="text" id="ef-rel"></label><label>Cell Phone <input type="tel" id="ef-phone"></label></div>
@@ -259,8 +261,13 @@ function drawEFields() {
     <label>Reason <input type="text" id="ef-reason" maxlength="300"></label>`;
   if (t === 'other') F.innerHTML = `<label>Details <textarea id="ef-details" rows="3" maxlength="2000" placeholder="What changed? e.g. new home address, custody paperwork, allergy update…"></textarea></label>`;
   if ($('#ef-period')) {
-    const sync = () => { const am = $('#ef-period').value === 'morning'; $('#ef-method').innerHTML = (am ? AM_OPTS : PM_OPTS).map(o => `<option>${o}</option>`).join(''); $('#ef-end-l').hidden = $('#ef-ct').value !== 'date_range'; };
-    $('#ef-period').onchange = $('#ef-ct').onchange = sync; sync();
+    const syncM = () => { const m = $('#ef-method').value, am = $('#ef-period').value === 'morning';
+      $('#ef-stop-l').hidden = m !== 'Bus Rider'; $('#ef-care-l').hidden = am || m !== 'Afternoon Extended Care'; $('#ef-drv-l').hidden = m !== 'Student Driver and/or Passenger'; };
+    const sync = () => { const am = $('#ef-period').value === 'morning'; $('#ef-method').innerHTML = (am ? AM_OPTS : PM_OPTS).map(o => `<option>${o}</option>`).join(''); $('#ef-end-l').hidden = $('#ef-ct').value !== 'date_range'; syncM(); };
+    $('#ef-period').onchange = $('#ef-ct').onchange = sync; $('#ef-method').onchange = syncM; sync();
+    busStops().then(stops => { if (!$('#ef-stop')) return; const buses = [...new Set(stops.map(x => x.bus))];
+      $('#ef-stop').innerHTML = '<option value="">Choose a Stop…</option>' + buses.map(b => `<optgroup label="${esc(b)}">${stops.filter(x => x.bus === b).map(x => `<option value="${esc(x.stop)}">${esc(x.label)}</option>`).join('')}</optgroup>`).join(''); })
+      .catch(() => { if ($('#ef-stop')) $('#ef-stop').innerHTML = '<option value="">Could not load stops — refresh the page</option>'; });
   }
   if ($('#ef-person')) $('#ef-person').onchange = () => $('#ef-other').hidden = $('#ef-person').value !== 'other';
 }
@@ -278,9 +285,11 @@ $('#e-save').onclick = async () => {
     const x = people(s)[+sel]; return x ? { person_name: x.name, relationship: x.relationship, person_key: x.key, phone: x.phone } : {};
   };
   if (t === 'transport') {
-    const pr = person();
-    Object.assign(p, { period: v('#ef-period'), change_type: v('#ef-ct'), start_date: v('#ef-start'), end_date: v('#ef-end'), new_method: v('#ef-method'), new_details: v('#ef-details'),
-      pickup_person: pr.person_name || '', pickup_relationship: pr.relationship || '', pickup_phone: pr.phone || '', comments: v('#ef-comments') });
+    const m = v('#ef-method'); let details = '';
+    if (m === 'Bus Rider') { details = v('#ef-stop'); if (!details) return err.textContent = 'Choose a bus stop.'; }
+    if (m === 'Afternoon Extended Care' && v('#ef-period') === 'afternoon') details = v('#ef-care');
+    if (m === 'Student Driver and/or Passenger') { if (!v('#ef-drv')) return err.textContent = "Enter the student driver's full name."; details = 'Student driver: ' + v('#ef-drv'); }
+    Object.assign(p, { period: v('#ef-period'), change_type: v('#ef-ct'), start_date: v('#ef-start'), end_date: v('#ef-end'), new_method: m, new_details: details, comments: v('#ef-comments') });
   }
   if (t === 'pickup_add') Object.assign(p, { first_name: v('#ef-first'), last_name: v('#ef-last'), relationship: v('#ef-rel'), phone: v('#ef-phone'), email: v('#ef-email'), comments: v('#ef-comments') });
   if (t === 'pickup_remove') { if (!v('#ef-rm')) return err.textContent = 'Choose who to remove.'; Object.assign(p, { person_key: v('#ef-rm'), comments: v('#ef-comments') }); }
@@ -295,7 +304,7 @@ $('#e-save').onclick = async () => {
     if (window.loadStudent) loadStudent(s.student_id);
   } catch (x) {
     const m = { missing_fields: 'Fill in every field.', need_name: 'Enter first and last name.', need_phone: 'Enter a 10-digit phone.', already_on_list: 'That person is already on the list.',
-      cant_remove_guardian: "Parents/guardians can't be removed here.", not_on_list: 'That person is no longer on the list.', pick_student: 'Choose a student.' }[x.message];
+      cant_remove_guardian: "Parents/guardians can't be removed here.", not_on_list: 'That person is no longer on the list.', pick_student: 'Choose a student.', need_bus: 'Choose a bus stop from the list.' }[x.message];
     err.textContent = m || emsg(x);
   }
   b.disabled = false;
