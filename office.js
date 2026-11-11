@@ -62,9 +62,9 @@ function badges(m) {
 async function refreshBadges() { try { ME = await call('staff_me'); badges(ME); } catch {} }
 
 // ---------- routing ----------
-const VIEWS = ['dash', 'students', 'student', 'buses', 'cars', 'alerts', 'notes', 'transport', 'pickchanges', 'signins', 'pins', 'settings', 'roster', 'carenow', 'carepm', 'caream', 'caresheets'];
+const VIEWS = ['dash', 'students', 'student', 'buses', 'cars', 'alerts', 'notes', 'transport', 'pickchanges', 'signins', 'pins', 'settings', 'roster', 'carenow', 'carepm', 'caream', 'caresheets', 'busstops'];
 // Which top menu item each screen belongs to.
-const MENU = { student: 'students', buses: 'reports', cars: 'reports', pins: 'reports', pickchanges: 'transport', alerts: 'settings', roster: 'settings', carenow: 'care', carepm: 'care', caream: 'care', caresheets: 'care' };
+const MENU = { student: 'students', buses: 'reports', cars: 'reports', pins: 'reports', pickchanges: 'transport', alerts: 'settings', roster: 'settings', carenow: 'care', carepm: 'care', caream: 'care', caresheets: 'care', busstops: 'settings' };
 let sioTimer = null;
 function route() {
   if (!ME) return;
@@ -81,7 +81,7 @@ function route() {
      pins: loadPins, students: () => loadStudentList(), student: () => loadStudent(new URLSearchParams(q || '').get('id')),
      buses: loadBuses, cars: () => loadCars(), pickchanges: () => loadPickChanges(), alerts: () => window.alertInfo && alertInfo(),
      settings: loadSettings, roster: loadImports,
-     carenow: () => careNow(), carepm: () => carePm(), caream: () => careAm(), caresheets: () => careSheets() })[view]();
+     carenow: () => careNow(), carepm: () => carePm(), caream: () => careAm(), caresheets: () => careSheets(), busstops: () => busStopsLoad() })[view]();
 }
 addEventListener('hashchange', route);
 const closeModal = () => { $('#modal').hidden = true; $('#modal-in').innerHTML = ''; $$('[data-blob]').forEach(u => URL.revokeObjectURL(u.dataset.blob)); };

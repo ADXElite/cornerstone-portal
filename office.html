@@ -74,6 +74,24 @@ tr.grp td{background:var(--bg);border-top:2px solid var(--line);padding-top:12px
 .csheet td{border-bottom:1px solid #bbb;padding:4px 5px;font-size:.85rem;vertical-align:middle;height:30px;color:#141213}.csheet td img{max-height:26px;max-width:100%;display:block}
 .csheet.week td{font-size:.72rem;height:42px;border-left:1px solid #ddd}.csheet.week td img{max-height:18px}
 @media print{.csheet{border:0;padding:0;break-after:page}.csheet:last-child{break-after:auto}}
+#bs-sheet{display:none}
+#bs-print-host{display:none}
+@media print{body.print-sched > *:not(#bs-print-host){display:none!important}body.print-sched #bs-print-host{display:block}}
+.bsched{background:#fff;color:#141213;font-family:Georgia,'Times New Roman',serif;width:7.7in;margin:0 auto}
+.bsched .hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}.bsched .hd img{height:62px}
+.bsched .ttl{text-align:right}.bsched .ttl h2{font-family:Georgia,serif;font-weight:400;font-size:26pt;margin:0;letter-spacing:.02em;color:#141213;text-transform:uppercase}
+.bsched .ttl b{display:block;color:#E4010D;font-size:13pt;letter-spacing:.04em;text-transform:uppercase}.bsched .ttl i{font-size:9.5pt;color:#555}
+.bsched .bar{background:#141213;color:#fff;text-align:center;font-weight:700;letter-spacing:.06em;font-size:9.5pt;padding:6px 8px;margin:6px 0 4px;border-bottom:3px solid #E4010D;text-transform:uppercase}
+.bsched table{width:100%;border-collapse:collapse;font-size:8.2pt;table-layout:fixed}
+.bsched th{background:#5a5a5a;color:#fff;font-weight:700;padding:4px 4px;text-align:left;font-size:8.2pt;line-height:1.1;text-transform:none;letter-spacing:0;font-family:Georgia,serif;border:0}
+.bsched th.c,.bsched td.c{text-align:center}
+.bsched td{padding:2.6px 4px;border-bottom:1px solid #d6d6d6;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bsched td.t{font-weight:700}.bsched td.n{color:#E4010D;font-weight:700;text-align:center}
+.bsched tr.bus td{background:#E4010D;color:#fff;font-weight:700;font-size:9.5pt;padding:4px 6px}.bsched tr.bus td span{font-weight:400}
+.bsched tr.school td{background:#fbe3e4;font-weight:700}
+.bsched tr:nth-child(even):not(.bus):not(.school) td{background:#f4f4f4}
+.bsched .ft{margin-top:10px;border-top:1px solid #bbb;padding-top:5px;font-size:8.5pt;color:#555}
+.bstbl td input,.bstbl td select{min-height:34px;padding:4px 6px;font-size:.9rem}
 .croster{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;color:#141213}.croster h3{font-family:var(--display);font-weight:800;font-size:1.6rem;text-transform:uppercase;margin:0}.croster td{padding:5px 8px;border-top:1px solid #E4DFDF}.croster .abs td{color:#8a8486;text-decoration:line-through}.croster .chk{width:22px;height:22px;border:2px solid #141213;border-radius:4px;display:inline-block}
 @media print{.croster{border:0;padding:0}}
 .roster{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;color:#141213}
@@ -346,7 +364,7 @@ td.c small{text-align:center}
 
     <!-- Alerts -->
     <div class="screen" id="p-alerts" hidden>
-      <nav class="subtabs noprint"><a href="#settings" data-s="settings">Staff &amp; Rules</a><a href="#roster" data-s="roster">Data Upload</a><a href="#alerts" data-s="alerts">Alerts</a></nav>
+      <nav class="subtabs noprint"><a href="#settings" data-s="settings">Staff &amp; Rules</a><a href="#roster" data-s="roster">Data Upload</a><a href="#alerts" data-s="alerts">Alerts</a><a href="#busstops" data-s="busstops">Bus Stops</a></nav>
       <section class="hsec" id="sec-alert">
         <h2 class="hh">Send a Parent Alert</h2>
         <div class="card form">
@@ -370,7 +388,7 @@ td.c small{text-align:center}
 
     <!-- Settings -->
     <div class="screen" id="p-settings" hidden>
-      <nav class="subtabs noprint"><a href="#settings" data-s="settings">Staff &amp; Rules</a><a href="#roster" data-s="roster">Data Upload</a><a href="#alerts" data-s="alerts">Alerts</a></nav>
+      <nav class="subtabs noprint"><a href="#settings" data-s="settings">Staff &amp; Rules</a><a href="#roster" data-s="roster">Data Upload</a><a href="#alerts" data-s="alerts">Alerts</a><a href="#busstops" data-s="busstops">Bus Stops</a></nav>
       <div class="card" id="ap-card">
         <b class="t">Alerts &amp; Emails</b>
         <label class="actions" style="font-weight:600"><input type="checkbox" id="ap-on"> Pause all alerts and emails (testing mode)</label>
@@ -414,9 +432,27 @@ td.c small{text-align:center}
       <p class="err" id="set-err"></p>
     </div>
 
+    <!-- Bus stops (Settings) -->
+    <div class="screen" id="p-busstops" hidden>
+      <nav class="subtabs noprint"><a href="#settings" data-s="settings">Staff &amp; Rules</a><a href="#roster" data-s="roster">Data Upload</a><a href="#alerts" data-s="alerts">Alerts</a><a href="#busstops" data-s="busstops">Bus Stops</a></nav>
+      <div class="card noprint">
+        <b class="t">Bus Stops &amp; Route Schedule</b>
+        <p class="muted small">These stops feed the bus rosters, the bus driver screen, the bus stop dropdowns for parents and the office, and the printed route schedule. Stops in the daily FACTS file are matched to these stops automatically.</p>
+        <div class="bar">
+          <label>School Year<input type="text" id="bs-year" maxlength="20"></label>
+          <label class="grow">Notice at the Top of the Schedule<input type="text" id="bs-note" maxlength="160"></label>
+        </div>
+        <div class="actions"><button class="btn ghost sm" id="bs-save-sched" type="button">Save</button><button class="btn sm" id="bs-print" type="button">Print Route Schedule</button><button class="btn ghost sm" id="bs-add-bus" type="button">Add a Bus</button><span class="cnt" id="bs-updated"></span></div>
+      </div>
+      <div id="bs-edit" class="noprint"></div>
+      <div id="bs-buses" class="noprint"></div>
+      <div class="card noprint" id="bs-facts-card"><b class="t">Stops in the FACTS File</b><p class="muted small">Every bus stop students have in FACTS and the stop it matches here. Fix a "Not matched" stop by adding it above, or by adding words from the FACTS stop to a stop's "FACTS Match Text".</p><div id="bs-facts"></div></div>
+      <div id="bs-sheet"></div>
+    </div>
+
     <!-- Data upload -->
     <div class="screen" id="p-roster" hidden>
-      <nav class="subtabs noprint"><a href="#settings" data-s="settings">Staff &amp; Rules</a><a href="#roster" data-s="roster">Data Upload</a><a href="#alerts" data-s="alerts">Alerts</a></nav>
+      <nav class="subtabs noprint"><a href="#settings" data-s="settings">Staff &amp; Rules</a><a href="#roster" data-s="roster">Data Upload</a><a href="#alerts" data-s="alerts">Alerts</a><a href="#busstops" data-s="busstops">Bus Stops</a></nav>
       <div class="card">
         <b class="t">Data Upload — Daily File from the SFTP Server</b>
         <p>Upload the student &amp; parent CSV to the <b>uploads</b> folder on the SFTP server (141.148.36.44, login <b>ccsftp</b>). On school days the portal checks at <b>10:00 AM</b> and <b>5:00 PM</b> for the student &amp; parent file and at <b>11:30 AM</b> for the daily attendance file (and keeps checking every 5 minutes for half an hour in case a file is late), imports the newest of each, and moves them to <b>processed</b>.</p>
@@ -442,5 +478,6 @@ td.c small{text-align:center}
 <script src="/office-home.js"></script>
 <script src="/office-more.js"></script>
 <script src="/office-care.js"></script>
+<script src="/office-bus.js"></script>
 </body>
 </html>
