@@ -3,7 +3,7 @@
 // to the database from here (the database refuses kiosk calls made straight from a browser).
 const C = require('../lib/core');
 
-const FNS = new Set(['kiosk_hello', 'kiosk_pin', 'kiosk_search', 'kiosk_student', 'kiosk_submit']);
+const FNS = new Set(['kiosk_hello', 'kiosk_pin', 'kiosk_search', 'kiosk_student', 'kiosk_submit', 'kiosk_care_pin', 'kiosk_care_submit']);
 const allowedIps = () => (process.env.KIOSK_ALLOWED_IPS || process.env.DISMISSAL_ALLOWED_IPS || '107.1.157.26')
   .split(',').map(s => s.trim()).filter(Boolean);
 

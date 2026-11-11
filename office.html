@@ -67,6 +67,13 @@ tr.grp td{background:var(--bg);border-top:2px solid var(--line);padding-top:12px
 .sgrid{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;align-items:start}
 @media (max-width:900px){.sgrid{grid-template-columns:1fr}}
 .subtabs{display:flex;gap:6px;flex-wrap:wrap}.subtabs a{padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);text-decoration:none;font-weight:600;font-size:.9rem}.subtabs a[aria-current]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.segs{display:flex;gap:6px;flex-wrap:wrap}.segs button{padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:600;font-size:.9rem;cursor:pointer}.segs button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.cloc{display:inline-block;font-size:.72rem;font-weight:800;padding:2px 7px;border-radius:6px}.cloc.KHA{background:#1d4ed8;color:#fff}.cloc.SP{background:#7c3aed;color:#fff}
+.csheet{background:#fff;color:#141213;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}.csheet h3{font-family:var(--display);font-weight:800;font-size:1.5rem;text-transform:uppercase;margin:0}
+.csheet table{width:100%;border-collapse:collapse;table-layout:fixed}.csheet th{font-size:.72rem;text-transform:uppercase;text-align:left;white-space:normal;line-height:1.15;border-bottom:2px solid #141213;padding:4px 5px;color:#141213;background:none}
+.csheet td{border-bottom:1px solid #bbb;padding:4px 5px;font-size:.85rem;vertical-align:middle;height:30px;color:#141213}.csheet td img{max-height:26px;max-width:100%;display:block}
+.csheet.week td{font-size:.72rem;height:42px;border-left:1px solid #ddd}.csheet.week td img{max-height:18px}
+@media print{.csheet{border:0;padding:0;break-after:page}.csheet:last-child{break-after:auto}}
 .croster{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;color:#141213}.croster h3{font-family:var(--display);font-weight:800;font-size:1.6rem;text-transform:uppercase;margin:0}.croster td{padding:5px 8px;border-top:1px solid #E4DFDF}.croster .abs td{color:#8a8486;text-decoration:line-through}.croster .chk{width:22px;height:22px;border:2px solid #141213;border-radius:4px;display:inline-block}
 @media print{.croster{border:0;padding:0}}
 .roster{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;color:#141213}
@@ -116,6 +123,7 @@ td.c small{text-align:center}
       <a href="#transport" data-v="transport">Changes <span class="badge" id="b-trans" hidden></span></a>
       <a href="#notes" data-v="notes">Excused Notes <span class="badge" id="b-notes" hidden></span></a>
       <a href="#signins" data-v="signins">Sign-In / Sign-Out <span class="badge" id="b-sio" hidden></span></a>
+      <a href="#carenow" data-v="care">Extended Care</a>
       <a href="#settings" data-v="settings">Settings</a>
       <a href="#buses" data-v="reports">Reports</a>
     </nav>
@@ -256,6 +264,45 @@ td.c small{text-align:center}
       </div>
     </div>
 
+    <!-- ===== Extended Care ===== -->
+    <div class="screen" id="p-carenow" hidden>
+      <nav class="subtabs noprint"><a href="#carenow" data-s="carenow">Signed In Now</a><a href="#carepm" data-s="carepm">Afterschool Care</a><a href="#caream" data-s="caream">Morning Care</a><a href="#caresheets" data-s="caresheets">Sign-In / Sign-Out Sheets</a></nav>
+      <div class="card noprint"><b class="t">Signed In to Extended Care Right Now</b>
+        <p class="muted small">Every student currently signed in to morning or afterschool care. Updates every 30 seconds. Staff sign students in and out at <b>portal.csjax.org/care</b>; parents sign out at the kiosk.</p>
+        <div class="actions"><span class="cnt" id="cn-count"></span><a class="btn ghost sm" href="/care" target="_blank" rel="noopener">Open Extended Care Screen</a></div></div>
+      <div id="cn-list"></div>
+    </div>
+    <div class="screen" id="p-carepm" hidden>
+      <nav class="subtabs noprint"><a href="#carenow" data-s="carenow">Signed In Now</a><a href="#carepm" data-s="carepm">Afterschool Care</a><a href="#caream" data-s="caream">Morning Care</a><a href="#caresheets" data-s="caresheets">Sign-In / Sign-Out Sheets</a></nav>
+      <div class="bar noprint">
+        <div class="segs" id="cp-loc"><button data-l="all" aria-pressed="true">All</button><button data-l="KHA">KHA</button><button data-l="SP">SP</button></div>
+        <label class="grow">Search<input type="search" id="cp-q" placeholder="Student name"></label>
+      </div>
+      <span class="cnt" id="cp-count"></span>
+      <div class="tw"><table><thead><tr><th>Student</th><th>Care</th><th>Today</th><th>Signed In</th><th>Signed Out</th><th>Picked Up By</th></tr></thead><tbody id="cp-rows"></tbody></table></div>
+    </div>
+    <div class="screen" id="p-caream" hidden>
+      <nav class="subtabs noprint"><a href="#carenow" data-s="carenow">Signed In Now</a><a href="#carepm" data-s="carepm">Afterschool Care</a><a href="#caream" data-s="caream">Morning Care</a><a href="#caresheets" data-s="caresheets">Sign-In / Sign-Out Sheets</a></nav>
+      <div class="bar noprint"><label class="grow">Search<input type="search" id="ca-q" placeholder="Student name"></label></div>
+      <span class="cnt" id="ca-count"></span>
+      <div class="tw"><table><thead><tr><th>Student</th><th>Signed Up</th><th>Marked Present</th><th>By</th><th>Signed Out</th></tr></thead><tbody id="ca-rows"></tbody></table></div>
+    </div>
+    <div class="screen" id="p-caresheets" hidden>
+      <nav class="subtabs noprint"><a href="#carenow" data-s="carenow">Signed In Now</a><a href="#carepm" data-s="carepm">Afterschool Care</a><a href="#caream" data-s="caream">Morning Care</a><a href="#caresheets" data-s="caresheets">Sign-In / Sign-Out Sheets</a></nav>
+      <div class="card noprint">
+        <b class="t">Print Sign-In / Sign-Out Sheets</b>
+        <div class="bar">
+          <label>Care<select id="cs-ses"><option value="pm">Afterschool Care</option><option value="am">Morning Care</option></select></label>
+          <label>Students<select id="cs-loc"><option value="all">All Afterschool Care</option><option value="KHA">KHA Afterschool Care Only</option><option value="SP">SP Afterschool Care Only</option></select></label>
+          <label>Sheet<select id="cs-kind"><option value="day">Daily</option><option value="week">Weekly</option></select></label>
+          <label id="cs-dl">Date<input type="date" id="cs-date"></label>
+        </div>
+        <div class="actions"><button class="btn sm" id="cs-print" type="button">Print</button><span class="cnt" id="cs-count"></span></div>
+        <p class="muted small">Shows each student's name, date of birth, sign-in time, sign-out time, the parent who signed them out and their signature. A future or blank day prints as a blank sheet to fill in by hand.</p>
+      </div>
+      <div id="cs-area"></div>
+    </div>
+
     <!-- Pick-up people changes -->
     <div class="screen" id="p-pickchanges" hidden>
       <nav class="subtabs noprint"><a href="#transport" data-s="transport">Dismissal Changes</a><a href="#pickchanges" data-s="pickchanges">Pick-Up People Changes <span class="badge" id="b-pick" hidden></span></a></nav>
@@ -331,13 +378,13 @@ td.c small{text-align:center}
       </div>
       <div class="card">
         <b class="t">Staff Sign-Ins</b>
-        <p class="muted small"><b>Front Office</b> — the whole office portal, plus emails for every parent change. <b>Car Line</b> — only portal.csjax.org/carline. <b>Bus Driver</b> — only portal.csjax.org/bus.</p>
+        <p class="muted small"><b>Front Office</b> — the whole office portal, plus emails for every parent change. <b>Car Line</b> — only portal.csjax.org/carline. <b>Bus Driver</b> — only portal.csjax.org/bus. <b>Extended Care</b> — only portal.csjax.org/care.</p>
         <div class="list" id="staff-list"></div>
         <form class="stack" id="f-staff" style="margin-top:6px">
           <div class="bar">
             <label class="grow">Name<input type="text" id="sa-name" required></label>
             <label class="grow">Email<input type="email" id="sa-email" required></label>
-            <label>Role<select id="sa-role"><option value="carline">Car Line</option><option value="bus">Bus Driver</option><option value="office">Front Office</option></select></label>
+            <label>Role<select id="sa-role"><option value="carline">Car Line</option><option value="bus">Bus Driver</option><option value="care">Extended Care</option><option value="office">Front Office</option></select></label>
             <label>Password<input type="text" id="sa-pass" minlength="8" placeholder="At least 8 characters" autocomplete="off" required></label>
             <button class="btn sm">Create Sign-In</button>
           </div>
@@ -394,5 +441,6 @@ td.c small{text-align:center}
 <script src="/office.js"></script>
 <script src="/office-home.js"></script>
 <script src="/office-more.js"></script>
+<script src="/office-care.js"></script>
 </body>
 </html>

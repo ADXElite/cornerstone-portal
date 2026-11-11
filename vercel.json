@@ -2,7 +2,7 @@
   "cleanUrls": true,
   "headers": [
     {
-      "source": "/(bus|carline|duty)",
+      "source": "/(bus|carline|duty|care)",
       "headers": [
         {
           "key": "X-Robots-Tag",

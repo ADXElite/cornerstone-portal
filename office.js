@@ -62,9 +62,9 @@ function badges(m) {
 async function refreshBadges() { try { ME = await call('staff_me'); badges(ME); } catch {} }
 
 // ---------- routing ----------
-const VIEWS = ['dash', 'students', 'student', 'buses', 'cars', 'alerts', 'notes', 'transport', 'pickchanges', 'signins', 'pins', 'settings', 'roster'];
+const VIEWS = ['dash', 'students', 'student', 'buses', 'cars', 'alerts', 'notes', 'transport', 'pickchanges', 'signins', 'pins', 'settings', 'roster', 'carenow', 'carepm', 'caream', 'caresheets'];
 // Which top menu item each screen belongs to.
-const MENU = { student: 'students', buses: 'reports', cars: 'reports', pins: 'reports', pickchanges: 'transport', alerts: 'settings', roster: 'settings' };
+const MENU = { student: 'students', buses: 'reports', cars: 'reports', pins: 'reports', pickchanges: 'transport', alerts: 'settings', roster: 'settings', carenow: 'care', carepm: 'care', caream: 'care', caresheets: 'care' };
 let sioTimer = null;
 function route() {
   if (!ME) return;
@@ -80,7 +80,8 @@ function route() {
      signins: () => { loadSignins(); sioTimer = setInterval(() => { if (!document.hidden && $('#modal').hidden) loadSignins(true); }, 30000); },
      pins: loadPins, students: () => loadStudentList(), student: () => loadStudent(new URLSearchParams(q || '').get('id')),
      buses: loadBuses, cars: () => loadCars(), pickchanges: () => loadPickChanges(), alerts: () => window.alertInfo && alertInfo(),
-     settings: loadSettings, roster: loadImports })[view]();
+     settings: loadSettings, roster: loadImports,
+     carenow: () => careNow(), carepm: () => carePm(), caream: () => careAm(), caresheets: () => careSheets() })[view]();
 }
 addEventListener('hashchange', route);
 const closeModal = () => { $('#modal').hidden = true; $('#modal-in').innerHTML = ''; $$('[data-blob]').forEach(u => URL.revokeObjectURL(u.dataset.blob)); };
@@ -375,7 +376,7 @@ async function loadSettings() {
   SET = set;
   $('#ap-on').checked = set.alerts_paused === true;
   $('#ap-card').style.borderColor = set.alerts_paused === true ? 'var(--red)' : '';
-  const ROLE = { office: ['Front Office', 'ok'], carline: ['Car Line', 'warn'], bus: ['Bus Driver', 'gray'] };
+  const ROLE = { office: ['Front Office', 'ok'], carline: ['Car Line', 'warn'], bus: ['Bus Driver', 'gray'], care: ['Extended Care', 'warn'] };
   $('#staff-list').innerHTML = staff.map(s => `<div class="row"><div class="txt"><b>${esc(s.name || s.email)} <span class="tag ${ROLE[s.role][1]}">${ROLE[s.role][0]}</span>${s.active ? '' : ' <span class="tag gray">Off</span>'}</b>
       <p>${esc(s.email)}${s.has_login ? (s.last_sign_in ? ' · last signed in ' + stamp(s.last_sign_in) : ' · has a sign-in') : ' · <b style="display:inline;color:var(--red)">no sign-in yet</b>'}</p></div>
     <span class="actions"><button class="btn ghost sm" data-pw="${esc(s.email)}">${s.has_login ? 'Reset password' : 'Create sign-in'}</button>
@@ -430,7 +431,7 @@ $('#f-staff').addEventListener('submit', async e => {
   const b = e.submitter; b.disabled = true;
   try {
     await staffUsers({ action: 'create', email: $('#sa-email').value, name: $('#sa-name').value, role: $('#sa-role').value, password: $('#sa-pass').value });
-    const where = { carline: 'portal.csjax.org/carline', bus: 'portal.csjax.org/bus', office: 'portal.csjax.org/office' }[$('#sa-role').value];
+    const where = { carline: 'portal.csjax.org/carline', bus: 'portal.csjax.org/bus', care: 'portal.csjax.org/care', office: 'portal.csjax.org/office' }[$('#sa-role').value];
     alert(`Sign-in created.\n\nGive them: ${where}\nEmail: ${$('#sa-email').value.trim().toLowerCase()}\nPassword: the one you just typed`);
     $('#f-staff').reset(); loadSettings();
   } catch (x) { $('#sa-err').textContent = x.message; }

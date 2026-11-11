@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
   }
 
   if (b.action === "create") {
-    const role = ["office", "carline", "bus"].includes(b.role) ? b.role : "carline";
+    const role = ["office", "carline", "bus", "care"].includes(b.role) ? b.role : "carline";
     const { error: sErr } = await asStaff.rpc("staff_staff_save", { p_email: email, p_name: String(b.name || "").trim() || null, p_active: true, p_role: role });
     if (sErr) return json({ error: sErr.message }, 400);
     if (user) {

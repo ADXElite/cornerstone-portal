@@ -198,3 +198,4 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
 
 /* Parent sign-in: how it works */
 .how ol{margin:0;padding-left:1.25em;display:grid;gap:8px}.how ul{margin:6px 0 0;padding-left:1.1em;display:grid;gap:4px}.how li{line-height:1.4}
+@media (min-width:640px){.staff-grid{grid-template-columns:repeat(2,1fr)}}

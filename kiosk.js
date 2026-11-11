@@ -16,12 +16,13 @@ const ERR = {
   already_checked_out: 'was already checked out today. Please see the front desk.',
   need_reason: 'Please type a reason.', need_signature: 'Please sign in the box.', pick_student: 'Tap at least one student.',
   pin_required: 'Early check-out needs a parent or pickup PIN.', one_student: 'Choose one student.',
-  campus_only: 'This only works on the school network.', need_label: 'Type a name for this iPad.',
+  campus_only: 'This only works on the school network.', not_in_care: 'is not signed in to afterschool care. Please see the care staff.', need_label: 'Type a name for this iPad.',
   server_error: 'Something went wrong. Please try again or see the front desk.'
 };
 function errText(m) {
   const [code, who] = String(m || '').split(':');
-  if ((code === 'already_signed_in' || code === 'already_checked_out') && who) return `${who} ${ERR[code]}`;
+  if (code === 'already_signed_in' && who && S.care) return `${who} is already signed in to morning care today.`;
+  if ((code === 'already_signed_in' || code === 'already_checked_out' || code === 'not_in_care') && who) return `${who} ${ERR[code]}`;
   return ERR[code] || ERR.server_error;
 }
 
@@ -66,9 +67,23 @@ function go(screen, html) { stopScan(); S.screen = screen; K.innerHTML = html; r
 const ICON_OUT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>';
 const ICON_IN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>';
 
+// Kiosk mode by Eastern time on school days: 5:00–8:00 AM morning care sign-in, 3:30–7:00 PM afterschool care sign-out,
+// otherwise late sign-in / early check-out. The home screen switches by itself when the time comes.
+function kioskMode() {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).map(x => [x.type, x.value]));
+  if (p.weekday === 'Sat' || p.weekday === 'Sun') return 'school';
+  const t = p.hour + ':' + p.minute;
+  if (t >= '05:00' && t < '08:00') return 'am';
+  if (t >= '15:30' && t < '19:00') return 'pm';
+  return 'school';
+}
+let MODE_SHOWN = null;
+setInterval(() => { if (S.screen === 'home' && TOKEN && MODE_SHOWN !== null && kioskMode() !== MODE_SHOWN) home(); }, 15000);
 function home() {
   if (!TOKEN) return setup();
   S = {};
+  const mode = kioskMode(); MODE_SHOWN = mode;
+  if (mode !== 'school') return careHome(mode);
   go('home', `<div class="kscreen">
     <div><h1 class="kh">Front Office</h1><p class="ksub" style="margin-top:6px">Tap what you're here to do.</p></div>
     <div class="big2">
@@ -77,6 +92,15 @@ function home() {
     </div></div>`);
   $('#b-out').onclick = () => { S.kind = 'early_out'; S.method = 'pin'; pinScreen(); };
   $('#b-in').onclick = () => { S.kind = 'late_in'; lateChoice(); };
+}
+function careHome(mode) {
+  const am = mode === 'am';
+  go('home', `<div class="kscreen">
+    <div><h1 class="kh">${am ? 'Morning Extended Care' : 'Afterschool Care'}</h1><p class="ksub" style="margin-top:6px">${am ? 'Parents: sign your student in to morning care with your PIN.' : 'Parents: sign your student out of afterschool care with your PIN.'}</p></div>
+    <div class="big2" style="grid-template-columns:1fr">
+      <button class="bigbtn ${am ? 'in' : 'out'}" id="b-care">${am ? ICON_IN : ICON_OUT}<b>${am ? 'Morning Care Sign-In' : 'Afterschool Care Sign-Out'}</b><span>Enter your 4-digit pick-up PIN</span></button>
+    </div></div>`);
+  $('#b-care').onclick = () => { S.care = mode; S.method = 'pin'; pinScreen(); };
 }
 
 // ---------- PIN ----------
@@ -100,10 +124,11 @@ function pinScreen() {
     if (S.pin.length === 4) {
       S.busy = true;
       try {
-        const r = await rpc('kiosk_pin', { p_pin: S.pin });
+        const r = S.care ? await rpc('kiosk_care_pin', { p_pin: S.pin, p_session: S.care }) : await rpc('kiosk_pin', { p_pin: S.pin });
         if (r.error) throw new Error(r.error);
-        S.person = r.name; S.students = r.students; S.selected = new Set(r.students.length === 1 ? [r.students[0].student_id] : []);
-        S.method = 'pin'; pickStudents();
+        S.person = r.name; S.students = r.students; S.method = 'pin';
+        if (S.care) { const can = r.students.filter(x => x.can); S.selected = new Set(can.length === 1 ? [can[0].student_id] : []); careStudents(); }
+        else { S.selected = new Set(r.students.length === 1 ? [r.students[0].student_id] : []); pickStudents(); }
       } catch (x) { if (S.screen !== 'pin') return; $('#perr').textContent = errText(x.message); $('#dots').classList.add('shake'); setTimeout(() => { $('#dots')?.classList.remove('shake'); S.pin = ''; draw(); }, 400); }
       S.busy = false;
     }
@@ -203,6 +228,56 @@ function pickStudents() {
   $('#bk').onclick = home;
   $('#stus').onclick = e => { const b = e.target.closest('.stu-pick'); if (!b) return; const id = +b.dataset.id; S.selected.has(id) ? S.selected.delete(id) : S.selected.add(id); b.setAttribute('aria-pressed', S.selected.has(id)); };
   $('#next').onclick = () => S.selected.size ? details() : ($('#kerr').textContent = ERR.pick_student);
+}
+
+// ---------- extended care: pick students, sign, confirm ----------
+const ktm = t => t ? new Date(t).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }) : '';
+function careStudents() {
+  const am = S.care === 'am';
+  const why = x => am ? `Already signed in ${ktm(x.in_at)}` : x.out_at ? `Already signed out ${ktm(x.out_at)}` : 'Not signed in to afterschool care today';
+  go('care-pick', `<div class="kscreen">
+    <button class="back" id="bk">‹ Back</button>
+    <div><h1 class="kh">Hi${S.person ? ', ' + esc(S.person.split(' ')[0]) : ''}</h1><p class="ksub" style="margin-top:6px">${am ? 'Tap each student you are signing in to morning care.' : 'Tap each student you are signing out of afterschool care.'}</p></div>
+    <div class="stus" id="stus">${S.students.map(x => `<button class="stu-pick" data-id="${x.student_id}" aria-pressed="${S.selected.has(x.student_id)}" ${x.can ? '' : 'disabled style="opacity:.45"'}><div class="av"><span>${esc(x.first_name[0])}</span></div><div><b>${esc(x.first_name)} ${esc(x.last_name)}</b><small>${esc(grade(x.grade))}${x.can ? (x.location ? ' · Afterschool Care ' + esc(x.location) : '') : ' · ' + esc(why(x))}</small></div></button>`).join('')}</div>
+    <div class="kerr" id="kerr"></div>
+    <div class="row2" style="justify-content:flex-end"><button class="kbtn" id="next">${am ? 'Sign In' : 'Next'}</button></div></div>`);
+  $('#bk').onclick = home;
+  $('#stus').onclick = e => { const b = e.target.closest('.stu-pick:not([disabled])'); if (!b) return; const id = +b.dataset.id; S.selected.has(id) ? S.selected.delete(id) : S.selected.add(id); b.setAttribute('aria-pressed', S.selected.has(id)); };
+  if (!S.students.some(x => x.can)) $('#kerr').textContent = am ? 'Your students are already signed in today.' : 'None of your students are signed in to afterschool care right now. Please see the care staff.';
+  $('#next').onclick = async () => {
+    if (!S.selected.size) return $('#kerr').textContent = ERR.pick_student;
+    if (!am) return careSign();
+    const b = $('#next'); b.disabled = true; b.textContent = 'Saving…';
+    try { careDone(await rpc('kiosk_care_submit', { p: { session: 'am', pin: S.pin, student_ids: [...S.selected] } })); }
+    catch (x) { $('#kerr').textContent = errText(x.message); b.disabled = false; b.textContent = 'Sign In'; }
+  };
+}
+function careSign() {
+  const names = S.students.filter(x => S.selected.has(x.student_id)).map(x => x.first_name).join(' and ');
+  go('care-sign', `<div class="kscreen">
+    <button class="back" id="bk">‹ Back</button>
+    <div><h1 class="kh">Signing out ${esc(names)}</h1><p class="ksub" style="margin-top:6px">Afterschool care · ${esc(S.person || '')}</p></div>
+    <div class="card" style="gap:10px"><div class="row2"><b style="font-size:1.25rem">Sign here</b><button class="link" id="sclr" style="font-size:1.1rem">Clear</button></div><canvas class="ksig" id="sig"></canvas><small class="muted">${esc(S.person || '')}</small></div>
+    <div class="kerr" id="kerr"></div>
+    <div class="row2" style="justify-content:flex-end"><button class="kbtn" id="submit">Confirm Sign-Out</button></div></div>`);
+  $('#bk').onclick = careStudents;
+  const sig = pad($('#sig'));
+  $('#submit').onclick = async () => {
+    if (!sig.dirty()) return $('#kerr').textContent = ERR.need_signature;
+    const b = $('#submit'); b.disabled = true; b.textContent = 'Saving…';
+    try { careDone(await rpc('kiosk_care_submit', { p: { session: 'pm', pin: S.pin, student_ids: [...S.selected], signature: sig.data() } })); }
+    catch (x) { $('#kerr').textContent = errText(x.message); b.disabled = false; b.textContent = 'Confirm Sign-Out'; }
+  };
+}
+function careDone(r) {
+  const am = S.care === 'am';
+  go('done', `<div class="done2">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg>
+    <h1>${am ? 'Signed In' : 'Signed Out'}</h1>
+    <p><b>${esc(r.students.join(' and '))}</b> ${am ? 'signed in to morning care' : 'signed out of afterschool care'} at ${esc(r.time)}.</p>
+    <p class="muted">${am ? 'Have a great day!' : 'Thank you — have a good evening!'}</p>
+    <button class="kbtn" id="fin">Done</button></div>`);
+  $('#fin').onclick = home;
 }
 
 // ---------- reason + signature ----------
