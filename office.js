@@ -376,18 +376,29 @@ async function loadSettings() {
   SET = set;
   $('#ap-on').checked = set.alerts_paused === true;
   $('#ap-card').style.borderColor = set.alerts_paused === true ? 'var(--red)' : '';
-  const ROLE = { office: ['Front Office', 'ok'], carline: ['Car Line', 'warn'], bus: ['Bus Driver', 'gray'], care: ['Extended Care', 'warn'] };
-  $('#staff-list').innerHTML = staff.map(s => `<div class="row"><div class="txt"><b>${esc(s.name || s.email)} <span class="tag ${ROLE[s.role][1]}">${ROLE[s.role][0]}</span>${s.active ? '' : ' <span class="tag gray">Off</span>'}</b>
-      <p>${esc(s.email)}${s.has_login ? (s.last_sign_in ? ' · last signed in ' + stamp(s.last_sign_in) : ' · has a sign-in') : ' · <b style="display:inline;color:var(--red)">no sign-in yet</b>'}</p></div>
-    <span class="actions"><button class="btn ghost sm" data-pw="${esc(s.email)}">${s.has_login ? 'Reset password' : 'Create sign-in'}</button>
-    <button class="btn ${s.active ? 'ghost' : ''} sm" data-e="${esc(s.email)}" data-r="${s.role}" data-a="${s.active ? 0 : 1}">${s.active ? 'Turn off' : 'Turn on'}</button></span></div>`).join('');
+  const ROLE = { admin: ['Admin', 'ok'], office: ['Front Office', 'ok'], carline: ['Car Line', 'warn'], bus: ['Bus Driver', 'gray'], care: ['Extended Care', 'warn'] };
+  const rolesOf = st => st.roles || [st.role];
+  $('#staff-list').innerHTML = staff.map(st => `<div class="row" data-row="${esc(st.email)}"><div class="txt"><b>${esc(st.name || st.email)} ${rolesOf(st).map(r => `<span class="tag ${(ROLE[r] || ['', ''])[1]}">${(ROLE[r] || [r])[0]}</span>`).join(' ')}${st.active ? '' : ' <span class="tag gray">Off</span>'}</b>
+      <p>${esc(st.email)}${st.has_login ? (st.last_sign_in ? ' · last signed in ' + stamp(st.last_sign_in) : ' · has a sign-in') : ' · <b style="display:inline;color:var(--red)">no sign-in yet</b>'}</p>
+      <div class="roles-pick" data-roles="${esc(st.email)}" hidden>${Object.entries(ROLE).map(([k, v]) => `<label><input type="checkbox" value="${k}" ${rolesOf(st).includes(k) ? 'checked' : ''}> ${v[0]}${k === 'admin' ? ' (all roles)' : ''}</label>`).join('')}
+        <button class="btn sm" data-saveroles="${esc(st.email)}" type="button">Save Roles</button></div></div>
+    <span class="actions"><button class="btn ghost sm" data-editroles="${esc(st.email)}">Edit Roles</button><button class="btn ghost sm" data-pw="${esc(st.email)}">${st.has_login ? 'Reset Password' : 'Create Sign-In'}</button>
+    <button class="btn ${st.active ? 'ghost' : ''} sm" data-e="${esc(st.email)}" data-a="${st.active ? 0 : 1}">${st.active ? 'Turn Off' : 'Turn On'}</button></span></div>`).join('');
   $$('#staff-list [data-e]').forEach(b => b.onclick = async () => {
-    try { await call('staff_staff_save', { p_email: b.dataset.e, p_name: null, p_active: b.dataset.a === '1', p_role: b.dataset.r }); loadSettings(); } catch (e) { $('#sa-err').textContent = emsg(e); }
+    try { await call('staff_staff_save', { p_email: b.dataset.e, p_name: null, p_active: b.dataset.a === '1' }); loadSettings(); } catch (e) { $('#sa-err').textContent = emsg(e); }
+  });
+  $$('#staff-list [data-editroles]').forEach(b => b.onclick = () => { const box = $(`#staff-list [data-roles="${CSS.escape(b.dataset.editroles)}"]`); box.hidden = !box.hidden; });
+  $$('#staff-list .roles-pick').forEach(box => wireAdmin(box));
+  $$('#staff-list [data-saveroles]').forEach(b => b.onclick = async () => {
+    const box = b.closest('.roles-pick'), roles = [...box.querySelectorAll('input:checked')].map(i => i.value);
+    const st = staff.find(x => x.email === b.dataset.saveroles);
+    if (!roles.length) return $('#sa-err').textContent = 'Choose at least one role.';
+    try { await call('staff_staff_save', { p_email: st.email, p_name: null, p_active: st.active, p_roles: roles }); toast('Roles saved'); loadSettings(); } catch (e) { $('#sa-err').textContent = emsg(e); }
   });
   $$('#staff-list [data-pw]').forEach(b => b.onclick = async () => {
     const pw = prompt(`New password for ${b.dataset.pw} (at least 8 characters):`); if (!pw) return;
     const st = staff.find(x => x.email === b.dataset.pw);
-    try { await staffUsers(st.has_login ? { action: 'password', email: b.dataset.pw, password: pw } : { action: 'create', email: b.dataset.pw, name: st.name, role: st.role, password: pw }); toast('Password saved. Share it with them privately.'); loadSettings(); }
+    try { await staffUsers(st.has_login ? { action: 'password', email: b.dataset.pw, password: pw } : { action: 'create', email: b.dataset.pw, name: st.name, roles: st.roles || [st.role], password: pw }); toast('Password saved. Share it with them privately.'); loadSettings(); }
     catch (x) { $('#sa-err').textContent = x.message; }
   });
   drawSems(set.semesters);
@@ -418,6 +429,16 @@ $('#set-save').onclick = async () => {
     toast('Rules saved');
   } catch (e) { $('#set-err').textContent = emsg(e); }
 };
+// Ticking Admin ticks every role; unticking any role unticks Admin.
+function wireAdmin(box) {
+  const boxes = [...box.querySelectorAll('input[type=checkbox]')], adm = boxes.find(i => i.value === 'admin');
+  boxes.forEach(i => i.addEventListener('change', () => {
+    if (i === adm) boxes.forEach(x => x.checked = adm.checked);
+    else if (!i.checked) adm.checked = false;
+    else if (boxes.filter(x => x !== adm).every(x => x.checked)) adm.checked = true;
+  }));
+}
+wireAdmin($('#sa-roles'));
 async function staffUsers(body) {
   const { data } = await sb.auth.getSession();
   const r = await fetch('https://cvvdwhgdiqnoqgxtgzfw.supabase.co/functions/v1/portal-staff-users', { method: 'POST',
@@ -430,9 +451,12 @@ $('#f-staff').addEventListener('submit', async e => {
   e.preventDefault(); $('#sa-err').textContent = '';
   const b = e.submitter; b.disabled = true;
   try {
-    await staffUsers({ action: 'create', email: $('#sa-email').value, name: $('#sa-name').value, role: $('#sa-role').value, password: $('#sa-pass').value });
-    const where = { carline: 'portal.csjax.org/carline', bus: 'portal.csjax.org/bus', care: 'portal.csjax.org/care', office: 'portal.csjax.org/office' }[$('#sa-role').value];
-    alert(`Sign-in created.\n\nGive them: ${where}\nEmail: ${$('#sa-email').value.trim().toLowerCase()}\nPassword: the one you just typed`);
+    const roles = [...$$('#sa-roles input:checked')].map(i => i.value);
+    if (!roles.length) throw new Error('Choose at least one role.');
+    await staffUsers({ action: 'create', email: $('#sa-email').value, name: $('#sa-name').value, roles, password: $('#sa-pass').value });
+    const all = roles.includes('admin') ? ['office', 'carline', 'bus', 'care'] : roles;
+    const where = all.map(r => ({ carline: 'portal.csjax.org/carline', bus: 'portal.csjax.org/bus', care: 'portal.csjax.org/care', office: 'portal.csjax.org/office' })[r]).filter(Boolean).join('\n');
+    alert(`Sign-in created.\n\nGive them:\n${where}\nEmail: ${$('#sa-email').value.trim().toLowerCase()}\nPassword: the one you just typed`);
     $('#f-staff').reset(); loadSettings();
   } catch (x) { $('#sa-err').textContent = x.message; }
   b.disabled = false;

@@ -1,6 +1,6 @@
 // Lets front office staff create sign-ins for car line and bus staff (and other office staff) and reset passwords.
 // Only active office staff can call it (checked with the caller's own sign-in via staff_me).
-// Body: { action: 'create' | 'password', email, name?, role?, password }
+// Body: { action: 'create' | 'password', email, name?, roles?: string[], password }
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const cors = {
@@ -35,8 +35,10 @@ Deno.serve(async (req) => {
   }
 
   if (b.action === "create") {
-    const role = ["office", "carline", "bus", "care"].includes(b.role) ? b.role : "carline";
-    const { error: sErr } = await asStaff.rpc("staff_staff_save", { p_email: email, p_name: String(b.name || "").trim() || null, p_active: true, p_role: role });
+    const ALL = ["admin", "office", "carline", "bus", "care"];
+    const roles = (Array.isArray(b.roles) ? b.roles : [b.role]).filter((r: unknown) => ALL.includes(String(r)));
+    if (!roles.length) return json({ error: "Choose at least one role." }, 400);
+    const { error: sErr } = await asStaff.rpc("staff_staff_save", { p_email: email, p_name: String(b.name || "").trim() || null, p_active: true, p_roles: roles });
     if (sErr) return json({ error: sErr.message }, 400);
     if (user) {
       const { error } = await admin.auth.admin.updateUserById(user.id, { password, email_confirm: true });

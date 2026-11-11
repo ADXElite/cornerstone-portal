@@ -18,10 +18,12 @@ async function boot() {
   const { data } = await sb.auth.getSession();
   if (!data.session) return login();
   try { ME = await call('duty_me'); } catch { await sb.auth.signOut(); return login("This account isn't set up for dismissal. Ask the front office."); }
-  if (ME.role !== 'office' && ME.role !== MODE) {
-    const other = ME.role === 'bus' ? '/bus' : '/carline';
+  const roles = ME.roles || [ME.role];
+  if (!roles.includes('office') && !roles.includes('admin') && !roles.includes(MODE)) {
+    const other = roles.includes('bus') ? '/bus' : roles.includes('carline') ? '/carline' : '/care';
+    const what = { '/bus': 'the bus roster', '/carline': 'car line', '/care': 'extended care' }[other];
     APP.hidden = false; $('#v-login').hidden = true;
-    APP.innerHTML = `<div class="card"><b class="t">This sign-in is for ${ME.role === 'bus' ? 'bus drivers' : 'car line'}.</b><p><a class="btn" href="${other}">Open ${ME.role === 'bus' ? 'the bus roster' : 'car line'}</a></p></div>`;
+    APP.innerHTML = `<div class="card"><b class="t">This sign-in isn't set up for ${MODE === 'bus' ? 'bus drivers' : 'car line'}.</b><p><a class="btn" href="${other}">Open ${what}</a></p></div>`;
     return;
   }
   $('#who').hidden = false;

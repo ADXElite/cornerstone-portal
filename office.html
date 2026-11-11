@@ -92,6 +92,7 @@ tr.grp td{background:var(--bg);border-top:2px solid var(--line);padding-top:12px
 .bsched tr:nth-child(even):not(.bus):not(.school) td{background:#f4f4f4}
 .bsched .ft{margin-top:10px;border-top:1px solid #bbb;padding-top:5px;font-size:8.5pt;color:#555}
 .bstbl td input,.bstbl td select{min-height:34px;padding:4px 6px;font-size:.9rem}
+.roles-pick{display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center}.roles-pick label{display:flex;gap:6px;align-items:center;font-weight:600;font-size:.92rem;text-transform:none;letter-spacing:0}.roles-pick input{width:auto;min-height:0}
 .croster{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;color:#141213}.croster h3{font-family:var(--display);font-weight:800;font-size:1.6rem;text-transform:uppercase;margin:0}.croster td{padding:5px 8px;border-top:1px solid #E4DFDF}.croster .abs td{color:#8a8486;text-decoration:line-through}.croster .chk{width:22px;height:22px;border:2px solid #141213;border-radius:4px;display:inline-block}
 @media print{.croster{border:0;padding:0}}
 .roster{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;color:#141213}
@@ -396,16 +397,19 @@ td.c small{text-align:center}
       </div>
       <div class="card">
         <b class="t">Staff Sign-Ins</b>
-        <p class="muted small"><b>Front Office</b> — the whole office portal, plus emails for every parent change. <b>Car Line</b> — only portal.csjax.org/carline. <b>Bus Driver</b> — only portal.csjax.org/bus. <b>Extended Care</b> — only portal.csjax.org/care.</p>
+        <p class="muted small"><b>Admin</b> — every role below. <b>Front Office</b> — the whole office portal, plus emails for every parent change. <b>Car Line</b> — only portal.csjax.org/carline. <b>Bus Driver</b> — only portal.csjax.org/bus. <b>Extended Care</b> — only portal.csjax.org/care.</p>
         <div class="list" id="staff-list"></div>
         <form class="stack" id="f-staff" style="margin-top:6px">
           <div class="bar">
             <label class="grow">Name<input type="text" id="sa-name" required></label>
             <label class="grow">Email<input type="email" id="sa-email" required></label>
-            <label>Role<select id="sa-role"><option value="carline">Car Line</option><option value="bus">Bus Driver</option><option value="care">Extended Care</option><option value="office">Front Office</option></select></label>
+            
             <label>Password<input type="text" id="sa-pass" minlength="8" placeholder="At least 8 characters" autocomplete="off" required></label>
             <button class="btn sm">Create Sign-In</button>
           </div>
+          <div class="roles-pick" id="sa-roles"><span class="muted small">Roles:</span>
+            <label><input type="checkbox" value="admin"> Admin (all roles)</label><label><input type="checkbox" value="office"> Front Office</label>
+            <label><input type="checkbox" value="carline"> Car Line</label><label><input type="checkbox" value="bus"> Bus Driver</label><label><input type="checkbox" value="care"> Extended Care</label></div>
         </form>
         <p class="err" id="sa-err"></p>
       </div>
