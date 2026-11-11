@@ -9,7 +9,7 @@ const tm = t => t ? new Date(t).toLocaleTimeString('en-US', { timeZone: 'America
 const md = d => { if (!d) return ''; const [y, m, dd] = String(d).slice(0, 10).split('-'); return `${m}/${dd}/${y}`; };
 const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} } };
 function toast(t) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 2500); }
-const ERR = { already_signed_in: 'Already signed in today.', not_signed_in: 'Not signed in.', pick_person: 'Choose who is picking up.', need_signature: 'Please sign.', student_not_found: 'Student not found.' };
+const ERR = { absent_today: 'Absent today — can\'t be signed in to afterschool care.', checked_out_today: 'Checked out early today — can\'t be signed in to afterschool care.', already_signed_in: 'Already signed in today.', not_signed_in: 'Not signed in.', pick_person: 'Choose who is picking up.', need_signature: 'Please sign.', student_not_found: 'Student not found.' };
 const msg = m => ERR[String(m).split(':')[0]] || m;
 async function call(fn, args = {}) { const { data, error } = await sb.rpc(fn, args); if (error) throw new Error(error.message); return data; }
 const APP = $('#v-app');
@@ -71,13 +71,7 @@ function drawAm() {
     ${st.filter(s => s.enrolled).map(kidAm).join('') || '<div class="card">No students signed up.</div>'}
     ${st.some(s => !s.enrolled) ? `<div class="stop"><span>Also Here Today (Not Signed Up)</span><span class="muted">${st.filter(s => !s.enrolled).length}</span></div>${st.filter(s => !s.enrolled).map(kidAm).join('')}` : ''}`;
   wire();
-  let t; $('#q').oninput = () => { clearTimeout(t); t = setTimeout(async () => {
-    const q = $('#q').value.trim(); if (q.length < 2) return $('#hits').innerHTML = '';
-    const list = await call('care_search', { p_q: q }).catch(() => []);
-    const on = new Set(LIST.students.filter(s => s.signed_in).map(s => s.student_id));
-    $('#hits').innerHTML = list.map(s => `<button class="kid ${on.has(s.student_id) ? 'on' : ''}" data-add="${s.student_id}" ${on.has(s.student_id) ? 'disabled' : ''}><span class="box">${on.has(s.student_id) ? '✓' : '+'}</span><span><b>${esc(s.first)} ${esc(s.last)}</b><small>Grade ${esc(grade(s.grade))} · ${esc(s.teacher || '')}</small></span><span class="st"><small>${on.has(s.student_id) ? 'Already here' : 'Mark present'}</small></span></button>`).join('') || '<p class="muted">No matches.</p>';
-  }, 250); };
-  $('#hits').onclick = async e => { const b = e.target.closest('[data-add]'); if (!b) return; await markIn(+b.dataset.add); $('#q').value = ''; $('#hits').innerHTML = ''; };
+  wireSearch();
   APP.querySelectorAll('.kid[data-id]').forEach(b => b.onclick = () => {
     const s = LIST.students.find(x => x.student_id === +b.dataset.id);
     if (!s.signed_in) return markIn(s.student_id);
@@ -90,8 +84,17 @@ function kidAm(s) {
     <span class="box">${s.signed_in ? '✓' : ''}</span><span><b>${esc(s.last)}, ${esc(s.first)}</b><small>Grade ${esc(grade(s.grade))} · ${esc(s.teacher || '')}</small></span>
     <span class="st"><small>${esc(st)}</small></span></button>`;
 }
+function wireSearch() {
+  let t; $('#q').oninput = () => { clearTimeout(t); t = setTimeout(async () => {
+    const q = $('#q').value.trim(); if (q.length < 2) return $('#hits').innerHTML = '';
+    const list = await call('care_search', { p_q: q }).catch(() => []);
+    const on = new Set(LIST.students.filter(s => s.signed_in).map(s => s.student_id));
+    $('#hits').innerHTML = list.map(s => `<button class="kid ${on.has(s.student_id) ? 'on' : ''}" data-add="${s.student_id}" ${on.has(s.student_id) ? 'disabled' : ''}><span class="box">${on.has(s.student_id) ? '✓' : '+'}</span><span><b>${esc(s.first)} ${esc(s.last)}</b><small>Grade ${esc(grade(s.grade))} · ${esc(s.teacher || '')}</small></span><span class="st"><small>${on.has(s.student_id) ? 'Already signed in' : SESSION === 'am' ? 'Mark present' : 'Sign in'}</small></span></button>`).join('') || '<p class="muted">No matches.</p>';
+  }, 250); };
+  $('#hits').onclick = async e => { const b = e.target.closest('[data-add]'); if (!b) return; await markIn(+b.dataset.add); $('#q').value = ''; $('#hits').innerHTML = ''; };
+}
 async function markIn(id) {
-  try { const r = await call('care_in', { p_student: id, p_session: SESSION }); toast('Marked present ' + r.time); load(true); }
+  try { const r = await call('care_in', { p_student: id, p_session: SESSION }); toast((SESSION === 'am' ? 'Marked present ' : 'Signed in ') + r.time); load(true); }
   catch (x) { toast(msg(x.message)); load(true); }
 }
 function sheetAm(s) {
@@ -111,6 +114,8 @@ function drawPm() {
     <div class="segs" id="locs" style="margin:4px 0 8px">${[['all', 'All'], ['KHA', 'KHA'], ['SP', 'SP']].map(([v, l]) => `<button data-l="${v}" aria-pressed="${LOC === v}">${l} (${v === 'all' ? all.length : all.filter(s => s.location === v).length})</button>`).join('')}</div>
     ${LIST.attendance_in ? '' : '<p class="muted small">Today\'s attendance isn\'t in yet.</p>'}
     <p class="muted small">Students marked present today are signed in automatically at 3:00 PM. Tap a student to sign them in or out, or to see who can pick them up.</p>
+    <div class="card" style="gap:8px"><b>Not on the list? Find any student</b>
+      <input type="search" id="q" placeholder="Type a first or last name" autocomplete="off"><div class="hits" id="hits"></div></div>
     ${st.map(s => {
       const status = s.out_at ? `Picked up ${tm(s.out_at)} · ${esc(s.out_person_name || '')}` : s.signed_in ? `Here since ${tm(s.in_at)}` : s.day_status === 'absent' ? 'Absent today' : s.day_status === 'dismissed' ? 'Checked out early' : 'Not signed in';
       return `<button class="kid ${s.signed_in && !s.out_at ? 'on' : ''} ${s.out_at ? 'done' : ''} ${away(s) ? 'out' : ''}" data-id="${s.student_id}">
@@ -119,13 +124,14 @@ function drawPm() {
   wire();
   $('#locs').onclick = e => { const b = e.target.closest('[data-l]'); if (!b) return; LOC = b.dataset.l; store.set('ccs_care_loc', LOC); draw(); };
   APP.querySelectorAll('.kid[data-id]').forEach(b => b.onclick = () => sheetPm(LIST.students.find(x => x.student_id === +b.dataset.id)));
+  wireSearch();
 }
 
 async function sheetPm(s) {
   openSheet('<p class="muted">Loading…</p>');
   let r; try { r = await call('care_people', { p_student: s.student_id }); } catch (x) { $('#sheet-in').innerHTML = `<div class="card err">${esc(x.message)}</div>`; return; }
   const people = r.people;
-  $('#sheet-in').innerHTML = `<div class="hd"><div><h1 style="font-size:1.8rem">${esc(s.first)} ${esc(s.last)}<span class="loc ${esc(s.location)}">${esc(s.location || '')}</span></h1><span class="muted">Grade ${esc(grade(s.grade))} · ${esc(s.teacher || '')}${r.student.birth_date ? ' · DOB ' + md(r.student.birth_date) : ''}</span></div><button class="x" id="sx" aria-label="Close">×</button></div>
+  $('#sheet-in').innerHTML = `<div class="hd"><div><h1 style="font-size:1.8rem">${esc(s.first)} ${esc(s.last)}<span class="loc ${esc(s.location)}">${esc(s.location || '')}</span></h1><span class="muted">Grade ${esc(grade(s.grade))} · ${esc(s.teacher || '')}</span></div><button class="x" id="sx" aria-label="Close">×</button></div>
     <div class="card"><p>${s.out_at ? `Signed in ${tm(s.in_at)}. <b>Picked up ${tm(s.out_at)}</b> by ${esc(s.out_person_name || '')}${s.out_relationship ? ' (' + esc(s.out_relationship) + ')' : ''}${s.out_how === 'kiosk' ? ' at the kiosk' : s.out_by ? ' · entered by ' + esc(s.out_by) : ''}.`
       : s.signed_in ? `<b>Here since ${tm(s.in_at)}</b> (${s.in_how === 'auto' ? 'automatic 3:00 PM sign-in' : 'signed in by ' + esc(s.in_by || '')}).` : 'Not signed in to afterschool care today.'}</p></div>
     ${!s.signed_in ? `<button class="btn" id="in">Sign In Now</button>` : ''}
