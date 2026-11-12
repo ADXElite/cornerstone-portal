@@ -43,7 +43,7 @@ function drawHome() {
   $('#c-pick').textContent = `(${H.pick.length})`;
   $('#h-pick').innerHTML = H.pick.map((r, i) => `<tr class="${r.sis_done ? 'done' : ''}">
     <td><b>${esc(r.student)}</b><small>Gr ${esc(grade(r.grade))} · ${esc(r.teacher || '')}</small></td>
-    <td><span class="tag ${r.action === 'add' ? 'ok' : ''}">${r.action === 'add' ? 'Add' : 'Remove'}</span>${r.status === 'cancelled' ? '<small>Cancelled</small>' : ''}</td>
+    <td><span class="tag ${r.action === 'add' ? 'ok' : ''}">${r.action === 'add' ? 'Add' : 'Remove'}</span>${pickState(r)}</td>
     <td><b>${esc([r.first_name, r.last_name].filter(Boolean).join(' '))}${r.pin && r.action === 'add' ? ` <span class="pin sm">${r.pin}</span>` : ''}</b><small>${esc(r.relationship || '')}</small></td>
     <td>${esc(r.phone || '')}<small>${esc(r.email || '')}</small></td>
     <td>${src(stamp(r.created_at), r.submitted_name || r.submitted_by)}${r.comments ? `<small>“${esc(r.comments)}”</small>` : ''}</td>${fx('pick', i, r.sis_done, r.sis_by, r.sis_at)}</tr>`).join('') || empty(6, none);
@@ -204,7 +204,7 @@ function notePdf(n, filename) {
   doc.save(filename);
 }
 
-// ---------- notify the parent when a note is approved / rejected ----------
+// ---------- manual alerts (Settings → Alerts) ----------
 async function pushTo(audience, title, body, url) {
   const { data } = await sb.auth.getSession();
   const r = await fetch(PUSH_URL, { method: 'POST', headers: { Authorization: 'Bearer ' + data.session.access_token, apikey: SB_KEY_PUB, 'Content-Type': 'application/json' },
@@ -215,14 +215,8 @@ async function pushTo(audience, title, body, url) {
 }
 const SB_KEY_PUB = 'sb_publishable_hnUHrqYS2un679djbzsXxg_oLYDQDp0';
 window.noteReviewed = async (id, status) => {
+  // The parent's "Absence Excused" push is queued by the database when a note is approved.
   if (!$('#p-dash').hidden) homeLoad(true);
-  if (status === 'pending') return;
-  try {
-    const n = await call('staff_note', { p_id: id });
-    const day = new Date(n.absent_date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    await pushTo({ type: 'note', note_id: id }, status === 'approved' ? 'Absence excused' : 'Excused note not approved',
-      status === 'approved' ? `${n.student.split(' ')[0]}'s absence on ${day} was marked excused.` : `${n.student.split(' ')[0]}'s note for ${day} was not approved.${n.review_note ? ' ' + n.review_note : ''}`, '/#history');
-  } catch {}
 };
 
 // ---------- enter a change ----------
@@ -376,3 +370,29 @@ $('#ban-list').addEventListener('click', async e => {
 });
 setInterval(() => { if (!document.hidden && (location.hash || '#dash').startsWith('#dash')) drawBanAlerts(); }, 30000);
 window.drawBanAlerts = drawBanAlerts;
+
+// ---------- pick-up requests: approve (check off) or reject ----------
+// Checking off a parent's request approves it; Reject undoes it. Both send the parent a push alert and an email.
+function pickState(r) {
+  if (r.status === 'cancelled') return '<small>Cancelled</small>';
+  if (r.status === 'rejected') return `<small><b style="color:var(--red)">Rejected</b>${r.review_note ? ' · ' + esc(r.review_note) : ''}</small>`;
+  if (r.source === 'parent' && r.status === 'active' && !r.sis_done) return '<small><button class="link" data-pkreject="' + r.id + '" style="padding:0;color:var(--red)">Reject</button></small>';
+  return '';
+}
+function rejectPickup(id, done) {
+  $('#modal').hidden = false;
+  $('#modal-in').innerHTML = `<div class="mh"><div><h2 style="margin:0">Pick-Up Person</h2><h1 style="font-size:1.7rem">Reject Request</h1></div><button class="x" id="m-x" aria-label="Close">×</button></div>
+    <p>An added person comes off the pick-up list (their PIN stops working for this student). A removed person goes back on. The parent gets a push alert and an email.</p>
+    <label style="display:block"><span class="hint">Reason (included in the parent's email)</span><textarea id="m-rj" rows="2" maxlength="500" style="width:100%"></textarea></label>
+    <div class="actions"><button class="btn" id="m-go">Reject Request</button><button class="btn ghost" id="m-no">Keep It</button></div><p class="err" id="m-err"></p>`;
+  $('#m-x').onclick = $('#m-no').onclick = closeModal;
+  $('#m-go').onclick = async () => {
+    try { await call('staff_pickup_reject', { p_id: id, p_note: $('#m-rj').value }); closeModal(); toast('Rejected'); done(); refreshBadges(); }
+    catch (e) { $('#m-err').textContent = emsg(e); }
+  };
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-pkreject]'); if (!b) return;
+  e.preventDefault(); e.stopPropagation();
+  rejectPickup(b.dataset.pkreject, () => { if (window.loadPickChanges && !$('#pk-rows').closest('[hidden]')) loadPickChanges(); if (!$('#p-dash').hidden) homeLoad(true); });
+}, true);

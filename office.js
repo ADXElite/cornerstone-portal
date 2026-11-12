@@ -177,6 +177,7 @@ function bindTRows(tbody, rows, reload) {
 }
 function openChange(c, reload) {
   $('#modal').hidden = false;
+  const fromParent = (c.source || 'parent') === 'parent';
   $('#modal-in').innerHTML = `<div class="mh"><div><h2 style="margin:0">Dismissal Change</h2><h1 style="font-size:1.7rem">${esc(c.student)}</h1></div><button class="x" id="m-x" aria-label="Close">×</button></div>
     <dl class="kv wide">
       <dt>Applies To</dt><dd>${c.period === 'afternoon' ? 'Afternoon dismissal' : 'Morning arrival'}</dd>
@@ -187,15 +188,19 @@ function openChange(c, reload) {
       ${c.comments ? `<dt>Comments</dt><dd>${esc(c.comments)}</dd>` : ''}
       <dt>Submitted by</dt><dd>${esc(c.submitted_name || '')} (${esc(c.submitted_by)}) · ${stamp(c.created_at)}</dd>
       ${c.processed_by ? `<dt>${esc(TS[c.status][0])}</dt><dd>${esc(c.processed_by)} · ${stamp(c.processed_at)}</dd>` : ''}
+      ${c.review_note ? `<dt>Office Note</dt><dd>${esc(c.review_note)}</dd>` : ''}
     </dl>
+    ${fromParent && c.status === 'new' ? '<p class="hint" style="margin:6px 0 0">Approving or rejecting sends the parent a push alert and an email. Rejecting also emails Donald.</p>' : ''}
+    ${c.status !== 'cancelled' ? `<label id="m-rj-wrap" hidden style="display:block;margin-top:10px"><span class="hint">Reason (included in the parent's email)</span><textarea id="m-rj" rows="2" maxlength="500" style="width:100%"></textarea></label>` : ''}
     <div class="actions">
-      ${c.status !== 'processed' ? '<button class="btn ok" data-s="processed">Mark Processed (KidAccount Updated)</button>' : ''}
+      ${c.status !== 'processed' ? `<button class="btn ok" data-s="processed">${fromParent ? 'Approve (KidAccount Updated)' : 'Mark Processed (KidAccount Updated)'}</button>` : ''}
       ${c.status !== 'new' ? '<button class="btn ghost" data-s="new">Mark Not Processed</button>' : ''}
-      ${c.status !== 'cancelled' ? '<button class="btn ghost" data-s="cancelled">Cancel This Change</button>' : ''}
+      ${c.status !== 'cancelled' ? `<button class="btn ghost" data-s="cancelled">${fromParent ? 'Reject This Change' : 'Cancel This Change'}</button>` : ''}
     </div><p class="err" id="m-err"></p>`;
   $('#m-x').onclick = closeModal;
   $$('#modal-in [data-s]').forEach(b => b.onclick = async () => {
-    try { await call('staff_transport_set', { p_id: c.id, p_status: b.dataset.s }); closeModal(); toast('Saved'); reload(); refreshBadges(); }
+    if (b.dataset.s === 'cancelled' && fromParent && $('#m-rj-wrap').hidden) { $('#m-rj-wrap').hidden = false; b.textContent = 'Confirm Reject'; $('#m-rj').focus(); return; }
+    try { await call('staff_transport_set', { p_id: c.id, p_status: b.dataset.s, p_note: $('#m-rj') ? $('#m-rj').value : null }); closeModal(); toast('Saved'); reload(); refreshBadges(); }
     catch (e) { $('#m-err').textContent = emsg(e); }
   });
 }

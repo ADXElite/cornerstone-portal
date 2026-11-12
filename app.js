@@ -520,7 +520,7 @@ function sheet(mode) {
   } else {
     box.innerHTML = `<img class="welcome-icon" src="/icons/icon-192.png" alt="">
       <h2 class="w-title" id="w-title">Turn On School Alerts</h2>
-      <p>Get notified about closings, early dismissals, and updates on your notes and requests — straight from the Cornerstone front office.</p>
+      <p>Get notified when your excused notes and requests are approved, and when your student is signed in late or signed out early.</p>
       <div class="stack"><button class="btn big" id="w-push">Turn On Alerts</button><button class="w-later" id="w-later">Not Now</button></div><p class="err" id="w-err"></p>`;
     $('#w-push').onclick = async () => { const ok = await enablePush(); if (ok) { $('#welcome').hidden = true; toast("Alerts are on. We'll notify you here."); } };
     $('#w-later').onclick = () => { later.set('ccs_push_later'); $('#welcome').hidden = true; };

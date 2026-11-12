@@ -171,7 +171,7 @@ function drawPickChanges() {
   $('#pk-count').textContent = `${rows.length} change${rows.length === 1 ? '' : 's'}`;
   $('#pk-rows').innerHTML = rows.map(({ r, i }) => `<tr class="${r.sis_done ? 'done' : ''}">
     <td><b>${esc(r.student)}</b><small>Gr ${esc(grade(r.grade))} · ${esc(r.teacher || '')}</small></td>
-    <td><span class="tag ${r.action === 'add' ? 'ok' : ''}">${r.action === 'add' ? 'Add' : 'Remove'}</span>${r.status === 'cancelled' ? '<small>Cancelled</small>' : ''}</td>
+    <td><span class="tag ${r.action === 'add' ? 'ok' : ''}">${r.action === 'add' ? 'Add' : 'Remove'}</span>${pickState(r)}</td>
     <td><b>${esc([r.first_name, r.last_name].filter(Boolean).join(' '))}${r.pin && r.action === 'add' ? ` <span class="pin sm">${r.pin}</span>` : ''}</b><small>${esc(r.relationship || '')}</small></td>
     <td>${esc(r.phone || '')}<small>${esc(r.email || '')}</small></td>
     <td>${esc(r.submitted_name || r.submitted_by || '')}<small>${r.source === 'office' ? 'Office · ' : ''}${stamp(r.created_at)}</small>${r.comments ? `<small>“${esc(r.comments)}”</small>` : ''}</td>
