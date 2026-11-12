@@ -3,6 +3,7 @@
 // Separate from dismissal and attendance — nothing here changes a student's present/absent status.
 const sb = supabase.createClient('https://cvvdwhgdiqnoqgxtgzfw.supabase.co', 'sb_publishable_hnUHrqYS2un679djbzsXxg_oLYDQDp0');
 const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const grade = g => g === 'K' ? 'K' : g ? String(g).replace(/^0/, '') : '';
 const tm = t => t ? new Date(t).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }) : '';
@@ -137,11 +138,18 @@ async function sheetPm(s) {
     ${!s.signed_in ? `<button class="btn" id="in">Sign In Now</button>` : ''}
     ${s.signed_in && !s.out_at ? `<b>Sign out — who is picking up?</b><div class="people" id="pp">${people.map((p, i) => `<button class="person" data-i="${i}"><div><b>${esc(p.name)}</b><small>${esc(p.relationship || p.type)}${p.phone ? ' · ' + esc(p.phone) : ''}${p.pin ? ' · PIN <span class="pin">' + esc(p.pin) + '</span>' : ''}</small></div></button>`).join('') || '<p class="muted">No pick-up people on file.</p>'}</div>
       <button class="btn ghost sm" id="undo">Undo Sign-In (Marked by Mistake)</button>` : ''}
+    ${(r.banned || []).length ? `<div class="banbox"><b class="h">⚠ BANNED — do not release to:</b>${r.banned.map((b, i) => `<button data-ban="${i}" type="button"><span><b>${esc(b.name)}</b><small style="display:block;color:#555">${esc([b.relationship, b.type].filter(Boolean).join(' · '))}</small></span><span class="t">BANNED</span></button>`).join('')}<small>If one of these people is here, tap their name to alert the front office.</small></div>` : ''}
     ${s.out_at || !s.signed_in ? `<b>Who can pick up</b><div class="pp">${people.map(p => `<div><span><b>${esc(p.name)}</b> <small class="muted">${esc(p.relationship || p.type)}</small></span><small>${esc(p.phone || '')}${p.pin ? ' · PIN <span class="pin">' + esc(p.pin) + '</span>' : ''}</small></div>`).join('') || '<p class="muted">None on file.</p>'}</div>` : ''}`;
   $('#sx').onclick = closeSheet;
   if ($('#in')) $('#in').onclick = async () => { try { const x = await call('care_in', { p_student: s.student_id, p_session: 'pm' }); closeSheet(); toast('Signed in ' + x.time); load(true); } catch (x) { toast(msg(x.message)); } };
   if ($('#undo')) $('#undo').onclick = async () => { await call('care_undo', { p_student: s.student_id, p_session: 'pm' }); closeSheet(); toast('Undone'); load(true); };
   if ($('#pp')) $('#pp').onclick = e => { const b = e.target.closest('[data-i]'); if (b) signOut(s, people[+b.dataset.i]); };
+  $$('#sheet-in [data-ban]').forEach(b => b.onclick = async () => {
+    const p = r.banned[+b.dataset.ban]; b.disabled = true;
+    try { await call('duty_ban_alert', { p_banned: p.id, p_place: 'care' }); } catch {}
+    $('#sheet-in').innerHTML = `<div class="banwarn"><h2>DO NOT RELEASE</h2><p><b>${esc(p.name)}</b> is BANNED from picking up ${esc(s.first)} ${esc(s.last)}.</p><p>The front office has been alerted. Keep the student with you and call the office.</p></div><button class="btn" id="sx" style="margin-top:12px">Close</button>`;
+    $('#sx').onclick = closeSheet;
+  });
 }
 function signOut(s, p) {
   $('#sheet-in').innerHTML = `<div class="hd"><div><h1 style="font-size:1.6rem">Sign out ${esc(s.first)}</h1><span class="muted">Picked up by <b>${esc(p.name)}</b> (${esc(p.relationship || p.type)})</span></div><button class="x" id="sx" aria-label="Close">×</button></div>

@@ -110,7 +110,7 @@ function drawCars() {
   const list = here.filter(s => s.done === SHOW_DONE && (!CQ || s.name.toLowerCase().includes(CQ)));
   const away = CARS.students.filter(s => !(s.status === 'present' || s.status === 'late'));
   $('#cars').innerHTML = list.map(s => `<button class="kid ${s.done ? 'on' : ''} ${s.changed ? 'chg' : ''}" data-id="${s.student_id}">
-      <span class="box">${s.done ? '✓' : ''}</span><span><b>${esc(s.last)}, ${esc(s.first)}</b><small>Grade ${esc(grade(s.grade))} · ${esc((s.teacher || '').replace(/^(Mr|Mrs|Ms|Miss|Dr)\.?\s+/, ''))}${s.changed && s.pickup_person ? ` · <span style="color:var(--red)">today: ${esc(s.pickup_person)}</span>` : ''}</small></span>
+      <span class="box">${s.done ? '✓' : ''}</span><span><b>${esc(s.last)}, ${esc(s.first)}${s.banned ? ' <span style="background:var(--red);color:#fff;font-size:.7rem;font-weight:800;padding:1px 6px;border-radius:5px;vertical-align:2px">BANNED PERSON</span>' : ''}</b><small>Grade ${esc(grade(s.grade))} · ${esc((s.teacher || '').replace(/^(Mr|Mrs|Ms|Miss|Dr)\.?\s+/, ''))}${s.changed && s.pickup_person ? ` · <span style="color:var(--red)">today: ${esc(s.pickup_person)}</span>` : ''}</small></span>
       <span class="st"><small>${s.done ? esc(s.picked_by || '') + ' · ' + tm(s.done_at) : ''}</small></span></button>`).join('')
     || `<div class="card">${SHOW_DONE ? 'No one picked up yet.' : CQ ? 'No match.' : 'Everyone has been picked up.'}</div>`;
   if (!SHOW_DONE && away.length && !CQ) $('#cars').innerHTML += `<details class="card" style="margin-top:10px"><summary class="muted">Not here today (${away.length})</summary><p class="small">${away.map(s => `${esc(s.name)} — ${s.status === 'absent' ? 'absent' : 'checked out early'}`).join('<br>')}</p></details>`;
@@ -128,7 +128,14 @@ async function openKid(id) {
     <b>Who is picking up?</b>
     <div class="people">${r.people.map((p, i) => `<button class="person ${today && p.name.toLowerCase() === today ? 'today' : ''}" data-i="${i}"><span><b>${esc(p.name)}</b><small>${esc([p.relationship, p.type].filter(Boolean).join(' · '))}</small></span></button>`).join('')
       || '<div class="card">No authorized pick-up people on file. Send them to the front office.</div>'}</div>
+    ${(r.banned || []).length ? `<div class="banbox"><b class="h">⚠ BANNED — do not release to:</b>${r.banned.map((b, i) => `<button data-ban="${i}" type="button"><span><b>${esc(b.name)}</b><small style="display:block;color:#555">${esc([b.relationship, b.type].filter(Boolean).join(' · '))}</small></span><span class="t">BANNED</span></button>`).join('')}<small>If one of these people is here, tap their name to alert the front office.</small></div>` : ''}
     <details class="card"><summary class="muted">Someone not on this list</summary><p class="small">Anyone not on the list must go to the front office with a photo ID.</p></details>`;
+  $('#sheet-in').querySelectorAll('[data-ban]').forEach(b => b.onclick = async () => {
+    const p = r.banned[+b.dataset.ban]; b.disabled = true;
+    try { await call('duty_ban_alert', { p_banned: p.id, p_place: 'carline' }); } catch {}
+    $('#sheet-in').innerHTML = `<div class="banwarn"><h2>DO NOT RELEASE</h2><p><b>${esc(p.name)}</b> is BANNED from picking up ${esc(r.student.name)}.</p><p>The front office has been alerted. Keep the student with you and call the office.</p></div><button class="btn" id="sx" style="margin-top:12px">Close</button>`;
+    $('#sx').onclick = () => $('#sheet').hidden = true;
+  });
   $('#sx').onclick = () => $('#sheet').hidden = true;
   if ($('#undo')) $('#undo').onclick = async () => { await call('duty_car_unmark', { p_student: id }); $('#sheet').hidden = true; toast('Undone'); loadCars(true); };
   $('#sheet-in').querySelectorAll('.person').forEach(b => b.onclick = async () => {

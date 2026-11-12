@@ -21,6 +21,7 @@ async function homeLoad(quiet) {
     Object.assign(H, { trans, pick, other, sio, notes });
   } catch (e) { toast(emsg(e)); return; }
   drawHome();
+  drawBanAlerts();
   refreshBadges();
 }
 
@@ -358,3 +359,20 @@ $('#a-send').onclick = async () => {
 const _homeLoad = homeLoad;
 homeLoad = async (quiet) => { await _homeLoad(quiet); };
 setInterval(() => { if (!document.hidden && !$('#p-dash').hidden && $('#modal').hidden) _homeLoad(true); }, 30000);
+
+
+// ---------- BANNED person alerts (kiosk PIN, car line, extended care) ----------
+const BAN_PLACE = { kiosk: 'Front office kiosk', carline: 'Car line', care: 'Extended care' };
+async function drawBanAlerts() {
+  let list = []; try { list = await call('staff_ban_alerts'); } catch { return; }
+  $('#sec-ban').hidden = !list.length;
+  $('#ban-list').innerHTML = list.map(a => `<div class="row banned"><div class="txt"><b>${esc(a.person)}${a.relationship ? ' (' + esc(a.relationship) + ')' : ''} — BANNED for <a href="#student?id=${a.student_id}">${esc(a.student)}</a></b>
+      <p>${esc(BAN_PLACE[a.place] || a.place)} · ${esc(a.detail || '')} · ${stamp(a.at)}${a.by ? ' · ' + esc(String(a.by).split('@')[0]) : ''}</p></div>
+      <button class="btn ghost sm" data-ban-seen="${a.id}" type="button">Seen</button></div>`).join('');
+}
+$('#ban-list').addEventListener('click', async e => {
+  const b = e.target.closest('[data-ban-seen]'); if (!b) return;
+  b.disabled = true; try { await call('staff_ban_alert_seen', { p_id: +b.dataset.banSeen }); drawBanAlerts(); refreshBadges(); } catch (x) { toast(emsg(x)); b.disabled = false; }
+});
+setInterval(() => { if (!document.hidden && (location.hash || '#dash').startsWith('#dash')) drawBanAlerts(); }, 30000);
+window.drawBanAlerts = drawBanAlerts;

@@ -29,7 +29,7 @@ function drawStudentList() {
     const way = s.method ? s.method + (s.bus ? ' ' + s.bus : '') : '—';
     return `<tr class="click"${anchor} data-id="${s.student_id}"><td><a href="#student?id=${s.student_id}" style="font-weight:700">${esc(s.last)}, ${esc(s.first)}</a><small>ID ${s.student_id}</small></td>
       <td>${esc(grade(s.grade))}</td><td>${esc(s.teacher || '')}${s.board && s.board !== s.teacher ? `<small>board: ${esc(s.board)}</small>` : ''}</td>
-      <td>${arch ? `<span class="tag gray">Archived</span><small>${s.archived_at ? nice(new Date(s.archived_at).toLocaleDateString('en-CA')) : ''}</small>` : s.today ? `<span class="tag ${TODAY_TAG[s.today][1]}">${TODAY_TAG[s.today][0]}</span>` : ''}</td>
+      <td>${arch ? `<span class="tag gray">Inactive</span><small>${s.archived_at ? nice(new Date(s.archived_at).toLocaleDateString('en-CA')) : ''}</small>` : s.today ? `<span class="tag ${TODAY_TAG[s.today][1]}">${TODAY_TAG[s.today][0]}</span>` : ''}</td>
       <td>${arch ? '' : esc(way)}</td></tr>`;
   }).join('') || '<tr><td colspan="5" class="empty">No students.</td></tr>';
 }
@@ -52,7 +52,7 @@ async function loadStudent(id) {
   const dis = s.dismissal;
   $('#st-head').innerHTML = `<div class="stu"><div class="stu-h"><div class="av">${esc(s.name.split(', ')[1]?.[0] || s.name[0])}</div>
     <div><b style="font-size:1.4rem">${esc(s.name.split(', ').reverse().join(' '))}</b><small>ID ${s.student_id} · ${esc(grade(s.grade) === 'K' ? 'Kindergarten' : 'Grade ' + grade(s.grade))} · Homeroom ${esc(s.teacher || '—')}${s.board && s.board !== s.teacher ? ' · Dismissal board ' + esc(s.board) : ''}</small></div>
-    <span style="margin-left:auto">${arch ? `<span class="tag gray">Archived ${s.archived_at ? stamp(s.archived_at) : ''}</span>` : s.today ? `<span class="tag ${TODAY_TAG[s.today][1]}">${TODAY_TAG[s.today][0]}</span>` : ''}</span></div></div>`;
+    <span style="margin-left:auto">${arch ? `<span class="tag gray">Inactive since ${s.archived_at ? stamp(s.archived_at) : ''}</span>` : s.today ? `<span class="tag ${TODAY_TAG[s.today][1]}">${TODAY_TAG[s.today][0]}</span>` : ''}</span></div></div>`;
   const people = [
     ...s.guardians.filter(g => g.name).map(g => `<div class="row"><div class="txt"><b>${esc(g.name)} <span class="tag ok">Parent/Guardian</span></b><p>${esc([g.relationship, g.phone, g.email].filter(Boolean).join(' · '))}</p></div>${g.pin ? `<span class="pin sm">${g.pin}</span>` : ''}</div>`),
     ...s.pickups.filter(p => p.name).map(p => `<div class="row"><div class="txt"><b>${esc(p.name)}${p.pending ? ' <span class="tag warn">Added in Portal</span>' : ''}</b><p>${esc([p.relationship, p.phone].filter(Boolean).join(' · '))}</p></div>${p.pin ? `<span class="pin sm">${p.pin}</span>` : ''}</div>`)];
@@ -62,7 +62,14 @@ async function loadStudent(id) {
       <dt>Dismissed</dt><dd>${dis ? `${dis.kind === 'bus' ? 'On Bus ' + esc(dis.bus || '') : 'Picked up by ' + esc(dis.person || '')} · ${stamp(dis.at)} <small style="color:var(--muted)">(${esc(dis.by)})</small>` : 'Not yet'}</dd></dl></div>`}
     <div class="card"><b class="t">On File</b><dl class="kv" style="padding:0"><dt>Morning</dt><dd>${esc(s.am || '—')}</dd><dt>Afternoon</dt><dd>${esc(s.pm || '—')}</dd>
       <dt>Parent notes</dt><dd>${s.parent_notes_approved} of ${LIMIT} approved this semester · ${s.doctor_notes} doctor's note${s.doctor_notes === 1 ? '' : 's'}</dd></dl></div>
-    <div><h2>Parents &amp; Pick-Up People</h2><div class="list">${people.join('') || '<div class="empty">None on file.</div>'}</div></div>`;
+    <div><h2>Parents &amp; Pick-Up People</h2><div class="list">${people.join('') || '<div class="empty">None on file.</div>'}</div></div>
+    ${(s.banned || []).length ? `<div><h2 style="color:var(--red)">Banned</h2><p class="muted small">Removed from this student in FACTS. They can't sign in to the parent app or pick up; the office is alerted if they try.</p><div class="list">${s.banned.map(b => b.cleared_at
+      ? `<div class="row"><div class="txt"><b>${esc(b.name)} <span class="tag gray">Ban Lifted</span></b><p>${esc([b.type, b.relationship].filter(Boolean).join(' · '))} · banned ${stamp(b.banned_at)} · lifted ${stamp(b.cleared_at)} (${esc(String(b.cleared_by || '').split('@')[0])})</p></div></div>`
+      : `<div class="row banned"><div class="txt"><b>${esc(b.name)} <span class="tag ban">BANNED</span></b><p>${esc([b.type, b.relationship, b.phone, b.email].filter(Boolean).join(' · '))} · since ${stamp(b.banned_at)}</p></div><button class="btn ghost sm" data-ban-clear="${b.id}" type="button">Lift Ban</button></div>`).join('')}</div></div>` : ''}`;
+  $$('#st-left [data-ban-clear]').forEach(b => b.onclick = async () => {
+    if (!confirm('Lift this ban? They will be able to sign in and pick up again only if FACTS lists them under a student.')) return;
+    try { await call('staff_ban_clear', { p_id: +b.dataset.banClear }); toast('Ban lifted'); loadStudent(String(s.student_id)); } catch (x) { toast(emsg(x)); }
+  });
   const hist = (title, rows, fn) => `<details class="card" ${rows.length ? 'open' : ''}><summary><b class="t">${title} (${rows.length})</b></summary><div class="list" style="margin-top:8px">${rows.map(fn).join('') || '<div class="empty">None.</div>'}</div></details>`;
   $('#st-right').innerHTML =
     hist('Excused Notes', s.notes, n => `<div class="row"><div class="txt"><b>${n.kind === 'doctor' ? "Doctor's note" : 'Parent note'} · ${nice(n.absent_date)}${n.absent_end ? ' – ' + nice(n.absent_end) : ''}</b><p>${esc(n.reason || '')} · ${stamp(n.created_at)}</p></div><span class="tag ${STATUS_NOTE[n.status][1]}">${STATUS_NOTE[n.status][0]}</span></div>`)

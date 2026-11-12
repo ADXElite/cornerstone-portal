@@ -93,6 +93,7 @@ tr.grp td{background:var(--bg);border-top:2px solid var(--line);padding-top:12px
 .bsched .ft{margin-top:10px;border-top:1px solid #bbb;padding-top:5px;font-size:8.5pt;color:#555}
 .bstbl td input,.bstbl td select{min-height:34px;padding:4px 6px;font-size:.9rem}
 .roles-pick{display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center}.roles-pick label{display:flex;gap:6px;align-items:center;font-weight:600;font-size:.92rem;text-transform:none;letter-spacing:0}.roles-pick input{width:auto;min-height:0}
+.tag.ban{background:var(--red);color:#fff}.row.banned{background:#fff4f4}.row.banned b{color:var(--red)}
 .croster{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;color:#141213}.croster h3{font-family:var(--display);font-weight:800;font-size:1.6rem;text-transform:uppercase;margin:0}.croster td{padding:5px 8px;border-top:1px solid #E4DFDF}.croster .abs td{color:#8a8486;text-decoration:line-through}.croster .chk{width:22px;height:22px;border:2px solid #141213;border-radius:4px;display:inline-block}
 @media print{.croster{border:0;padding:0}}
 .roster{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;color:#141213}
@@ -154,6 +155,13 @@ td.c small{text-align:center}
         <span class="muted small" id="h-updated"></span>
       </div>
       <input type="radio" name="h-show" value="todo" checked hidden>
+      <section class="hsec" id="sec-ban" hidden>
+        <div class="card" style="border:2px solid var(--red);background:#fff4f4">
+          <b class="t" style="color:var(--red)">⚠ BANNED Person Alerts</b>
+          <p class="small" style="margin:0 0 6px">Someone FACTS removed from a student tried to pick them up or sign in. Tap "Seen" once you've dealt with it.</p>
+          <div class="list" id="ban-list"></div>
+        </div>
+      </section>
 
       <section class="hsec" id="sec-changes">
         <h2 class="hh">Change Requests</h2>
@@ -243,7 +251,7 @@ td.c small{text-align:center}
       <div class="bar">
         <div class="seg sm" role="radiogroup" aria-label="Which students">
           <label><input type="radio" name="sl-arch" value="0" checked><span>Current Students</span></label>
-          <label><input type="radio" name="sl-arch" value="1"><span>Archived</span></label>
+          <label><input type="radio" name="sl-arch" value="1"><span>Inactive</span></label>
         </div>
         <label>Grade<select id="sl-grade"></select></label>
         <label>Teacher<select id="sl-teacher"></select></label>
@@ -468,7 +476,7 @@ td.c small{text-align:center}
         </div>
         <div id="sftp-result"></div>
       </div>
-      <div class="card"><b class="t">Recent Imports</b><div class="tw"><table><thead><tr><th>When</th><th>By</th><th>Rows</th><th>Students</th><th>Parents</th><th>Pick-Up People</th><th>Archived</th></tr></thead><tbody id="r-hist"></tbody></table></div></div>
+      <div class="card"><b class="t">Recent Imports</b><div class="tw"><table><thead><tr><th>When</th><th>By</th><th>Rows</th><th>Students</th><th>Parents</th><th>Pick-Up People</th><th>Made Inactive</th></tr></thead><tbody id="r-hist"></tbody></table></div></div>
     </div>
   </section>
 </main>

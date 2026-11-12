@@ -9,6 +9,7 @@ let TOKEN = store.get('ccs_kiosk_token');
 
 const ERR = {
   bad_pin: "That PIN wasn't found. Please check it and try again.",
+  see_office: 'Please see the front office for help.',
   locked: 'Too many wrong PINs. Please wait 3 minutes or ask the front desk for help.',
   student_not_found: "We couldn't find that student ID. Try again or search by name.",
   not_linked: "That student isn't linked to this PIN. Please see the front desk.",

@@ -56,7 +56,7 @@ function badges(m) {
   $('#b-trans').hidden = !ch; $('#b-trans').textContent = ch;
   $('#b-pick').hidden = !m.pickup_todo; $('#b-pick').textContent = m.pickup_todo;
   $('#b-sio').hidden = !m.signins_todo; $('#b-sio').textContent = m.signins_todo;
-  const home = (m.new_changes || 0) + (m.pickup_todo || 0) + (m.notes_todo || 0) + (m.other_todo || 0) + (m.signins_todo || 0);
+  const home = (m.new_changes || 0) + (m.pickup_todo || 0) + (m.notes_todo || 0) + (m.other_todo || 0) + (m.signins_todo || 0) + (m.ban_alerts || 0);
   $('#b-home').hidden = !home; $('#b-home').textContent = home;
 }
 async function refreshBadges() { try { ME = await call('staff_me'); badges(ME); } catch {} }
