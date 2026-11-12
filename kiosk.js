@@ -110,10 +110,12 @@ function pinScreen() {
   go('pin', `<div class="kscreen">
     <button class="back" id="bk">‹ Back</button>
     <div class="pinwrap">
-      <h1 class="kh">Enter your 4-digit PIN</h1>
-      <p class="ksub" style="margin:0">Parents can find PINs in the Cornerstone Parent Portal.</p>
-      <div class="dots" id="dots"><i></i><i></i><i></i><i></i></div>
-      <div class="kerr" id="perr"></div>
+      <div class="pininfo">
+        <h1 class="kh">Enter your 4-digit PIN</h1>
+        <p class="ksub" style="margin:0">Parents can find PINs in the Cornerstone Parent Portal.</p>
+        <div class="dots" id="dots"><i></i><i></i><i></i><i></i></div>
+        <div class="kerr" id="perr"></div>
+      </div>
       <div class="pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button data-n="${n}">${n}</button>`).join('')}<button class="fn" data-c="clr">Clear</button><button data-n="0">0</button><button class="fn" data-c="del">⌫</button></div>
     </div></div>`);
   $('#bk').onclick = () => S.kind === 'late_in' ? lateChoice() : home();
