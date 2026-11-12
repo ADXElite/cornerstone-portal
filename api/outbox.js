@@ -7,6 +7,12 @@ const C = require('../lib/core');
 const HOST = 'https://portal.csjax.org';
 
 function emailBody(it) {
+  if (it.kind === 'manual') {
+    const msg = (it.email_rows && it.email_rows[0] && it.email_rows[0][1]) || it.email_title;
+    return { html: C.emailHtml(it.email_title, `<p style="margin:0;font-size:16px;line-height:1.5">${C.esc(msg).replace(/\n/g, '<br>')}</p>`
+      + (it.email_note ? `<p style="margin:16px 0 0;color:#6B6466;font-size:14px">${C.esc(it.email_note)}</p>` : '')),
+      text: msg + (it.email_note ? `\n\n${it.email_note}` : '') };
+  }
   const rows = (it.email_rows || []).map(([k, v]) =>
     `<tr><td style="padding:7px 10px 7px 0;color:#6B6466;vertical-align:top;white-space:nowrap">${C.esc(k)}</td><td style="padding:7px 0;font-weight:600">${C.esc(v)}</td></tr>`).join('');
   const html = C.emailHtml(it.email_title || it.email_subject,
@@ -40,9 +46,17 @@ module.exports = async (req, res) => {
         result.push = { devices: it.subs.length, sent, failed };
       }
       if (it.email_subject && it.email_to && it.email_to.length) {
-        try { const { html, text } = emailBody(it); const r = await C.sendEmail({ to: it.email_to, subject: it.email_subject, html, text }); result.email = r && r.skipped ? r : { to: it.email_to.length }; }
-        catch (e) { ok = false; result.email = { error: e.message }; }
+        try { const { html, text } = emailBody(it); const r = await C.sendEmailEach({ to: it.email_to, subject: it.email_subject, html, text }); result.email = r && r.skipped ? r : { to: it.email_to.length }; }
+        catch (e) { result.email = { error: e.message, detail: e.detail }; } // not retried, so push/texts aren't sent twice
       } else if (it.email_subject) result.email = { to: 0, note: 'no email on file' };
+      if (it.sms_body && it.sms_to && it.sms_to.length) {
+        let sent = 0, failed = 0, err;
+        const q = [...it.sms_to];
+        await Promise.all(Array.from({ length: 6 }, async () => {
+          while (q.length) { const n = q.shift(); try { await C.sendSms(n, it.sms_body); sent++; } catch (e) { failed++; err = e.detail || e.message; } }
+        }));
+        result.sms = { to: it.sms_to.length, sent, failed, ...(err ? { error: err } : {}) };
+      }
       await C.rpc('portal_outbox_done', { p_id: it.id, p_result: result, p_gone: gone, p_ok: ok });
       done++;
     }

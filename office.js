@@ -12,7 +12,7 @@ function toast(t) { const el = $('#toast'); el.textContent = t; el.hidden = fals
 const ERR = { not_staff: 'This account is not on the front office staff list.', limit_reached: 'This student already has the maximum approved parent notes this semester. Reject it or ask for a doctor\'s note.',
   bad_columns: 'That file is missing the "Student ID (System)" column. Use the student & parent export.', empty_file: 'That file has no rows.',
   too_many_removed: 'This file would turn off a lot of students. Check it\'s the full export, then tick "I\'m sure" to continue.', cant_remove_self: "You can't turn off your own access.",
-  bad_email: 'Enter a valid email address.', bad_setting: 'Check that value.' };
+  bad_email: 'Enter a valid email address.', bad_phone: 'Enter a 10-digit cell phone number.', bad_setting: 'Check that value.' };
 const emsg = e => { const m = (e && (e.message || e)) || ''; return ERR[m.split(':')[0]] || m || 'Something went wrong.'; };
 async function call(fn, args = {}) { const { data, error } = await sb.rpc(fn, args); if (error) throw new Error(error.message); return data; }
 
@@ -190,10 +190,10 @@ function openChange(c, reload) {
       ${c.processed_by ? `<dt>${esc(TS[c.status][0])}</dt><dd>${esc(c.processed_by)} · ${stamp(c.processed_at)}</dd>` : ''}
       ${c.review_note ? `<dt>Office Note</dt><dd>${esc(c.review_note)}</dd>` : ''}
     </dl>
-    ${fromParent && c.status === 'new' ? '<p class="hint" style="margin:6px 0 0">Approving or rejecting sends the parent a push alert and an email. Rejecting also emails Donald.</p>' : ''}
+    ${fromParent && c.status === 'new' ? '<p class="hint" style="margin:6px 0 0">Mark Processed or Reject sends the parent a push alert and an email. Rejecting also emails Donald.</p>' : ''}
     ${c.status !== 'cancelled' ? `<label id="m-rj-wrap" hidden style="display:block;margin-top:10px"><span class="hint">Reason (included in the parent's email)</span><textarea id="m-rj" rows="2" maxlength="500" style="width:100%"></textarea></label>` : ''}
     <div class="actions">
-      ${c.status !== 'processed' ? `<button class="btn ok" data-s="processed">${fromParent ? 'Approve (KidAccount Updated)' : 'Mark Processed (KidAccount Updated)'}</button>` : ''}
+      ${c.status !== 'processed' ? `<button class="btn ok" data-s="processed">Mark Processed (KidAccount Updated)</button>` : ''}
       ${c.status !== 'new' ? '<button class="btn ghost" data-s="new">Mark Not Processed</button>' : ''}
       ${c.status !== 'cancelled' ? `<button class="btn ghost" data-s="cancelled">${fromParent ? 'Reject This Change' : 'Cancel This Change'}</button>` : ''}
     </div><p class="err" id="m-err"></p>`;
@@ -376,6 +376,7 @@ $('#sftp-go').onclick = async () => {
   b.disabled = false; b.textContent = 'Check SFTP now';
 };
 
+const fmtPhone = p => { const d = String(p || '').replace(/\D/g, ''); return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : p; };
 // ---------- settings ----------
 let SET = null;
 async function loadSettings() {
@@ -386,10 +387,10 @@ async function loadSettings() {
   const ROLE = { admin: ['Admin', 'ok'], office: ['Front Office', 'ok'], carline: ['Car Line', 'warn'], bus: ['Bus Driver', 'gray'], care: ['Extended Care', 'warn'] };
   const rolesOf = st => st.roles || [st.role];
   $('#staff-list').innerHTML = staff.map(st => `<div class="row" data-row="${esc(st.email)}"><div class="txt"><b>${esc(st.name || st.email)} ${rolesOf(st).map(r => `<span class="tag ${(ROLE[r] || ['', ''])[1]}">${(ROLE[r] || [r])[0]}</span>`).join(' ')}${st.active ? '' : ' <span class="tag gray">Off</span>'}</b>
-      <p>${esc(st.email)}${st.has_login ? (st.last_sign_in ? ' · last signed in ' + stamp(st.last_sign_in) : ' · has a sign-in') : ' · <b style="display:inline;color:var(--red)">no sign-in yet</b>'}</p>
+      <p>${esc(st.email)}${st.phone ? ' · ' + esc(fmtPhone(st.phone)) : ''}${st.has_login ? (st.last_sign_in ? ' · last signed in ' + stamp(st.last_sign_in) : ' · has a sign-in') : ' · <b style="display:inline;color:var(--red)">no sign-in yet</b>'}</p>
       <div class="roles-pick" data-roles="${esc(st.email)}" hidden>${Object.entries(ROLE).map(([k, v]) => `<label><input type="checkbox" value="${k}" ${rolesOf(st).includes(k) ? 'checked' : ''}> ${v[0]}${k === 'admin' ? ' (all roles)' : ''}</label>`).join('')}
         <button class="btn sm" data-saveroles="${esc(st.email)}" type="button">Save Roles</button></div></div>
-    <span class="actions"><button class="btn ghost sm" data-editroles="${esc(st.email)}">Edit Roles</button><button class="btn ghost sm" data-pw="${esc(st.email)}">${st.has_login ? 'Reset Password' : 'Create Sign-In'}</button>
+    <span class="actions"><button class="btn ghost sm" data-editroles="${esc(st.email)}">Edit Roles</button><button class="btn ghost sm" data-phone="${esc(st.email)}">${st.phone ? 'Edit Phone' : 'Add Phone'}</button><button class="btn ghost sm" data-pw="${esc(st.email)}">${st.has_login ? 'Reset Password' : 'Create Sign-In'}</button>
     <button class="btn ${st.active ? 'ghost' : ''} sm" data-e="${esc(st.email)}" data-a="${st.active ? 0 : 1}">${st.active ? 'Turn Off' : 'Turn On'}</button></span></div>`).join('');
   $$('#staff-list [data-e]').forEach(b => b.onclick = async () => {
     try { await call('staff_staff_save', { p_email: b.dataset.e, p_name: null, p_active: b.dataset.a === '1' }); loadSettings(); } catch (e) { $('#sa-err').textContent = emsg(e); }
@@ -407,6 +408,12 @@ async function loadSettings() {
     const st = staff.find(x => x.email === b.dataset.saveroles);
     if (!roles.length) return $('#sa-err').textContent = 'Choose at least one role.';
     try { await call('staff_staff_save', { p_email: st.email, p_name: null, p_active: st.active, p_roles: roles }); toast('Roles saved'); loadSettings(); } catch (e) { $('#sa-err').textContent = emsg(e); }
+  });
+  $$('#staff-list [data-phone]').forEach(b => b.onclick = async () => {
+    const st = staff.find(x => x.email === b.dataset.phone);
+    const ph = prompt(`Cell phone for ${st.name || st.email} (gets a text if a BANNED person uses the kiosk). Leave blank to remove.`, st.phone ? fmtPhone(st.phone) : '');
+    if (ph === null) return;
+    try { await call('staff_staff_save', { p_email: st.email, p_name: null, p_active: st.active, p_phone: ph.trim() }); toast('Phone saved'); loadSettings(); } catch (e) { $('#sa-err').textContent = emsg(e); }
   });
   $$('#staff-list [data-pw]').forEach(b => b.onclick = async () => {
     const pw = prompt(`New password for ${b.dataset.pw} (at least 8 characters):`); if (!pw) return;
@@ -466,7 +473,7 @@ $('#f-staff').addEventListener('submit', async e => {
   try {
     const roles = [...$$('#sa-roles input:checked')].map(i => i.value);
     if (!roles.length) throw new Error('Choose at least one role.');
-    await staffUsers({ action: 'create', email: $('#sa-email').value, name: $('#sa-name').value, roles, password: $('#sa-pass').value });
+    await staffUsers({ action: 'create', email: $('#sa-email').value, name: $('#sa-name').value, phone: $('#sa-phone').value, roles, password: $('#sa-pass').value });
     const all = roles.includes('admin') ? ['office', 'carline', 'bus', 'care'] : roles;
     const where = all.map(r => ({ carline: 'portal.csjax.org/carline', bus: 'portal.csjax.org/bus', care: 'portal.csjax.org/care', office: 'portal.csjax.org/office' })[r]).filter(Boolean).join('\n');
     alert(`Sign-in created.\n\nGive them:\n${where}\nEmail: ${$('#sa-email').value.trim().toLowerCase()}\nPassword: the one you just typed`);

@@ -312,7 +312,7 @@ async function alertInfo() {
   call('staff_settings').then(x => { $('#a-paused').hidden = x.alerts_paused !== true; }).catch(() => {});
   try {
     AINFO = await call('staff_push_info');
-    $('#a-info').textContent = `${AINFO.devices} phone${AINFO.devices === 1 ? '' : 's'} from ${AINFO.families} famil${AINFO.families === 1 ? 'y' : 'ies'} have alerts turned on. Alerts reach parents who added the app to their phone and turned alerts on.`;
+    $('#a-info').textContent = `Sends a push alert to the ${AINFO.devices} phone${AINFO.devices === 1 ? '' : 's'} (${AINFO.families} famil${AINFO.families === 1 ? 'y' : 'ies'}) with alerts turned on, plus an email and a text to every parent/guardian on file for the families you pick.`;
     $('#a-log').innerHTML = AINFO.log.map(l => `<div class="row"><div class="txt"><b>${esc(l.title)}</b><p>${esc(l.body || '')} · ${stamp(l.created_at)} · sent to ${l.sent}</p></div></div>`).join('');
   } catch {}
 }
@@ -344,8 +344,15 @@ $('#a-send').onclick = async () => {
     : a === 'transport' ? `families of today's ${$('#a-pick').value === 'Bus Rider' && $('#a-bus').value ? 'Bus ' + $('#a-bus').value + ' riders' : $('#a-pick').value + 's'}` : $('#a-pick').selectedOptions[0]?.textContent;
   if (!confirm(`Send "${title}" to ${label}?`)) return;
   const b = $('#a-send'); b.disabled = true; $('#a-res').textContent = 'Sending…';
-  try { const r = await pushTo(aud, title, body, '/'); $('#a-res').textContent = `Sent to ${r.sent} phone${r.sent === 1 ? '' : 's'}.`; $('#a-title').value = $('#a-body').value = ''; alertInfo(); }
-  catch (x) { $('#a-res').textContent = x.message; }
+  try {
+    // Email + text are queued first (they reach every parent on file); then the push alert to phones with the app.
+    const m = await call('staff_message_send', { p_title: title, p_body: body, p_aud: aud });
+    let push = '';
+    try { const r = await pushTo(aud, title, body, '/'); push = `${r.sent} push alert${r.sent === 1 ? '' : 's'}, `; } catch (x) { push = `push alerts failed (${x.message}), `; }
+    $('#a-res').textContent = `Sending: ${push}${m.emails} email${m.emails === 1 ? '' : 's'}, ${m.texts} text${m.texts === 1 ? '' : 's'}.`;
+    $('#a-title').value = $('#a-body').value = ''; alertInfo();
+  }
+  catch (x) { $('#a-res').textContent = emsg(x); }
   b.disabled = false;
 };
 

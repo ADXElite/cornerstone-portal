@@ -35,8 +35,18 @@ async function firstDir(sftp, names) {
 
 const stamp = () => new Date().toLocaleString('sv-SE', { timeZone: 'America/New_York' }).replace(/[: ]/g, '-').replace(/-(\d\d)$/, '$1');
 
-// Import failures are shown under Settings → Data Upload. No email is sent (only the alerts on the approved list go out).
-async function notifyFailure(message) { console.log('roster import failed (no email sent):', message); }
+// Import failures are shown under Settings → Data Upload and emailed to Donald only (setting import_alert_emails).
+async function notifyFailure(message) {
+  try {
+    const to = await C.rpc('portal_import_alert_emails', {});
+    if (!to?.length) return;
+    await C.sendEmail({ to, subject: 'Portal roster import needs attention',
+      text: `The daily student/parent file on the SFTP server was not imported.\n\n${message}\n\nOpen https://portal.csjax.org/office#roster`,
+      html: C.emailHtml('Roster import needs attention', `<p style="margin:0 0 12px">The daily student/parent file on the SFTP server was <b>not imported</b>.</p>
+<p style="margin:0 0 16px;padding:10px 12px;background:#FBE9EA;color:#A0000A;border-radius:8px">${C.esc(message)}</p>
+<p style="margin:0"><a href="https://portal.csjax.org/office#roster" style="color:#E4010D;font-weight:700">Open Roster upload</a></p>`) });
+  } catch (e) { console.error('failure email', e.message); }
+}
 
 module.exports = async (req, res) => {
   const url = new URL(req.url, 'http://x');

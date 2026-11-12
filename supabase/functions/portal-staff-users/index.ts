@@ -1,6 +1,6 @@
 // Lets front office staff create sign-ins for car line and bus staff (and other office staff) and reset passwords.
 // Only active office staff can call it (checked with the caller's own sign-in via staff_me).
-// Body: { action: 'create' | 'password', email, name?, roles?: string[], password }
+// Body: { action: 'create' | 'password', email, name?, phone?, roles?: string[], password }
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const cors = {
@@ -39,8 +39,8 @@ Deno.serve(async (req) => {
     const ALL = ["admin", "office", "carline", "bus", "care"];
     const roles = (Array.isArray(b.roles) ? b.roles : [b.role]).filter((r: unknown) => ALL.includes(String(r)));
     if (!roles.length) return json({ error: "Choose at least one role." }, 400);
-    const { error: sErr } = await asStaff.rpc("staff_staff_save", { p_email: email, p_name: String(b.name || "").trim() || null, p_active: true, p_roles: roles });
-    if (sErr) return json({ error: sErr.message }, 400);
+    const { error: sErr } = await asStaff.rpc("staff_staff_save", { p_email: email, p_name: String(b.name || "").trim() || null, p_active: true, p_roles: roles, p_phone: String(b.phone || "").trim() || null });
+    if (sErr) return json({ error: sErr.message === "bad_phone" ? "Enter a 10-digit cell phone number." : sErr.message }, 400);
     if (user) {
       const { error } = await admin.auth.admin.updateUserById(user.id, { password, email_confirm: true });
       if (error) return json({ error: error.message }, 400);

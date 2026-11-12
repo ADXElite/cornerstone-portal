@@ -175,7 +175,7 @@ function drawPickChanges() {
     <td><b>${esc([r.first_name, r.last_name].filter(Boolean).join(' '))}${r.pin && r.action === 'add' ? ` <span class="pin sm">${r.pin}</span>` : ''}</b><small>${esc(r.relationship || '')}</small></td>
     <td>${esc(r.phone || '')}<small>${esc(r.email || '')}</small></td>
     <td>${esc(r.submitted_name || r.submitted_by || '')}<small>${r.source === 'office' ? 'Office · ' : ''}${stamp(r.created_at)}</small>${r.comments ? `<small>“${esc(r.comments)}”</small>` : ''}</td>
-    <td class="c"><input type="checkbox" data-pk="${i}" ${r.sis_done ? 'checked' : ''} aria-label="Entered in FACTS">${r.sis_done && r.sis_by ? `<small>${esc(String(r.sis_by).split('@')[0])}${r.sis_at ? ' · ' + stamp(r.sis_at) : ''}</small>` : ''}</td></tr>`).join('')
+    <td class="c"><input type="checkbox" data-pk="${i}" ${r.sis_done ? 'checked' : ''} aria-label="Approved and entered in FACTS">${r.sis_done && r.sis_by ? `<small>${esc(String(r.sis_by).split('@')[0])}${r.sis_at ? ' · ' + stamp(r.sis_at) : ''}</small>` : ''}</td></tr>`).join('')
     || '<tr><td colspan="6" class="empty">No pick-up people changes in these dates.</td></tr>';
 }
 ['#pk-from', '#pk-to', '#pk-facts'].forEach(id => $(id).addEventListener('change', loadPickChanges));
