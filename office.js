@@ -210,6 +210,8 @@ async function loadTrans() {
 ['#tf-by', '#tf-from', '#tf-to', '#tf-status'].forEach(s => $(s).addEventListener('change', loadTrans));
 $('#tf-q').addEventListener('input', debounce(loadTrans));
 $('#tf-today').onclick = () => { $('#tf-by').value = 'effective'; $('#tf-from').value = $('#tf-to').value = TODAY; loadTrans(); };
+// Excel drops leading zeros (0123 -> 123); writing ="0123" makes Excel and Google Sheets keep the number as typed.
+const keepZeros = v => v == null || v === '' ? '' : `="${v}"`;
 $('#tf-csv').onclick = () => {
   const cols = [['Student', c => c.student], ['Grade', c => c.grade], ['Teacher', c => c.teacher], ['Period', c => c.period], ['Type', c => TYPE[c.change_type]],
     ['Start date', c => c.start_date], ['End date', c => c.end_date], ['Was', c => c.current_method], ['New method', c => c.new_method], ['Details', c => c.new_details],
@@ -267,7 +269,7 @@ $('#sio-q').addEventListener('input', debounce(() => loadSignins()));
 $('#sio-today').onclick = () => { $('#sio-from').value = $('#sio-to').value = TODAY; loadSignins(); };
 $('#sio-csv').onclick = () => {
   const cols = [['Date', r => new Date(r.created_at).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })], ['Time', r => tm(r.created_at)], ['Type', r => KIND[r.kind][0]],
-    ['Student', r => r.student], ['Student ID', r => r.student_id], ['Grade', r => r.grade], ['Teacher', r => r.teacher], ['Signed by', r => r.person_name], ['PIN', r => r.pin],
+    ['Student', r => r.student], ['Student ID', r => r.student_id], ['Grade', r => r.grade], ['Teacher', r => r.teacher], ['Signed by', r => r.person_name], ['PIN', r => keepZeros(r.pin)],
     ['Relationship', r => r.relationship], ['How', r => HOW[r.method]], ['Reason', r => r.reason], ['Updated in FACTS', r => r.facts_done ? 'Yes' : 'No'], ['Updated by', r => r.facts_by]];
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const csv = [cols.map(c => q(c[0])).join(','), ...SIO.map(r => cols.map(c => q(c[1](r))).join(','))].join('\r\n');
@@ -305,7 +307,7 @@ $('#pf-q').addEventListener('input', debounce(loadPins));
 $('#pf-print').onclick = () => window.print();
 $('#pf-csv').onclick = () => {
   const cols = [['Student', r => `${r.last}, ${r.first}`], ['Student ID', r => r.sid], ['Grade', r => r.grade], ['Homeroom', r => r.teacher], ['Dismissal board', r => r.board],
-    ['Person', r => r.name], ['Type', r => r.type], ['Relationship', r => r.relationship], ['Phone', r => r.phone], ['Email', r => r.email], ['FACTS ID', r => r.id], ['PIN', r => r.pin], ['PIN from', r => r.pin_source === 'file' ? 'FACTS' : 'Portal']];
+    ['Person', r => r.name], ['Type', r => r.type], ['Relationship', r => r.relationship], ['Phone', r => r.phone], ['Email', r => r.email], ['FACTS ID', r => r.id], ['PIN', r => keepZeros(r.pin)], ['PIN from', r => r.pin_source === 'file' ? 'FACTS' : 'Portal']];
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const csv = [cols.map(c => q(c[0])).join(','), ...PINS.map(r => cols.map(c => q(c[1](r))).join(','))].join('\r\n');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `pickup-pins-${TODAY}.csv`; a.click();
