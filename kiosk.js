@@ -70,7 +70,10 @@ const ICON_IN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 
 // Kiosk mode by Eastern time on school days: 5:00–8:00 AM morning care sign-in, 3:30–7:00 PM afterschool care sign-out,
 // otherwise late sign-in / early check-out. The home screen switches by itself when the time comes.
+// The office can force a mode for a few minutes (portal_settings.kiosk_mode_override), e.g. to preview morning care.
+let OVERRIDE = null;
 function kioskMode() {
+  if (OVERRIDE && new Date(OVERRIDE.until) > new Date()) return OVERRIDE.mode;
   const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).map(x => [x.type, x.value]));
   if (p.weekday === 'Sat' || p.weekday === 'Sun') return 'school';
   const t = p.hour + ':' + p.minute;
@@ -79,6 +82,7 @@ function kioskMode() {
   return 'school';
 }
 let MODE_SHOWN = null;
+setInterval(async () => { if (!TOKEN) return; try { const h = await rpc('kiosk_hello'); OVERRIDE = h && h.mode_override || null; } catch { } }, 20000);
 setInterval(() => { if (S.screen === 'home' && TOKEN && MODE_SHOWN !== null && kioskMode() !== MODE_SHOWN) home(); }, 15000);
 function home() {
   if (!TOKEN) return setup();
@@ -383,5 +387,5 @@ $('.top img').addEventListener('pointerdown', () => { hold = setTimeout(() => { 
     try { await api({ fn: 'ping' }); } catch (x) { if (x.message === 'campus_only') return offCampus(); }
     return setup();
   }
-  try { await rpc('kiosk_hello'); home(); } catch (x) { if (TOKEN && x.message !== 'campus_only') home(); }
+  try { const h = await rpc('kiosk_hello'); OVERRIDE = h && h.mode_override || null; home(); } catch (x) { if (TOKEN && x.message !== 'campus_only') home(); }
 })();
