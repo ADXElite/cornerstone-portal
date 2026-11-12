@@ -1,8 +1,9 @@
 // Office portal — Settings → Bus Stops: buses (driver, school times), stops, FACTS matching, printable route schedule.
 let BR = null;
+const isAdmin = () => !!(ME && (ME.roles || []).includes('admin'));
 const t12 = v => { if (!v) return ''; const [h, m] = v.split(':').map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
 const longDate = iso => iso ? D(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
-const BS_ERR = { need_bus_number: 'Enter a bus number.', bus_exists: 'That bus number already exists.', bus_has_stops: 'Move or delete this bus\'s stops first.',
+const BS_ERR = { admin_only: 'Only Admins can change bus stops, drivers and times.', need_bus_number: 'Enter a bus number.', bus_exists: 'That bus number already exists.', bus_has_stops: 'Move or delete this bus\'s stops first.',
   pick_bus: 'Choose a bus.', need_stop_name: 'Enter the stop name.', need_time: 'Enter a pick-up or drop-off time.', stop_no_taken: 'That stop # is already used.', stop_not_found: 'That stop no longer exists.' };
 const bsMsg = e => { const m = String(e?.message || e); return BS_ERR[m.split(':')[0]] || emsg(e); };
 
@@ -13,6 +14,12 @@ async function busStopsLoad() {
   $('#bs-note').value = BR.schedule.note || '';
   $('#bs-updated').textContent = BR.schedule.updated ? 'Schedule last updated ' + longDate(BR.schedule.updated) : '';
   drawBuses(); drawFacts();
+  const adm = isAdmin();
+  $('#bs-year').disabled = $('#bs-note').disabled = !adm;
+  $('#bs-save-sched').hidden = $('#bs-add-bus').hidden = !adm;
+  $('#bs-admin-note').hidden = adm;
+  $$('#bs-buses input').forEach(i => i.disabled = !adm);
+  $$('#bs-buses [data-save-bus], #bs-buses [data-edit], #bs-buses [data-del], #bs-buses [data-add-stop], #bs-buses [data-del-bus]').forEach(b => b.hidden = !adm);
 }
 
 function drawBuses() {

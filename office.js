@@ -389,6 +389,12 @@ async function loadSettings() {
   });
   $$('#staff-list [data-editroles]').forEach(b => b.onclick = () => { const box = $(`#staff-list [data-roles="${CSS.escape(b.dataset.editroles)}"]`); box.hidden = !box.hidden; });
   $$('#staff-list .roles-pick').forEach(box => wireAdmin(box));
+  // Only Admins can give or take away Admin, or change an Admin's account.
+  const iAdmin = (ME?.roles || []).includes('admin');
+  $$('#sa-roles input[value=admin], #staff-list .roles-pick input[value=admin]').forEach(i => i.closest('label').hidden = !iAdmin);
+  if (!iAdmin) staff.filter(st => rolesOf(st).includes('admin')).forEach(st => {
+    $$(`#staff-list [data-row="${CSS.escape(st.email)}"] .actions button`).forEach(b => b.hidden = true);
+  });
   $$('#staff-list [data-saveroles]').forEach(b => b.onclick = async () => {
     const box = b.closest('.roles-pick'), roles = [...box.querySelectorAll('input:checked')].map(i => i.value);
     const st = staff.find(x => x.email === b.dataset.saveroles);

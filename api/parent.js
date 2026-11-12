@@ -78,7 +78,14 @@ module.exports = async (req, res) => {
     const body = await C.readBody(req, 6_000_000);
 
     if (body.action === 'note') {
-      const { action, ...p } = body;
+      const { action, file, ...p } = body;
+      // Doctor's notes must come with a photo or PDF; the note and its first file are saved together.
+      if (p.kind === 'doctor') {
+        const data = String(file?.data || '').replace(/^data:[^,]*,/, '');
+        if (!data) return C.send(res, 400, { error: 'need_file' });
+        return C.send(res, 200, await C.rpc('portal_doctor_note_submit', { p_id: id, p,
+          p_name: String(file.name || 'note').slice(0, 200), p_mime: file.mime, p_b64: data }));
+      }
       return C.send(res, 200, await C.rpc('portal_note_submit', { p_id: id, p }));
     }
     if (body.action === 'file') {

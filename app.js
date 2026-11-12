@@ -3,7 +3,7 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-const ERR = {
+const ERR = { need_file: "Add a photo or PDF of the doctor's note.",
   not_found: "We couldn't find that phone number or email in our records. Please use the one the school has on file, or call the front office at (904) 730-5500.",
   bad_identifier: 'Enter a 10-digit cell phone number or a full email address.',
   too_many_codes: 'Too many codes were requested. Please wait 30 minutes and try again.',
@@ -324,9 +324,10 @@ $('#f-doc').addEventListener('submit', async e => {
   const done = [], failed = [];
   for (const s of kids) {
     try {
+      const [first, ...more] = S.files;
       const n = await api('/api/parent', { action: 'note', kind: 'doctor', student_id: s.student_id, absent_date: d0, absent_end: d1,
-        provider: $('#d-provider').value, comments: $('#d-comments').value });
-      for (const f of S.files) await api('/api/parent', { action: 'file', note_id: n.id, name: f.name, mime: f.mime, data: f.data });
+        provider: $('#d-provider').value, comments: $('#d-comments').value, file: { name: first.name, mime: first.mime, data: first.data } });
+      for (const f of more) await api('/api/parent', { action: 'file', note_id: n.id, name: f.name, mime: f.mime, data: f.data });
       done.push(s.first_name);
     } catch (x) { failed.push(`${s.first_name}: ${msg(x.message)}`); if (x.status === 401) return signedOut(); }
   }

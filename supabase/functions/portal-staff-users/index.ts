@@ -16,8 +16,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "Use POST" }, 405);
   const asStaff = createClient(URL_, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: req.headers.get("Authorization") || "" } }, auth: { persistSession: false } });
-  const { error: meErr } = await asStaff.rpc("staff_me");
+  const { data: me, error: meErr } = await asStaff.rpc("staff_me");
   if (meErr) return json({ error: "Only front office staff can manage staff sign-ins." }, 401);
+  const iAmAdmin = Array.isArray(me?.roles) && me.roles.includes("admin");
 
   const b = await req.json().catch(() => ({}));
   const email = String(b.email || "").trim().toLowerCase();
@@ -51,6 +52,11 @@ Deno.serve(async (req) => {
   }
   if (b.action === "password") {
     if (!user) return json({ error: "That person doesn't have a sign-in yet." }, 404);
+    if (!iAmAdmin) {
+      const { data: staff } = await asStaff.rpc("staff_staff_list");
+      const target = (staff || []).find((x: { email: string }) => x.email === email);
+      if (target && (target.roles || []).includes("admin")) return json({ error: "Only an Admin can reset an Admin's password." }, 403);
+    }
     const { error } = await admin.auth.admin.updateUserById(user.id, { password });
     if (error) return json({ error: error.message }, 400);
     return json({ ok: true });
