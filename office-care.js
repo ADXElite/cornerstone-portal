@@ -130,6 +130,8 @@ document.addEventListener('click', e => {
 // ---------- Sign-in / sign-out sheets ----------
 function monday(iso) { const d = D(iso); const k = (d.getDay() + 6) % 7; d.setDate(d.getDate() - k); return d.toLocaleDateString('en-CA'); }
 function addDays(iso, n) { const d = D(iso); d.setDate(d.getDate() + n); return d.toLocaleDateString('en-CA'); }
+// Afternoon care staff sign-in shown on the daily PM sheet.
+const PM_SIGN_IN_BY = 'Wendy Cruz', PM_SIGN_IN_SIG = '/img/wendy-cruz-signature.png';
 function careSheets() {
   if (!$('#cs-date').value) $('#cs-date').value = TODAY < CARE_START ? CARE_START : TODAY;
   syncSheetForm(); buildSheet();
@@ -154,9 +156,9 @@ async function buildSheet() {
   let html;
   if (!week) {
     html = `<section class="csheet"><h3>${esc(title)} — Daily Sign-In / Sign-Out</h3><p class="small" style="margin:2px 0 8px;color:#555">${sub}</p>
-      <table><colgroup><col style="width:20%"><col style="width:10%"><col style="width:10%"><col style="width:10%">${ses === 'pm' ? '<col style="width:22%"><col style="width:28%">' : '<col style="width:50%">'}</colgroup>
-      <thead><tr><th>Student</th><th>Student #</th><th>Sign-In</th><th>Sign-Out</th>${ses === 'pm' ? '<th>Signed Out By (Parent)</th><th>Parent Signature</th>' : '<th>Notes</th>'}</tr></thead><tbody>
-      ${st.map(s => { const d = s.days[from]; return `<tr><td>${nm(s)}</td><td>${esc(s.student_id)}</td><td>${d ? ctm(d.in_at) : ''}</td><td>${d ? ctm(d.out_at) : ''}</td>${ses === 'pm' ? `<td>${outBy(d)}${d && d.out_relationship ? ` <span style="color:#555">(${esc(d.out_relationship)})</span>` : ''}</td><td>${sigImg(d)}</td>` : `<td>${d && d.out_how === 'auto' ? 'Signed out automatically 8:30 AM' : ''}</td>`}</tr>`; }).join('')}
+      <table><colgroup>${ses === 'pm' ? '<col style="width:13%"><col style="width:8%"><col style="width:9%"><col style="width:11%"><col style="width:13%"><col style="width:9%"><col style="width:15%"><col style="width:22%">' : '<col style="width:20%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:50%">'}</colgroup>
+      <thead><tr><th>Student</th><th>Student #</th>${ses === 'pm' ? `<th>Sign-In</th><th>Signed In By</th><th>Sign-In Signature</th><th>Sign-Out</th><th>Signed Out By (Parent)</th><th>Parent Signature</th>` : '<th>Sign-In</th><th>Sign-Out</th><th>Notes</th>'}</tr></thead><tbody>
+      ${st.map(s => { const d = s.days[from]; return `<tr><td>${nm(s)}</td><td>${esc(s.student_id)}</td><td>${d ? ctm(d.in_at) : ''}</td>${ses === 'pm' ? `<td>${d ? esc(PM_SIGN_IN_BY) : ''}</td><td>${d ? `<img src="${PM_SIGN_IN_SIG}" alt="Signature">` : ''}</td>` : ''}<td>${d ? ctm(d.out_at) : ''}</td>${ses === 'pm' ? `<td>${outBy(d)}${d && d.out_relationship ? ` <span style="color:#555">(${esc(d.out_relationship)})</span>` : ''}</td><td>${sigImg(d)}</td>` : `<td>${d && d.out_how === 'auto' ? 'Signed out automatically 8:30 AM' : ''}</td>`}</tr>`; }).join('')}
       </tbody></table></section>`;
   } else {
     const days = [0, 1, 2, 3, 4].map(i => addDays(from, i));
