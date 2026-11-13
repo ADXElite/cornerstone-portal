@@ -3,7 +3,7 @@
 const PUSH_URL = 'https://cvvdwhgdiqnoqgxtgzfw.supabase.co/functions/v1/portal-push';
 const H = { trans: [], pick: [], other: [], sio: [], notes: [] };
 const showMode = () => 'todo';
-const fx = (kind, i, done, by, at) => `<td class="c"><input type="checkbox" class="fx" data-sis="${kind}:${i}" ${done ? 'checked' : ''} aria-label="Entered in FACTS">${done && by ? `<small>${esc(String(by).split('@')[0])}${at ? ' · ' + stamp(at) : ''}</small>` : ''}</td>`;
+const fx = (kind, i, done, by, at, lock) => `<td class="c"><input type="checkbox" class="fx" data-sis="${kind}:${i}" ${done ? 'checked' : ''}${lock ? ` disabled title="${lock}"` : ''} aria-label="Entered in FACTS">${lock ? '<small>Review first</small>' : ''}${done && by ? `<small>${esc(String(by).split('@')[0])}${at ? ' · ' + stamp(at) : ''}</small>` : ''}</td>`;
 const src = (by, name) => `${esc(name || '')}<small>${esc(by || '')}</small>`;
 
 async function homeLoad(quiet) {
@@ -69,7 +69,7 @@ function drawHome() {
     <td>${nice(n.absent_date)}${n.absent_end ? `<small>through ${nice(n.absent_end)}</small>` : ''}</td>
     <td>${esc(n.reason || '')}<small>${esc(n.parent_name || '')} · ${stamp(n.created_at)}</small></td>
     <td><button class="btn ghost sm" data-review="${i}">${NS[n.status][0]}</button></td>
-    <td><button class="btn ghost sm" data-dl="${i}">${n.kind === 'doctor' ? 'Download' : 'PDF'}</button></td>${fx('note', i, n.sis_done, n.sis_by, n.sis_at)}</tr>`).join('') || empty(7, none);
+    <td><button class="btn ghost sm" data-dl="${i}">${n.kind === 'doctor' ? 'Download' : 'PDF'}</button></td>${fx('note', i, n.sis_done, n.sis_by, n.sis_at, n.status === 'pending' && !n.sis_done ? 'Approve or reject this note first' : '')}</tr>`).join('') || empty(7, none);
 
   badge('#j-changes', H.trans.filter(c => c.status === 'new').length + H.pick.filter(r => !r.sis_done).length + H.other.filter(o => !o.sis_done).length);
   badge('#j-sio', H.sio.filter(r => !r.facts_done).length);
