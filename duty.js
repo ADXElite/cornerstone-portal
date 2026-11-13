@@ -62,6 +62,24 @@ async function pickBus() {
   $('#buses').onclick = e => { const b = e.target.closest('[data-b]'); if (!b) return; BUS = b.dataset.b; store.set('ccs_bus', BUS); BUS === ALL_BUSES ? loadAllBuses() : loadBus(); };
 }
 
+
+// Put any student on a bus (asks which bus unless the driver's bus is known).
+async function busAnyStudent(x, fixedBus, after) {
+  $('#sheet').hidden = false;
+  let buses = fixedBus ? [fixedBus] : [];
+  if (!fixedBus) { $('#sheet-in').innerHTML = '<p class="muted">Loading…</p>'; try { buses = await call('duty_bus_numbers'); } catch { buses = ['1', '4', '5']; } }
+  $('#sheet-in').innerHTML = `<div class="hd"><div><h1 style="font-size:1.8rem">${esc(x.first)} ${esc(x.last)}</h1><span class="muted">Grade ${esc(grade(x.grade))}${x.teacher ? ' · ' + esc(x.teacher) : ''}</span></div><button class="x" id="sx" aria-label="Close">×</button></div>
+    ${changeNote(x, 'Bus Rider')}
+    <b>${fixedBus ? 'Put on this bus?' : 'Which bus did they get on?'}</b>
+    <div class="buses" style="margin-top:8px">${buses.map(b => `<button data-pb="${esc(b)}"><b>Bus ${esc(b)}</b><small>${fixedBus ? 'Tap to check them on' : 'Check them on'}</small></button>`).join('')}</div>`;
+  $('#sx').onclick = () => $('#sheet').hidden = true;
+  $('#sheet-in').querySelectorAll('[data-pb]').forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    try { await call('duty_bus_mark_any', { p_student: x.student_id, p_bus: b.dataset.pb }); $('#sheet').hidden = true; toast(`${x.first} is on Bus ${b.dataset.pb}`); after(); }
+    catch (er) { toast(er.message === 'pick_bus' ? 'Choose a bus.' : er.message); b.disabled = false; }
+  });
+}
+
 // ----- All buses (Bus Dismissal role): Last, First (Grade) (Bus #), check each student onto the bus -----
 let AQ = '', ABUS = '', ANOT = false;
 async function loadAllBuses(quiet) {
@@ -77,8 +95,8 @@ async function loadAllBuses(quiet) {
     ${r.attendance_in ? '' : '<p class="muted small">Today\'s attendance isn\'t in yet, so everyone shows as present.</p>'}
     <div class="abar"><input type="search" id="aq" placeholder="Search a student" value="${esc(AQ)}" autocomplete="off">
       <div class="achips"><button data-ab="" class="${ABUS ? '' : 'on'}">All</button>${buses.map(b => `<button data-ab="${esc(b)}" class="${ABUS === b ? 'on' : ''}">Bus ${esc(b)}</button>`).join('')}<button id="anot" class="not ${ANOT ? 'on' : ''}" aria-pressed="${ANOT}">Not on Bus</button></div></div>
-    <p class="muted small">Tap a student when they get on the bus. Tap again to undo.</p>
-    <div id="alist"></div>`;
+    <p class="muted small">Tap a student when they get on the bus. Tap again to undo. Not on the list? Search their name.</p>
+    <div id="alist"></div><div id="aothers"></div>`;
   const draw = () => {
     const q = AQ.trim().toLowerCase().split(/[\s,]+/).filter(Boolean);
     const outOf = s => s.status === 'absent' || s.status === 'dismissed' || s.elsewhere;
@@ -100,7 +118,9 @@ async function loadAllBuses(quiet) {
   };
   draw(); scrollTo(0, y);
   if (focused) { const i = $('#aq'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
-  $('#aq').oninput = e => { AQ = e.target.value; draw(); };
+  const others = () => findOthers(AQ, $('#aothers'), x => r.students.some(y => y.student_id === x.student_id), x => busAnyStudent(x, null, () => { AQ = ''; loadAllBuses(); }));
+  $('#aq').oninput = e => { AQ = e.target.value; draw(); others(); };
+  if (AQ) others();
   APP.querySelector('.achips').onclick = e => {
     if (e.target.closest('#anot')) { ANOT = !ANOT; $('#anot').classList.toggle('on', ANOT); $('#anot').setAttribute('aria-pressed', ANOT); return draw(); }
     const b = e.target.closest('[data-ab]'); if (!b) return; ABUS = b.dataset.ab; APP.querySelectorAll('.achips [data-ab]').forEach(x => x.classList.toggle('on', x === b)); draw(); };
@@ -113,6 +133,7 @@ async function loadBus(quiet) {
   let r; try { r = await call('duty_bus', { p_bus: BUS }); } catch (x) { if (!quiet) APP.innerHTML = `<div class="card err">${esc(x.message)}</div>`; return; }
   const riding = r.students.filter(s => s.status === 'present' || s.status === 'late');
   const on = riding.filter(s => s.on_bus).length;
+  const bqv = $('#bq') ? $('#bq').value : '', bqf = document.activeElement && document.activeElement.id === 'bq';
   // Students arrive sorted by afternoon drop-off time; keep that order.
   const by = new Map(); for (const s of r.students) { const k = s.stop_no ? 'n' + s.stop_no : 's' + s.stop; if (!by.has(k)) by.set(k, []); by.get(k).push(s); }
   const y = scrollY;
@@ -120,6 +141,7 @@ async function loadBus(quiet) {
       <div class="tools"><button class="btn ghost sm" id="chg">Change bus</button><button class="btn ghost sm" id="ref">Refresh</button></div></div>
     ${r.attendance_in ? '' : '<p class="muted small">Today\'s attendance isn\'t in yet, so everyone shows as present.</p>'}
     <p class="muted small">Tap a student when they get on the bus. Tap again to undo.</p>
+    <div class="abar"><input type="search" id="bq" placeholder="Student not on this list? Search their name" autocomplete="off"></div><div id="bothers"></div>
     ${[...by.values()].map(list => { const f = list[0]; return `<div class="stop"><span>${f.stop_time ? esc(f.stop_time) + ' · ' : ''}${esc(f.stop)}<small style="display:block;font-family:var(--body);font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted);font-size:.85rem">${esc(f.stop_where || '')}</small></span><span class="muted">${list.filter(s => s.status === 'present' || s.status === 'late').length}</span></div>
       ${list.map(s => {
         const out = s.status === 'absent' || s.status === 'dismissed' || s.elsewhere;
@@ -130,6 +152,9 @@ async function loadBus(quiet) {
   scrollTo(0, y);
   $('#chg').onclick = () => { store.set('ccs_bus', null); pickBus(); };
   $('#ref').onclick = () => loadBus();
+  const bOthers = () => findOthers($('#bq').value, $('#bothers'), x => r.students.some(y => y.student_id === x.student_id), x => busAnyStudent(x, BUS, () => { $('#bq').value = ''; loadBus(); }));
+  $('#bq').oninput = bOthers;
+  if (bqv) { $('#bq').value = bqv; bOthers(); if (bqf) { $('#bq').focus(); $('#bq').setSelectionRange(bqv.length, bqv.length); } }
   APP.querySelectorAll('.kid:not(.out)').forEach(b => b.onclick = async () => {
     const was = b.classList.contains('on'); b.classList.toggle('on', !was); b.querySelector('.box').textContent = was ? '' : '✓';
     try { await call('duty_bus_mark', { p_student: +b.dataset.id, p_on: !was }); loadBus(true); }
@@ -138,14 +163,41 @@ async function loadBus(quiet) {
   every(loadBus, 30000);
 }
 
+
+// =================== Any student (search beyond today's list) ===================
+// Car line / bus staff can dismiss a student whose usual way home is different (e.g. afterschool care).
+// The database then creates today's dismissal change and takes them off the afterschool care list.
+const METHOD_LABEL = m => m === 'Afternoon Extended Care' ? 'Afterschool Care' : (m || 'Not on file');
+let FIND_T = null;
+function findOthers(q, box, exclude, onPick) {
+  clearTimeout(FIND_T);
+  if (!box) return;
+  if (q.trim().length < 2) { box.innerHTML = ''; return; }
+  FIND_T = setTimeout(async () => {
+    let list = []; try { list = await call('duty_find_students', { p_q: q }); } catch { list = []; }
+    list = list.filter(x => !exclude(x));
+    box.innerHTML = list.length ? `<h3 class="others-h">Other students <small>— not on this list today</small></h3>` + list.map(x => {
+      const away = x.status === 'absent' ? 'Absent today' : x.status === 'dismissed' ? 'Checked out early' : x.done ? (x.done === 'bus' ? 'On ' : 'Picked up · ') + (x.done_by || '') : '';
+      return `<button class="kid other" data-oid="${x.student_id}" ${x.status === 'absent' || x.status === 'dismissed' ? 'disabled' : ''}>
+        <span class="box">+</span><span><b>${esc(x.last)}, ${esc(x.first)} (${esc(grade(x.grade))})</b><small>Today: ${esc(METHOD_LABEL(x.method))}${x.method === 'Bus Rider' && x.bus ? ' · Bus ' + esc(x.bus) : ''}${x.teacher ? ' · ' + esc(x.teacher.replace(/^(Mr|Mrs|Ms|Miss|Dr)\.?\s+/, '')) : ''}</small></span>
+        <span class="st"><small>${esc(away)}</small></span></button>`; }).join('') : '';
+    box.querySelectorAll('[data-oid]').forEach(b => b.onclick = () => onPick(list.find(x => String(x.student_id) === b.dataset.oid)));
+  }, 250);
+}
+function changeNote(x, how) {
+  return x.method === how ? '' : `<div class="card alert"><b>${esc(x.first)} is listed as ${esc(METHOD_LABEL(x.method))} today.</b>
+    <p class="small" style="margin:4px 0 0">Dismissing ${how === 'Car Rider' ? 'in car line' : 'on a bus'} changes today's dismissal to ${how}${x.method === 'Afternoon Extended Care' ? ' and takes them off the afterschool care list' : ''}.</p></div>`;
+}
+
 // =================== CAR LINE ===================
 let CARS = null, CQ = '', SHOW_DONE = false;
 async function carStart() {
   APP.innerHTML = `<div class="hd"><div><h1>Car line</h1><span class="prog" id="prog"></span></div><div class="tools"><button class="btn ghost sm" id="ref">Refresh</button></div></div>
     <div class="tools"><input type="search" id="cq" placeholder="Type a student's name" autocomplete="off"></div>
     <div class="seg sm" role="radiogroup"><label><input type="radio" name="cv" value="0" checked><span>Waiting</span></label><label><input type="radio" name="cv" value="1"><span>Picked up</span></label></div>
-    <div id="att"></div><div id="cars"></div>`;
-  $('#cq').oninput = () => { CQ = $('#cq').value.trim().toLowerCase(); drawCars(); };
+    <div id="att"></div><div id="cars"></div><div id="cothers"></div>`;
+  $('#cq').oninput = () => { CQ = $('#cq').value.trim().toLowerCase(); drawCars();
+    findOthers($('#cq').value, $('#cothers'), x => (CARS && CARS.students.some(c => c.student_id === x.student_id)), x => openKid(x.student_id, x)); };
   document.querySelectorAll('input[name=cv]').forEach(r => r.onchange = () => { SHOW_DONE = r.value === '1' && r.checked; drawCars(); });
   $('#ref').onclick = () => loadCars();
   loadCars();
@@ -170,14 +222,15 @@ function drawCars() {
   if (!SHOW_DONE && away.length && !CQ) $('#cars').innerHTML += `<details class="card" style="margin-top:10px"><summary class="muted">Not here today (${away.length})</summary><p class="small">${away.map(s => `${esc(s.name)} — ${s.status === 'absent' ? 'absent' : 'checked out early'}`).join('<br>')}</p></details>`;
   $('#cars').querySelectorAll('.kid').forEach(b => b.onclick = () => openKid(+b.dataset.id));
 }
-async function openKid(id) {
-  const s = CARS.students.find(x => x.student_id === id);
+async function openKid(id, other) {
+  const s = CARS.students.find(x => x.student_id === id) || { done: other && other.done === 'car', picked_by: other && other.done_by, done_at: other && other.done_at };
   $('#sheet').hidden = false;
   $('#sheet-in').innerHTML = '<p class="muted">Loading…</p>';
   const r = await call('duty_car_people', { p_student: id });
   const today = (r.today_pickup || '').toLowerCase();
   $('#sheet-in').innerHTML = `<div class="hd"><div><h1 style="font-size:1.8rem">${esc(r.student.name)}</h1><span class="muted">Grade ${esc(grade(r.student.grade))} · ${esc(r.student.teacher || '')}</span></div><button class="x" id="sx" aria-label="Close">×</button></div>
     ${s.done ? `<div class="card on" style="background:var(--ok-bg);color:var(--ok);border-color:var(--ok)"><b>Picked up by ${esc(s.picked_by || '')} at ${tm(s.done_at)}</b><button class="link" id="undo">Undo</button></div>` : ''}
+    ${other ? changeNote(other, 'Car Rider') : ''}
     ${r.today_pickup ? `<div class="card alert"><b>Today's change: picked up by ${esc(r.today_pickup)}</b></div>` : ''}
     <b>Who is picking up?</b>
     <div class="people">${r.people.map((p, i) => `<button class="person ${today && p.name.toLowerCase() === today ? 'today' : ''}" data-i="${i}"><span><b>${esc(p.name)}</b><small>${esc([p.relationship, p.type].filter(Boolean).join(' · '))}</small></span></button>`).join('')
@@ -195,7 +248,7 @@ async function openKid(id) {
   $('#sheet-in').querySelectorAll('.person').forEach(b => b.onclick = async () => {
     const p = r.people[+b.dataset.i]; b.disabled = true;
     try { await call('duty_car_mark', { p_student: id, p_person_key: p.key, p_name: p.name, p_rel: p.relationship || p.type });
-      $('#sheet').hidden = true; toast(`${r.student.name.split(' ')[0]} picked up by ${p.name}`); loadCars(true); }
+      $('#sheet').hidden = true; toast(`${r.student.name.split(' ')[0]} picked up by ${p.name}`); if (other) { $('#cq').value = ''; CQ = ''; $('#cothers').innerHTML = ''; } loadCars(true); }
     catch (x) { toast(x.message); b.disabled = false; }
   });
 }
