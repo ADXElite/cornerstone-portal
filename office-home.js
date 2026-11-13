@@ -225,6 +225,16 @@ async function imageToPng(blob) {
   return new Uint8Array(await (await new Promise(r => c.toBlob(r, 'image/png'))).arrayBuffer());
 }
 async function notesPdf(ids, filename, progress) {
+  const { bytes, skipped } = await notesPdfBytes(ids, progress);
+  savePdf(bytes, filename);
+  return skipped;
+}
+function savePdf(bytes, filename) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+}
+async function notesPdfBytes(ids, progress) {
   const { PDFDocument, StandardFonts, rgb } = await loadPdfLib();
   const out = await PDFDocument.create(); const font = await out.embedFont(StandardFonts.Helvetica);
   const skipped = [];
@@ -249,9 +259,7 @@ async function notesPdf(ids, filename, progress) {
       } catch { skipped.push(`${n.student}: ${f.filename}`); }
     }
   }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([await out.save()], { type: 'application/pdf' })); a.download = filename; a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 30000);
-  return skipped;
+  return { bytes: await out.save(), skipped };
 }
 
 // ---------- manual alerts (Settings → Alerts) ----------

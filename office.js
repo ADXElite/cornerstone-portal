@@ -101,6 +101,7 @@ async function loadDash() { return homeLoad(); }
 // ---------- notes ----------
 let NOTES = [];
 async function loadNotes() {
+  $('#nf-export').hidden = !isAdmin();
   $('#n-rows').innerHTML = '<tr><td colspan="8" class="empty">Loading…</td></tr>';
   NOTES = await call('staff_notes', { p_status: $('#nf-status').value, p_q: $('#nf-q').value.trim() || null, p_kind: $('#nf-kind').value || null });
   $('#nf-count').textContent = `${NOTES.length} note${NOTES.length === 1 ? '' : 's'}`;
@@ -112,12 +113,13 @@ async function loadNotes() {
     <td>${esc(n.reason_other || n.reason)}</td>
     <td>${n.kind === 'parent' ? `${n.approved_parent_notes} of ${LIMIT}` : '—'}<small>${esc(n.semester)}</small></td>
     <td>${stamp(n.created_at)}<small>${esc(n.parent_name || n.submitted_by)}</small></td>
-    <td><span class="tag ${NS[n.status][1]}">${NS[n.status][0]}</span>${n.reviewed_by ? `<small>${esc(n.reviewed_by)}</small>` : ''}</td>
+    <td><span class="tag ${NS[n.status][1]}">${NS[n.status][0]}</span>${n.reviewed_by ? `<small>${esc(n.reviewed_by)}</small>` : ''}${n.exported_at ? `<small title="${esc(n.exported_by || '')}">Exported ${nice(new Date(n.exported_at).toLocaleDateString('en-CA', { timeZone: 'America/New_York' }))}</small>` : ''}</td>
     <td class="noprint"><button class="btn ghost sm" data-npdf="${i}">PDF</button></td></tr>`).join('')
     || '<tr><td colspan="8" class="empty">No notes here.</td></tr>';
   $('#nf-pdf').disabled = !NOTES.length;
 }
-const noteBase = n => { const nm = String(n.student || '').split(' '); return `${safe(nm.slice(-1)[0])}_${safe(nm[0])}_${n.student_id}`; };
+// "Adams, Abigail" or "Abigail Adams" → Adams_Abigail_1206336
+const noteBase = n => { const st = String(n.student || ''); const [last, first] = st.includes(',') ? st.split(/,\s*/) : [st.split(' ').slice(-1)[0], st.split(' ')[0]]; return `${safe(last)}_${safe(first)}_${n.student_id}`; };
 async function onePdf(id, btn) {
   btn.disabled = true;
   try { const n = await call('staff_note', { p_id: id }); n.kind === 'doctor' ? await notesPdf([id], `${noteBase(n)}_${n.absent_date}_doctors_note.pdf`) : notePdf(n, `${noteBase(n)}_${n.absent_date}_excused_note.pdf`); }
@@ -128,6 +130,30 @@ $('#n-rows').addEventListener('click', e => {
   const b = e.target.closest('[data-npdf]'); if (b) { e.stopPropagation(); return onePdf(NOTES[+b.dataset.npdf].id, b); }
   const tr = e.target.closest('tr[data-i]'); if (tr) openNote(NOTES[+tr.dataset.i].id);
 });
+// ---------- Admin: export every reviewed note not exported yet, one PDF file per note ----------
+const isAdmin = () => !!(ME && (ME.roles || []).includes('admin')); // also used by office-bus.js
+async function exportNotes() {
+  const b = $('#nf-export'), label = b.textContent;
+  let list; try { list = await call('staff_notes_to_export'); } catch (x) { return toast(emsg(x)); }
+  if (!list.length) return toast('No new notes to export. Every approved or rejected note has already been exported.');
+  if (!confirm(`Export ${list.length} note${list.length === 1 ? '' : 's'} as ${list.length} separate PDF file${list.length === 1 ? '' : 's'}?\n\nOnly approved and rejected notes that haven't been exported before are included. If Chrome asks to allow multiple downloads, click Allow.`)) return;
+  b.disabled = true; let done = 0; const failed = [];
+  for (const it of list) {
+    b.textContent = `Exporting ${done + failed.length + 1} of ${list.length}…`;
+    try {
+      const n = await call('staff_note', { p_id: it.id });
+      const bytes = n.kind === 'doctor' ? (await notesPdfBytes([it.id])).bytes : new Uint8Array(notePdf(n).output('arraybuffer'));
+      savePdf(bytes, `${noteBase(n)}_${n.absent_date}_${n.kind === 'doctor' ? 'doctors_note' : 'parent_note'}.pdf`);
+      await call('staff_note_exported', { p_id: it.id });
+      done++;
+      await new Promise(r => setTimeout(r, 700)); // give the browser time between downloads
+    } catch (x) { failed.push(`${it.student} (${nice(it.absent_date)})`); }
+  }
+  b.textContent = label; b.disabled = false;
+  toast(`Exported ${done} PDF${done === 1 ? '' : 's'}.${failed.length ? ` Couldn't export: ${failed.join(', ')} — try Export again.` : ''}`);
+  loadNotes();
+}
+$('#nf-export').addEventListener('click', exportNotes);
 $('#nf-pdf').addEventListener('click', async () => {
   const list = NOTES.slice(0, 150), b = $('#nf-pdf'), label = b.textContent;
   if (!list.length) return;

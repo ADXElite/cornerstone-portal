@@ -1,6 +1,5 @@
 // Office portal — Settings → Bus Stops: buses (driver, school times), stops, FACTS matching, printable route schedule.
 let BR = null;
-const isAdmin = () => !!(ME && (ME.roles || []).includes('admin'));
 const t12 = v => { if (!v) return ''; const [h, m] = v.split(':').map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
 const longDate = iso => iso ? D(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
 const BS_ERR = { admin_only: 'Only Admins can change bus stops, drivers and times.', need_bus_number: 'Enter a bus number.', bus_exists: 'That bus number already exists.', bus_has_stops: 'Move or delete this bus\'s stops first.',
