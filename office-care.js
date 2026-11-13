@@ -35,13 +35,13 @@ function drawCarePm() {
   const isToday = CP.day === TODAY;
   $('#cp-dayh').textContent = isToday ? 'Today' : 'Day';
   $('#cp-count').textContent = isToday ? `${st.length} students · ${here} here now · ${out} picked up${CP.attendance_in ? '' : ' · today\'s attendance isn\'t in yet'}`
-    : `${cmd(CP.day)} · ${st.filter(s => s.signed_in).length} were here · ${out} picked up`;
+    : `${cmd(CP.day)} · ${st.filter(s => s.signed_in).length} here · ${out} picked up`;
   const today = s => !isToday ? (s.signed_in ? '<span class="tag ok">Here</span>' : '<span class="tag gray">Not Here</span>') : s.day_status === 'absent' ? '<span class="tag">Absent</span>' : s.day_status === 'dismissed' ? '<span class="tag gray">Checked Out Early</span>' : s.day_status === 'late' ? '<span class="tag warn">Late</span>' : '<span class="tag ok">Present</span>';
   $('#cp-rows').innerHTML = st.map(s => `<tr class="click" data-id="${s.student_id}">
       <td><b>${esc(s.last)}, ${esc(s.first)}</b><small>#${esc(s.student_id)} · Gr ${esc(grade(s.grade))} · ${esc(s.teacher || '')} · tap for pick-up people</small></td>
       <td>${cloc(s.location)}${s.enrolled ? '' : '<small>Not on today\'s list</small>'}</td><td>${today(s)}</td>
       <td>${s.signed_in ? `<b>${ctm(s.in_at)}</b><small>${s.in_how === 'auto' ? 'Automatic' : esc(s.in_by || '')}</small>` : '<span class="muted">—</span>'}</td>
-      <td>${s.out_at ? `<b>${ctm(s.out_at)}</b><small>${s.out_how === 'kiosk' ? 'Kiosk' : esc(s.out_by || '')}</small>` : s.signed_in ? '<span class="tag ok">Here now</span>' : '<span class="muted">—</span>'}</td>
+      <td>${s.out_at ? `<b>${ctm(s.out_at)}</b><small>${s.out_how === 'kiosk' ? 'Kiosk' : esc(s.out_by || '')}</small>` : s.signed_in ? (isToday ? '<span class="tag ok">Here now</span>' : '<span class="tag warn">No sign-out</span>') : '<span class="muted">—</span>'}</td>
       <td>${esc(s.out_person_name || '')}${s.out_relationship ? `<small>${esc(s.out_relationship)}</small>` : ''}</td>
       <td class="noprint"><button class="btn ghost sm" data-cedit="pm:${s.student_id}">Edit</button></td></tr>
     <tr class="cp-more" data-for="${s.student_id}" hidden><td colspan="7"></td></tr>`).join('') || '<tr><td colspan="7" class="empty">No students.</td></tr>';
@@ -81,7 +81,7 @@ function drawCareAm() {
       <td>${s.enrolled ? 'Yes' : '<span class="tag warn">Not signed up</span>'}</td>
       <td>${s.signed_in ? `<b>${ctm(s.in_at)}</b>` : `<span class="muted">Not here${CA.day === TODAY ? ' today' : ''}</span>`}</td>
       <td>${esc(s.in_by || '')}${s.in_how === 'kiosk' ? '<small>Kiosk</small>' : ''}</td>
-      <td>${s.out_at ? `${ctm(s.out_at)}${s.out_how === 'auto' ? '<small>Automatic</small>' : ''}` : s.signed_in ? '<span class="tag ok">Here now</span>' : ''}</td>
+      <td>${s.out_at ? `${ctm(s.out_at)}${s.out_how === 'auto' ? '<small>Automatic</small>' : ''}` : s.signed_in ? (CA.day === TODAY ? '<span class="tag ok">Here now</span>' : '<span class="tag warn">No sign-out</span>') : ''}</td>
       <td class="noprint"><button class="btn ghost sm" data-cedit="am:${s.student_id}">Edit</button></td></tr>`).join('') || '<tr><td colspan="6" class="empty">No students.</td></tr>';
 }
 $('#ca-q').addEventListener('input', debounce(() => CA && drawCareAm(), 200));
