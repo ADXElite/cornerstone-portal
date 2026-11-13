@@ -196,10 +196,10 @@ function openChange(c, reload) {
       ${c.processed_by ? `<dt>${esc(TS[c.status][0])}</dt><dd>${esc(c.processed_by)} · ${stamp(c.processed_at)}</dd>` : ''}
       ${c.review_note ? `<dt>Office Note</dt><dd>${esc(c.review_note)}</dd>` : ''}
     </dl>
-    ${fromParent && c.status === 'new' ? '<p class="hint" style="margin:6px 0 0">Mark Processed or Reject sends the parent a push alert and an email. Rejecting also emails Donald.</p>' : ''}
+    ${fromParent && c.status === 'new' ? '<p class="hint" style="margin:6px 0 0">Processing or rejecting sends the parent a push alert and an email. Rejecting also emails Donald.</p>' : ''}
     ${c.status !== 'cancelled' ? `<label id="m-rj-wrap" hidden style="display:block;margin-top:10px"><span class="hint">Reason (included in the parent's email)</span><textarea id="m-rj" rows="2" maxlength="500" style="width:100%"></textarea></label>` : ''}
     <div class="actions">
-      ${c.status !== 'processed' ? `<button class="btn ok" data-s="processed">Mark Processed (KidAccount Updated)</button>` : ''}
+      ${c.status !== 'processed' ? `<button class="btn ok" data-s="processed">${c.change_type === 'permanent' ? 'Processed, Entered in FACTS' : 'Mark Processed'}</button>` : ''}
       ${c.status !== 'new' ? '<button class="btn ghost" data-s="new">Mark Not Processed</button>' : ''}
       ${c.status !== 'cancelled' ? `<button class="btn ghost" data-s="cancelled">${fromParent ? 'Reject This Change' : 'Cancel This Change'}</button>` : ''}
     </div><p class="err" id="m-err"></p>`;
