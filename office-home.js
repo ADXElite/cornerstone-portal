@@ -139,7 +139,7 @@ body{font-family:"Source Sans 3",Arial,sans-serif;color:#000;padding:.14in .18in
 <div class="r"><b>${date} · ${late ? 'Arrived' : 'Left'} ${tm(r.created_at)}</b></div>
 <div class="r">Reason: ${esc(r.reason || '')}</div>
 <div class="r">${late ? 'Signed in by' : 'Picked up by'}: ${esc(who)}</div>
-<div class="f"><span>Office</span><span>${late ? 'Teacher' : 'Time out'}</span></div>
+${late ? '' : `<div class="f"><span>Office</span><span>Time out</span></div>`}
 <script>document.fonts.ready.then(()=>{setTimeout(()=>{print();},150)});<\/script></body></html>`;
   const f = document.createElement('iframe');
   f.style.cssText = 'position:fixed;right:0;bottom:0;width:4in;height:2.5in;border:0;opacity:0;pointer-events:none';
