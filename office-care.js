@@ -149,32 +149,66 @@ async function buildSheet() {
   const st = r.students;
   $('#cs-count').textContent = `${st.length} student${st.length === 1 ? '' : 's'} signed in`;
   const title = ses === 'am' ? 'Morning Care' : loc === 'all' ? 'Afterschool Care' : `Afterschool Care — ${loc}`;
-  const sub = `Cornerstone Christian School · ${week ? `Week of ${cmd(from)} – ${cmd(to)}` : D(from).toLocaleDateString('en-US', { weekday: 'long' }) + ' ' + cmd(from)}`;
   const nm = s => `<b>${esc(s.last)}, ${esc(s.first)}</b>${loc === 'all' && ses === 'pm' ? ' ' + cloc(s.location) : ''}`;
   const sigImg = d => d && d.signature ? `<img src="${d.signature}" alt="Signature">` : '';
   const outBy = d => d ? esc(d.out_person_name || (d.out_how === 'auto' ? 'Automatic 8:30' : '')) : '';
-  let html;
-  if (!week) {
-    html = `<section class="csheet"><h3>${esc(title)} — Daily Sign-In / Sign-Out</h3><p class="small" style="margin:2px 0 8px;color:#555">${sub}</p>
+  const dayLine = day => `Cornerstone Christian School · ${D(day).toLocaleDateString('en-US', { weekday: 'long' })} ${cmd(day)}`;
+  // One daily-format sheet. Weekly = one of these per weekday (each its own page in the PDF).
+  const daySheet = (day, rows) => `<section class="csheet"><h3>${esc(title)} — Daily Sign-In / Sign-Out</h3><p class="small" style="margin:2px 0 8px;color:#555">${dayLine(day)}</p>
       <table><colgroup>${ses === 'pm' ? '<col style="width:13%"><col style="width:8%"><col style="width:9%"><col style="width:11%"><col style="width:13%"><col style="width:9%"><col style="width:15%"><col style="width:22%">' : '<col style="width:20%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:50%">'}</colgroup>
       <thead><tr><th>Student</th><th>Student #</th>${ses === 'pm' ? `<th>Sign-In</th><th>Signed In By</th><th>Sign-In Signature</th><th>Sign-Out</th><th>Signed Out By (Parent)</th><th>Parent Signature</th>` : '<th>Sign-In</th><th>Sign-Out</th><th>Notes</th>'}</tr></thead><tbody>
-      ${st.map(s => { const d = s.days[from]; return `<tr><td>${nm(s)}</td><td>${esc(s.student_id)}</td><td>${d ? ctm(d.in_at) : ''}</td>${ses === 'pm' ? `<td>${d ? esc(PM_SIGN_IN_BY) : ''}</td><td>${d ? `<img src="${PM_SIGN_IN_SIG}" alt="Signature">` : ''}</td>` : ''}<td>${d ? ctm(d.out_at) : ''}</td>${ses === 'pm' ? `<td>${outBy(d)}${d && d.out_relationship ? ` <span style="color:#555">(${esc(d.out_relationship)})</span>` : ''}</td><td>${sigImg(d)}</td>` : `<td>${d && d.out_how === 'auto' ? 'Signed out automatically 8:30 AM' : ''}</td>`}</tr>`; }).join('')}
+      ${rows.map(s => { const d = s.days[day]; return `<tr><td>${nm(s)}</td><td>${esc(s.student_id)}</td><td>${d ? ctm(d.in_at) : ''}</td>${ses === 'pm' ? `<td>${d ? esc(PM_SIGN_IN_BY) : ''}</td><td>${d ? `<img src="${PM_SIGN_IN_SIG}" alt="Signature">` : ''}</td>` : ''}<td>${d ? ctm(d.out_at) : ''}</td>${ses === 'pm' ? `<td>${outBy(d)}${d && d.out_relationship ? ` <span style="color:#555">(${esc(d.out_relationship)})</span>` : ''}</td><td>${sigImg(d)}</td>` : `<td>${d && d.out_how === 'auto' ? 'Signed out automatically 8:30 AM' : ''}</td>`}</tr>`; }).join('')}
       </tbody></table></section>`;
-  } else {
-    const days = [0, 1, 2, 3, 4].map(i => addDays(from, i));
-    html = `<section class="csheet week"><h3>${esc(title)} — Weekly Sign-In / Sign-Out</h3><p class="small" style="margin:2px 0 8px;color:#555">${sub}</p>
-      <table><colgroup><col style="width:15%"><col style="width:8%">${days.map(() => '<col>').join('')}</colgroup>
-      <thead><tr><th>Student</th><th>Student #</th>${days.map(d => `<th>${D(d).toLocaleDateString('en-US', { weekday: 'short' })} ${cmd(d).slice(0, 5)}</th>`).join('')}</tr></thead><tbody>
-      ${st.map(s => `<tr><td>${nm(s)}</td><td>${esc(s.student_id)}</td>${days.map(day => { const d = s.days[day]; return `<td>${d ? `In ${ctm(d.in_at)}${d.out_at ? ` · Out ${ctm(d.out_at)}` : ''}${ses === 'pm' && d.out_person_name ? `<br>${esc(d.out_person_name)}` : ''}${sigImg(d)}` : 'In ____ Out ____'}</td>`; }).join('')}</tr>`).join('')}
-      </tbody></table></section>`;
+  let html;
+  if (!week) html = daySheet(from, st);
+  else {
+    // Each day lists the students signed in that day; a day with nobody yet (future/blank) lists the week's students to fill in by hand.
+    html = [0, 1, 2, 3, 4].map(i => addDays(from, i)).map(day => { const on = st.filter(s => s.days[day]); return daySheet(day, on.length ? on : st); }).join('');
   }
   $('#cs-area').innerHTML = st.length ? html : '<div class="card">No students were signed in for this sheet.</div>';
+  CS_NAME = `${title.replace(/ — /g, ' ')} Sign-In Sheet ${week ? 'Week of ' + cmd(from).replace(/\//g, '-') : cmd(from).replace(/\//g, '-')}.pdf`;
 }
-$('#cs-print').addEventListener('click', () => {
-  let s = $('#cs-page'); if (!s) { s = document.createElement('style'); s.id = 'cs-page'; document.head.appendChild(s); }
-  s.textContent = $('#cs-kind').value === 'week' ? '@page{size:letter landscape;margin:.35in}' : '@page{size:letter portrait;margin:.4in}';
-  window.print();
-  setTimeout(() => { s.textContent = ''; }, 1000);
+let CS_NAME = 'Care Sign-In Sheet.pdf';
+// Export the sheets on screen as a letter-portrait PDF: each daily sheet starts a new page; long rosters continue onto extra pages, split between rows.
+$('#cs-print').addEventListener('click', async () => {
+  const secs = [...document.querySelectorAll('#cs-area .csheet')], btn = $('#cs-print');
+  if (!secs.length) return;
+  btn.disabled = true; const label = btn.textContent; btn.textContent = 'Creating PDF…';
+  const host = document.createElement('div');
+  host.style.cssText = 'position:fixed;left:-10000px;top:0;width:740px;background:#fff';
+  document.body.appendChild(host);
+  try {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'portrait' });
+    const M = 29, PW = pdf.internal.pageSize.getWidth() - 2 * M, PH = pdf.internal.pageSize.getHeight() - 2 * M;
+    let first = true;
+    for (const sec of secs) {
+      const c = sec.cloneNode(true); c.style.cssText = 'border:0;border-radius:0;margin:0;padding:0';
+      host.replaceChildren(c);
+      await Promise.all([...c.querySelectorAll('img')].map(i => i.complete ? null : new Promise(r => { i.onload = i.onerror = r; })));
+      const canvas = await html2canvas(c, { scale: 2, backgroundColor: '#fff', logging: false });
+      const k = PW / c.offsetWidth, pageCss = PH / k, sc = canvas.width / c.offsetWidth;   // pageCss: CSS px that fit on one page
+      const top0 = c.getBoundingClientRect().top, rel = el => el.getBoundingClientRect().bottom - top0;
+      const head = rel(c.querySelector('thead')), cut = [...c.querySelectorAll('tbody tr')].map(rel), total = c.offsetHeight;
+      // Page 1 = title + header + rows; continuation pages repeat the title + column headers, then the next rows. Breaks fall between rows.
+      let y = 0;
+      while (y < total - 1) {
+        const lead = y ? head : 0, end0 = Math.min(total, y + pageCss - lead);
+        let end = end0;
+        if (end < total) { const fit = cut.filter(v => v > y + 1 && v <= end0); if (fit.length) end = fit[fit.length - 1]; }
+        const part = document.createElement('canvas'), g = part.getContext('2d');
+        part.width = canvas.width; part.height = Math.ceil((lead + end - y) * sc);
+        g.fillStyle = '#fff'; g.fillRect(0, 0, part.width, part.height);
+        if (lead) g.drawImage(canvas, 0, 0, canvas.width, Math.round(head * sc), 0, 0, canvas.width, Math.round(head * sc));
+        g.drawImage(canvas, 0, Math.round(y * sc), canvas.width, Math.round((end - y) * sc), 0, Math.round(lead * sc), canvas.width, Math.round((end - y) * sc));
+        if (!first) pdf.addPage(); first = false;
+        pdf.addImage(part.toDataURL('image/jpeg', 0.92), 'JPEG', M, M, PW, (lead + end - y) * k);
+        y = end;
+      }
+    }
+    pdf.save(CS_NAME);
+  } catch (e) { alert('Could not create the PDF: ' + (e && e.message || e)); }
+  finally { host.remove(); btn.disabled = false; btn.textContent = label; }
 });
 
 // Keep "Signed In Now" and the rosters fresh while open.

@@ -344,15 +344,15 @@ td.c small{text-align:center}
     <div class="screen" id="p-caresheets" hidden>
       <nav class="subtabs noprint"><a href="#carenow" data-s="carenow">Signed In Now</a><a href="#carepm" data-s="carepm">Afterschool Care</a><a href="#caream" data-s="caream">Morning Care</a><a href="#caresheets" data-s="caresheets">Sign-In / Sign-Out Sheets</a></nav>
       <div class="card noprint">
-        <b class="t">Print Sign-In / Sign-Out Sheets</b>
+        <b class="t">Sign-In / Sign-Out Sheets</b>
         <div class="bar">
           <label>Care<select id="cs-ses"><option value="pm">Afterschool Care</option><option value="am">Morning Care</option></select></label>
           <label>Students<select id="cs-loc"><option value="all">All Afterschool Care</option><option value="KHA">KHA Afterschool Care Only</option><option value="SP">SP Afterschool Care Only</option></select></label>
           <label>Sheet<select id="cs-kind"><option value="day">Daily</option><option value="week">Weekly</option></select></label>
           <label id="cs-dl">Date<input type="date" id="cs-date"></label>
         </div>
-        <div class="actions"><button class="btn sm" id="cs-print" type="button">Print</button><span class="cnt" id="cs-count"></span></div>
-        <p class="muted small">Shows each student's name, student number, sign-in time, sign-out time, the parent who signed them out and their signature. A future or blank day prints as a blank sheet to fill in by hand.</p>
+        <div class="actions"><button class="btn sm" id="cs-print" type="button">Export PDF</button><span class="cnt" id="cs-count"></span></div>
+        <p class="muted small">Shows each student's name, student number, sign-in time, sign-out time, the parent who signed them out and their signature. The weekly export includes a separate daily sheet for each day, one per page. A future or blank day comes out as a blank sheet to fill in by hand.</p>
       </div>
       <div id="cs-area"></div>
     </div>
@@ -514,6 +514,7 @@ td.c small{text-align:center}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="/office.js"></script>
 <script src="/office-home.js"></script>
 <script src="/office-more.js"></script>
