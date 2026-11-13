@@ -19,7 +19,9 @@ async function loadStudentList() {
 function drawStudentList() {
   const g = $('#sl-grade').value, t = $('#sl-teacher').value;
   const arch = document.querySelector('input[name=sl-arch]:checked').value === '1';
-  const list = SL.filter(s => (!g || s.grade === g) && (!t || s.teacher === t || s.board === t));
+  const q = $('#sl-q').value.trim().toLowerCase().split(/[\s,]+/).filter(Boolean);
+  const hay = s => `${s.first} ${s.last} ${s.student_id}`.toLowerCase();
+  const list = SL.filter(s => (!g || s.grade === g) && (!t || s.teacher === t || s.board === t) && q.every(w => hay(s).includes(w)));
   $('#sl-count').textContent = `${list.length} student${list.length === 1 ? '' : 's'}`;
   const letters = [...new Set(list.map(s => (s.last || '?')[0].toUpperCase()))];
   $('#sl-az').innerHTML = letters.map(l => `<a href="#students" data-l="${l}">${l}</a>`).join('');
@@ -31,8 +33,10 @@ function drawStudentList() {
       <td>${esc(grade(s.grade))}</td><td>${esc(s.teacher || '')}${s.board && s.board !== s.teacher ? `<small>board: ${esc(s.board)}</small>` : ''}</td>
       <td>${arch ? `<span class="tag gray">Inactive</span><small>${s.archived_at ? nice(new Date(s.archived_at).toLocaleDateString('en-CA')) : ''}</small>` : s.today ? `<span class="tag ${TODAY_TAG[s.today][1]}">${TODAY_TAG[s.today][0]}</span>` : ''}</td>
       <td>${arch ? '' : esc(way)}</td></tr>`;
-  }).join('') || '<tr><td colspan="5" class="empty">No students.</td></tr>';
+  }).join('') || `<tr><td colspan="5" class="empty">${q.length ? 'No students match your search.' : 'No students.'}</td></tr>`;
 }
+$('#sl-q').addEventListener('input', debounce(drawStudentList, 150));
+$('#sl-q').addEventListener('keydown', e => { if (e.key === 'Enter') { const first = $('#sl-rows tr[data-id]'); if (first) location.hash = '#student?id=' + first.dataset.id; } });
 $('#sl-rows').addEventListener('click', e => { const tr = e.target.closest('tr[data-id]'); if (tr && !e.target.closest('a')) location.hash = '#student?id=' + tr.dataset.id; });
 $('#sl-az').addEventListener('click', e => { const a = e.target.closest('[data-l]'); if (!a) return; e.preventDefault(); document.getElementById('sl-' + a.dataset.l)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
 ['#sl-grade', '#sl-teacher'].forEach(x => $(x).addEventListener('change', drawStudentList));
