@@ -84,9 +84,27 @@ async function loadStudent(id) {
     + hist('Dismissal Changes', s.changes, c => `<div class="row"><div class="txt"><b>${esc(c.new_method)}${c.new_details ? ' — ' + esc(c.new_details) : ''}</b><p>${when(c)} · ${c.period} · ${esc(c.submitted_name || '')}${c.pickup_person ? ' · with ' + esc(c.pickup_person) : ''}</p></div><span class="tag ${TS[c.status][1]}">${TS[c.status][0]}</span></div>`)
     + hist('Late Sign-Ins & Early Check-Outs', s.signins, r => `<div class="row"><div class="txt"><b>${KIND[r.kind][0]} · ${stamp(r.created_at)}</b><p>${esc(r.person_name || '')} · ${esc(r.reason || '')}</p></div>${r.facts_done ? '<span class="tag ok">In FACTS</span>' : ''}</div>`)
     + hist('Pick-Up List Changes', s.pickup_requests, r => `<div class="row"><div class="txt"><b>${r.action === 'add' ? 'Added' : 'Removed'} ${esc(r.name)}</b><p>${r.source === 'office' ? 'Office' : 'Parent'} · ${stamp(r.created_at)}</p></div>${r.sis_done ? '<span class="tag ok">In FACTS</span>' : ''}</div>`)
-    + hist('Attendance (Last 30 School Days)', s.attendance, a => `<div class="row"><div class="txt"><b>${nice(a.date)}</b></div><span class="tag ${a.status === 'P' ? 'ok' : ''}">${a.status === 'P' ? 'Present' : 'Absent'}</span></div>`)
+    + hist('Attendance (Last 30 School Days)', s.attendance, a => {
+        const label = a.status === 'P' ? 'Present' : a.status === 'A' ? 'Absent' : 'Not in yet';
+        const fixed = a.override ? `<p>Changed by office${a.facts ? ` (FACTS said ${a.facts === 'P' ? 'present' : 'absent'})` : ''} · ${esc((a.by || '').split('@')[0])} · ${stamp(a.at)}${a.note ? ' · ' + esc(a.note) : ''}</p>` : '';
+        const flip = a.status === 'A' ? 'present' : 'absent';
+        return `<div class="row"><div class="txt"><b>${nice(a.date)}${a.date === TODAY ? ' (today)' : ''}</b>${fixed}</div>
+          <span class="tag ${a.status === 'P' ? 'ok' : a.status === 'A' ? '' : 'gray'}">${label}</span>
+          ${arch ? '' : `<span class="actions" style="margin:0"><button class="btn ghost sm" data-att="${a.date}:${flip}">Mark ${flip === 'present' ? 'Present' : 'Absent'}</button>${a.override ? `<button class="btn ghost sm" data-att="${a.date}:">Undo</button>` : ''}</span>`}</div>`; })
     + hist('Afternoon Dismissals', s.dismissals, d => `<div class="row"><div class="txt"><b>${nice(d.day)}</b><p>${d.kind === 'bus' ? 'Bus ' + esc(d.bus || '') : 'Car line · ' + esc(d.person || '')} · ${new Date(d.at).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' })}</p></div></div>`);
 }
+// Office correction of attendance (FACTS synced it wrong). Today's change updates the boards, car line, bus and afterschool care right away.
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-att]'); if (!b || !$('#st-right').contains(b)) return;
+  const [date, status] = b.dataset.att.split(':'), id = new URLSearchParams(location.hash.split('?')[1] || '').get('id');
+  let note = null;
+  if (status) { note = prompt(`Mark ${status} for ${nice(date)}? Reason (optional):`, ''); if (note === null) return; }
+  else if (!confirm(`Go back to what FACTS says for ${nice(date)}?`)) return;
+  b.disabled = true;
+  try { await call('staff_attendance_set', { p_student: +id, p_date: date, p_status: status || null, p_note: note });
+    toast(status ? `Marked ${status}${date === TODAY ? ' — boards update within a minute' : ''}` : 'Back to the FACTS attendance'); loadStudent(id); }
+  catch (x) { toast(emsg(x)); b.disabled = false; }
+});
 window.loadStudent = loadStudent;
 
 // ---------- buses & car line ----------
