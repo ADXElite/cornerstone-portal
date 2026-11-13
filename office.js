@@ -411,7 +411,7 @@ async function loadSettings() {
   });
   $$('#staff-list [data-phone]').forEach(b => b.onclick = async () => {
     const st = staff.find(x => x.email === b.dataset.phone);
-    const ph = prompt(`Cell phone for ${st.name || st.email} (gets a text if a BANNED person uses the kiosk). Leave blank to remove.`, st.phone ? fmtPhone(st.phone) : '');
+    const ph = prompt(`Cell phone for ${st.name || st.email} (optional). Leave blank to remove.`, st.phone ? fmtPhone(st.phone) : '');
     if (ph === null) return;
     try { await call('staff_staff_save', { p_email: st.email, p_name: null, p_active: st.active, p_phone: ph.trim() }); toast('Phone saved'); loadSettings(); } catch (e) { $('#sa-err').textContent = emsg(e); }
   });
