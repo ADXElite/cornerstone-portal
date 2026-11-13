@@ -50,28 +50,29 @@ module.exports = async (req, res) => {
   const ip = C.clientIp(req);
   // On campus: the short scan key works. Off campus (e.g. Google Apps Script for scan-to-email): only the long remote key works.
   const campus = allowedIps().includes(ip);
-  if (req.method === 'GET') return campus ? C.send(res, 200, { ok: true, ready: true, note: 'POST the scanned PDF to this address.' }) : C.send(res, 404, { error: 'not_found' });
-  if (req.method !== 'POST' && req.method !== 'PUT') return C.send(res, 405, { error: 'method' });
+  const done = (code, body) => { console.log(`[scan] ${req.method} from ${ip}${campus ? ' (campus)' : ''} ct=${req.headers['content-type'] || '-'} len=${req.headers['content-length'] || '-'} -> ${code} ${JSON.stringify(body)}`); return C.send(res, code, body); };
+  if (req.method === 'GET') return campus ? done(200, { ok: true, ready: true, note: 'POST the scanned PDF to this address.' }) : done(404, { error: 'not_found' });
+  if (req.method !== 'POST' && req.method !== 'PUT') return done(405, { error: 'method' });
   const key = String(req.query.key || '').trim();
-  if (!key) return C.send(res, 404, { error: 'not_found' });
+  if (!key) return done(404, { error: 'not_found' });
   try {
     const ctype = String(req.headers['content-type'] || '').toLowerCase();
     let buf = await rawBody(req), name = String(req.headers['x-file-name'] || req.query.name || ''), mime = '';
-    if (!buf) return C.send(res, 400, { error: 'send_the_file_as_pdf_or_multipart' });
+    if (!buf) return done(400, { error: 'send_the_file_as_pdf_or_multipart' });
     const bm = /boundary=(?:"([^"]+)"|([^;\s]+))/i.exec(String(req.headers['content-type'] || '')); // keep the boundary's case
     if (ctype.startsWith('multipart/') && bm) {
       const part = firstFilePart(buf, bm[1] || bm[2]);
-      if (!part) return C.send(res, 400, { error: 'no_file_in_upload' });
+      if (!part) return done(400, { error: 'no_file_in_upload' });
       buf = part.data; name = part.name || name; mime = part.mime;
     } else mime = ctype.split(';')[0].trim();
     const real = sniff(buf);
     if (real) mime = real;
-    if (!['application/pdf', 'image/jpeg', 'image/png', 'image/tiff'].includes(mime)) return C.send(res, 415, { error: 'pdf_or_image_only' });
-    if (buf.length > MAX) return C.send(res, 413, { error: 'too_big' });
+    if (!['application/pdf', 'image/jpeg', 'image/png', 'image/tiff'].includes(mime)) return done(415, { error: 'pdf_or_image_only' });
+    if (buf.length > MAX) return done(413, { error: 'too_big' });
     const r = await C.rpc('portal_scan_add', { p_scan_key: key, p_name: name.slice(0, 120), p_mime: mime, p_b64: buf.toString('base64'), p_ip: ip, p_campus: campus });
-    return C.send(res, 200, { ok: true, id: r.id });
+    return done(200, { ok: true, id: r.id });
   } catch (e) {
-    if (e.message === 'bad_scan_key') return C.send(res, 404, { error: 'not_found' });
-    return C.fail(res, e);
+    if (e.message === 'bad_scan_key') return done(404, { error: 'not_found' });
+    console.log(`[scan] error from ${ip}: ${e.message}`); return C.fail(res, e);
   }
 };
