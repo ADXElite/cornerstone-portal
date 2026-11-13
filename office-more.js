@@ -173,7 +173,7 @@ function drawPickChanges() {
   const q = $('#pk-q').value.trim().toLowerCase();
   const rows = PK.map((r, i) => ({ r, i })).filter(({ r }) => !q || [r.student, r.first_name, r.last_name, r.phone, r.email].join(' ').toLowerCase().includes(q));
   $('#pk-count').textContent = `${rows.length} change${rows.length === 1 ? '' : 's'}`;
-  $('#pk-rows').innerHTML = rows.map(({ r, i }) => `<tr class="${r.sis_done ? 'done' : ''}">
+  $('#pk-rows').innerHTML = rows.map(({ r, i }) => `<tr class="${r.sis_done ? 'is-done' : ''}">
     <td><b>${esc(r.student)}</b><small>Gr ${esc(grade(r.grade))} · ${esc(r.teacher || '')}</small></td>
     <td><span class="tag ${r.action === 'add' ? 'ok' : ''}">${r.action === 'add' ? 'Add' : 'Remove'}</span>${pickState(r)}</td>
     <td><b>${esc([r.first_name, r.last_name].filter(Boolean).join(' '))}${r.pin && r.action === 'add' ? ` <span class="pin sm">${r.pin}</span>` : ''}</b><small>${esc(r.relationship || '')}</small></td>
@@ -187,7 +187,7 @@ $('#pk-q').addEventListener('input', debounce(drawPickChanges, 200));
 $('#pk-rows').addEventListener('change', async e => {
   const cb = e.target.closest('[data-pk]'); if (!cb) return;
   const r = PK[+cb.dataset.pk], on = cb.checked; cb.disabled = true;
-  try { await call('staff_pickup_sis', { p_id: r.id, p_done: on }); r.sis_done = on; cb.closest('tr').classList.toggle('done', on); refreshBadges(); }
+  try { await call('staff_pickup_sis', { p_id: r.id, p_done: on }); r.sis_done = on; cb.closest('tr').classList.toggle('is-done', on); refreshBadges(); }
   catch (x) { cb.checked = !on; toast(emsg(x)); }
   cb.disabled = false;
 });

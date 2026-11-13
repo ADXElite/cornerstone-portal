@@ -170,13 +170,13 @@ function tRow(c, i) {
   const [l, k] = TS[c.status];
   const isoT = ((D(TODAY).getDay() + 6) % 7) + 1;
   const onToday = c.status !== 'cancelled' && c.start_date <= TODAY && (c.change_type === 'weekly' ? (!c.end_date || c.end_date >= TODAY) && (c.weekdays || []).includes(isoT) && weeksBetween(c.start_date, TODAY) % (c.week_interval || 1) === 0 : (c.end_date || '9999') >= TODAY);
-  return `<tr class="click ${onToday ? 'today' : ''}" data-i="${i}">
+  return `<tr class="click${onToday ? ' is-today' : ''}${c.status !== 'new' ? ' is-done' : ''}" data-i="${i}">
     <td><b>${esc(c.student)}</b><small>Gr ${esc(grade(c.grade))} · ${esc(c.teacher || '')}</small></td>
     <td>${when(c)}<small>${c.period === 'afternoon' ? 'Afternoon' : 'Morning'} · ${TYPE[c.change_type]}</small></td>
     <td><small>${esc(c.current_method || '—')}</small><b>→ ${esc(c.new_method)}</b>${c.new_details && c.new_details !== 'Not on pickup list' ? `<small>${esc(c.new_details)}</small>` : ''}</td>
     <td>${c.pickup_person ? `<b>${esc(c.pickup_person)}${c.pickup_pin ? ` <span class="pin sm">${c.pickup_pin}</span>` : ''}</b><small>${esc([c.pickup_relationship, c.pickup_phone].filter(Boolean).join(' · '))}${c.new_details === 'Not on pickup list' ? ' · <b style="display:inline;color:var(--red)">Not on pickup list</b>' : ''}</small>` : '—'}${c.comments ? `<small>“${esc(c.comments)}”</small>` : ''}</td>
     <td>${esc(c.submitted_name || '')}<small>${esc(c.submitted_by)} · ${stamp(c.created_at)}</small></td>
-    <td><span class="tag ${k}">${l}</span>${c.processed_by ? `<small>${esc(c.processed_by)}</small>` : ''}</td></tr>`;
+    <td><span class="tag ${k}"${c.processed_by ? ` title="${esc(c.processed_by)} · ${stamp(c.processed_at)}"` : ''}>${l}</span></td></tr>`;
 }
 function bindTRows(tbody, rows, reload) {
   tbody.onclick = e => { const tr = e.target.closest('tr[data-i]'); if (tr) openChange(rows[+tr.dataset.i], reload); };

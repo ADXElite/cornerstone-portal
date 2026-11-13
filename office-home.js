@@ -33,7 +33,7 @@ function drawHome() {
   const todo = a => a.filter(x => x.sis_done === false || x.facts_done === false || x.status === 'new').length;
 
   $('#c-trans').textContent = `(${H.trans.length})`;
-  $('#h-trans').innerHTML = H.trans.map((c, i) => `<tr class="click ${c.status !== 'new' ? 'done' : ''}" data-row="trans:${i}">
+  $('#h-trans').innerHTML = H.trans.map((c, i) => `<tr class="click ${c.status !== 'new' ? 'is-done' : ''}" data-row="trans:${i}">
     <td><b>${esc(c.student)}</b><small>Gr ${esc(grade(c.grade))} · ${esc(c.teacher || '')}</small></td>
     <td>${when(c)}<small>${c.period === 'afternoon' ? 'Afternoon' : 'Morning'} · ${TYPE[c.change_type]}</small></td>
     <td><small>${esc(c.current_method || '—')}</small><b>→ ${esc(c.new_method)}</b>${c.new_details && c.new_details !== 'Not on pickup list' ? `<small>${esc(c.new_details)}</small>` : ''}</td>
@@ -41,7 +41,7 @@ function drawHome() {
     <td>${src(stamp(c.created_at), c.submitted_name)}</td>${fx('trans', i, c.status !== 'new', c.processed_by, c.processed_at)}</tr>`).join('') || empty(6, none);
 
   $('#c-pick').textContent = `(${H.pick.length})`;
-  $('#h-pick').innerHTML = H.pick.map((r, i) => `<tr class="${r.sis_done ? 'done' : ''}">
+  $('#h-pick').innerHTML = H.pick.map((r, i) => `<tr class="${r.sis_done ? 'is-done' : ''}">
     <td><b>${esc(r.student)}</b><small>Gr ${esc(grade(r.grade))} · ${esc(r.teacher || '')}</small></td>
     <td><span class="tag ${r.action === 'add' ? 'ok' : ''}">${r.action === 'add' ? 'Add' : 'Remove'}</span>${pickState(r)}</td>
     <td><b>${esc([r.first_name, r.last_name].filter(Boolean).join(' '))}${r.pin && r.action === 'add' ? ` <span class="pin sm">${r.pin}</span>` : ''}</b><small>${esc(r.relationship || '')}</small></td>
@@ -50,12 +50,12 @@ function drawHome() {
 
   $('#h-other-wrap').hidden = !H.other.length;
   $('#c-other').textContent = `(${H.other.length})`;
-  $('#h-other').innerHTML = H.other.map((o, i) => `<tr class="${o.sis_done ? 'done' : ''}"><td><b>${esc(o.student)}</b><small>Gr ${esc(grade(o.grade))}</small></td>
+  $('#h-other').innerHTML = H.other.map((o, i) => `<tr class="${o.sis_done ? 'is-done' : ''}"><td><b>${esc(o.student)}</b><small>Gr ${esc(grade(o.grade))}</small></td>
     <td style="white-space:pre-wrap">${esc(o.details)}</td><td>${src(stamp(o.created_at), o.created_by)}</td>${fx('other', i, o.sis_done, o.sis_by, o.sis_at)}</tr>`).join('');
 
   $('#h-sio').innerHTML = H.sio.map((r, i) => {
     const multi = all; const d = new Date(r.created_at).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-    return `<tr class="${r.facts_done ? 'done' : ''}">
+    return `<tr class="${r.facts_done ? 'is-done' : ''}">
     <td><b>${tm(r.created_at)}</b><small>${multi || d !== TODAY ? nice(d) + ' · ' : ''}<span class="tag ${KIND[r.kind][1]}" style="margin-top:4px">${KIND[r.kind][0]}</span></small></td>
     <td><b>${esc(r.student)}</b><small>Gr ${esc(grade(r.grade))} · ${esc(r.teacher || '')}</small></td>
     <td>${r.method === 'pin' || r.method === 'office' ? `<b>${esc(r.person_name)}${r.pin ? ` <span class="pin sm">${esc(r.pin)}</span>` : ''}</b><small>${esc(r.relationship || '')}${r.method === 'office' ? ' · entered by office' : ''}</small>` : `<b>Student (Self)</b><small>${HOW[r.method]}</small>`}</td>
@@ -63,7 +63,7 @@ function drawHome() {
     <td><button class="btn ghost sm" data-print="${i}">Print</button></td>${fx('sio', i, r.facts_done, r.facts_by, r.facts_at)}</tr>`; }).join('') || empty(6, none);
 
   const NS = { pending: ['Pending', 'warn'], approved: ['Approved', 'ok'], rejected: ['Rejected', ''] };
-  $('#h-notes').innerHTML = H.notes.map((n, i) => `<tr class="${n.sis_done ? 'done' : ''}">
+  $('#h-notes').innerHTML = H.notes.map((n, i) => `<tr class="${n.sis_done ? 'is-done' : ''}">
     <td><b>${esc(n.student)}</b><small>ID ${n.student_id} · Gr ${esc(grade(n.grade))}</small></td>
     <td>${n.kind === 'doctor' ? `<span class="tag">Doctor</span><small>${n.files} file${n.files === 1 ? '' : 's'}</small>` : `<span class="tag gray">Parent</span><small>${n.approved_parent_notes} of ${LIMIT} approved</small>`}</td>
     <td>${nice(n.absent_date)}${n.absent_end ? `<small>through ${nice(n.absent_end)}</small>` : ''}</td>
@@ -87,7 +87,7 @@ $('#p-dash').addEventListener('change', async e => {
       if (kind === 'other') await call('staff_other_sis', { p_id: H.other[i].id, p_done: on });
       if (kind === 'sio') await call('staff_signin_facts', { p_id: H.sio[i].id, p_done: on });
       if (kind === 'note') await call('staff_note_sis', { p_id: H.notes[i].id, p_done: on });
-      cb.closest('tr').classList.toggle('done', on);
+      cb.closest('tr').classList.toggle('is-done', on);
       clearTimeout(homeLoad.t); homeLoad.t = setTimeout(() => homeLoad(true), 1500);
     } catch (x) { cb.checked = !on; toast(emsg(x)); }
     cb.disabled = false;
