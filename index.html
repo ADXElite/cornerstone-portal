@@ -227,12 +227,22 @@
           <label><input type="radio" name="t-type" value="today"><span>Today Only</span></label>
           <label><input type="radio" name="t-type" value="one_day" checked><span>Another Day</span></label>
           <label><input type="radio" name="t-type" value="date_range"><span>Date Range</span></label>
+          <label><input type="radio" name="t-type" value="weekly"><span>Every Week</span></label>
           <label><input type="radio" name="t-type" value="permanent"><span>Permanent</span></label>
         </div>
+        <fieldset id="t-days" class="days" hidden>
+          <legend>Which days each week?</legend>
+          <label><input type="checkbox" value="1"><span>Mon</span></label>
+          <label><input type="checkbox" value="2"><span>Tue</span></label>
+          <label><input type="checkbox" value="3"><span>Wed</span></label>
+          <label><input type="checkbox" value="4"><span>Thu</span></label>
+          <label><input type="checkbox" value="5"><span>Fri</span></label>
+        </fieldset>
         <div class="two">
           <label id="t-start-l">Date <input type="date" id="t-start"></label>
-          <label id="t-end-l" hidden>Through <input type="date" id="t-end"></label>
+          <label id="t-end-l" hidden><span id="t-end-t">Through </span><input type="date" id="t-end"></label>
         </div>
+        <p class="muted small" id="t-weekly-note" hidden style="margin:0">On the days you pick, this replaces your student's usual dismissal. Other days stay the same. Leave "Until" blank to keep it going.</p>
       </div>
       <div class="card form">
         <div class="step"><span>3</span>New Way Home</div>

@@ -199,3 +199,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
 /* Parent sign-in: how it works */
 .how ol{margin:0;padding-left:1.25em;display:grid;gap:8px}.how ul{margin:6px 0 0;padding-left:1.1em;display:grid;gap:4px}.how li{line-height:1.4}
 @media (min-width:640px){.staff-grid{grid-template-columns:repeat(2,1fr)}}
+/* weekday chips (weekly dismissal changes) */
+.days{border:0;padding:0;margin:4px 0 2px;display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.days legend{font-weight:700;font-size:.92rem;margin-bottom:6px;padding:0}
+.days label{flex:1 1 52px;position:relative}
+.days input{position:absolute;opacity:0;pointer-events:none}
+.days span{display:block;text-align:center;padding:10px 4px;border:1.5px solid var(--line);border-radius:10px;font-weight:700;cursor:pointer;background:var(--surface);color:var(--ink)}
+.days input:checked+span{background:var(--red);color:var(--on-red);border-color:var(--red)}
+.days input:focus-visible+span{outline:2px solid var(--red);outline-offset:2px}

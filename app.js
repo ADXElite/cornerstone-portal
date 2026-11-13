@@ -27,6 +27,7 @@ const ERR = { need_file: "Add a photo or PDF of the doctor's note.",
   missing_fields: 'Please fill in every required field, including your signature.',
   date_too_far: 'That date is too far in the future.', date_past: 'That date has already passed.',
   bad_range: 'Check the dates — the last day must be on or after the first day.',
+  need_weekdays: 'Pick at least one day of the week.',
   after_cutoff: 'Same-day dismissal changes must be submitted by 1:00 PM. Please call the front office at (904) 730-5500.',
   need_driver: "Enter the student driver's full name.",
   need_pickup: 'Choose who is picking up.', need_bus: 'Choose a bus stop.', bad_method: 'Choose a new transportation method.',
@@ -161,7 +162,7 @@ function renderHome() {
     || '<div class="empty">No pickup people on file.</div>';
   box.innerHTML = HOME.students.map(s => {
     const t = transportLines(s);
-    const up = s.upcoming_changes.map(c => `<span class="tag ${c.status === 'processed' ? 'ok' : 'warn'}">${c.change_type === 'permanent' ? 'From ' : ''}${nice(c.start_date)}${c.change_type === 'date_range' ? '–' + nice(c.end_date) : ''}: ${esc(c.new_method)}</span>`).join(' ');
+    const up = s.upcoming_changes.map(c => `<span class="tag ${c.status === 'processed' ? 'ok' : 'warn'}">${c.change_type === 'weekly' ? esc(everyDays(c.weekdays)) : `${c.change_type === 'permanent' ? 'From ' : ''}${nice(c.start_date)}${c.change_type === 'date_range' ? '–' + nice(c.end_date) : ''}`}: ${esc(c.new_method)}</span>`).join(' ');
     return `<article class="stu">
       <div class="stu-h"><div class="av">${esc((s.first_name || '?')[0])}</div><div><b>${esc(s.first_name)} ${esc(s.last_name)}</b><small>${esc(gradeLabel(s.grade))}${s.teacher ? ' · ' + esc(s.teacher) : ''}</small></div></div>
       <dl class="kv">
@@ -347,6 +348,11 @@ const PM = [
   ['Student Walker', 'Walks home'], ['Student Driver and/or Passenger', 'Drives or rides with a student driver'], ['City Bus Rider', 'Rides the city bus']];
 const afterCut = () => HOME.now_et >= HOME.cutoff || isWeekend(HOME.today);
 
+// "Every Friday" / "Every Mon & Wed" — weekly changes use ISO day numbers 1 (Mon) … 5 (Fri).
+const DAYN = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], DAYS3 = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+const everyDays = d => 'Every ' + ((d || []).length === 1 ? DAYN[d[0]] : (d || []).map(x => DAYS3[x]).join(' & '));
+const changeWhen = c => c.change_type === 'weekly' ? `${everyDays(c.weekdays)} from ${nice(c.start_date)}${c.end_date ? ' to ' + nice(c.end_date) : ''}`
+  : c.change_type === 'date_range' ? `${nice(c.start_date)} – ${nice(c.end_date)}` : c.change_type === 'permanent' ? `From ${nice(c.start_date)} (permanent)` : nice(c.start_date);
 function renderTrans() {
   $('#t-cutnote').innerHTML = afterCut()
     ? `<b class="t">It's past ${fmt12(HOME.cutoff)} — changes for today can't be made here.</b><p>You can still submit changes for upcoming days.</p>`
@@ -376,8 +382,10 @@ function syncTrans() {
   today.disabled = afterCut();
   if (today.disabled && type === 'today') { $('input[name=t-type][value=one_day]').checked = true; return syncTrans(); }
   $('#t-start-l').hidden = type === 'today';
-  $('#t-start-l').firstChild.textContent = type === 'date_range' ? 'From ' : type === 'permanent' ? 'Starting ' : 'Date ';
-  $('#t-end-l').hidden = type !== 'date_range';
+  $('#t-start-l').firstChild.textContent = type === 'date_range' ? 'From ' : type === 'permanent' || type === 'weekly' ? 'Starting ' : 'Date ';
+  $('#t-end-l').hidden = type !== 'date_range' && type !== 'weekly';
+  $('#t-end-t').textContent = type === 'weekly' ? 'Until (optional) ' : 'Through ';
+  $('#t-days').hidden = $('#t-weekly-note').hidden = type !== 'weekly';
   const min = type === 'today' ? HOME.today : afterCut() ? addDays(HOME.today, 1) : HOME.today;
   $('#t-start').min = min; if ($('#t-start').value < min) $('#t-start').value = isWeekend(min) ? nextSchoolDay(min) : min;
   $('#t-end').min = $('#t-start').value;
@@ -408,6 +416,9 @@ $('#f-trans').addEventListener('submit', async e => {
   if (!kids.length) return err.textContent = 'Choose at least one student.';
   if (!start) return err.textContent = 'Choose a date.';
   if (type === 'date_range' && (!$('#t-end').value || $('#t-end').value < start)) return err.textContent = ERR.bad_range;
+  const weekdays = type === 'weekly' ? $$('#t-days input:checked').map(i => +i.value) : [];
+  if (type === 'weekly' && !weekdays.length) return err.textContent = ERR.need_weekdays;
+  if (type === 'weekly' && $('#t-end').value && $('#t-end').value < start) return err.textContent = ERR.bad_range;
   if (!method) return err.textContent = ERR.bad_method;
   let details = '', person = '', rel = '', phone = '';
   if (method === 'Bus Rider') { details = $('#t-stop').value; if (!details) return err.textContent = ERR.need_bus; }
@@ -423,7 +434,7 @@ $('#f-trans').addEventListener('submit', async e => {
   for (const s of kids) {
     try {
       const r = await api('/api/parent', { action: 'transport', student_id: s.student_id, period, change_type: type, start_date: start,
-        end_date: type === 'date_range' ? $('#t-end').value : '', new_method: method, new_details: details,
+        end_date: type === 'date_range' || type === 'weekly' ? $('#t-end').value : '', weekdays, new_method: method, new_details: details,
         pickup_person: person, pickup_relationship: rel, pickup_phone: phone, comments: $('#t-comments').value });
       if (!r.alerted) alertFail = true;
       done.push(s.first_name);
@@ -432,7 +443,8 @@ $('#f-trans').addEventListener('submit', async e => {
   busy(btn, false);
   if (failed.length) err.textContent = failed.join(' ');
   if (done.length) {
-    const when = type === 'date_range' ? `${nice(start)} – ${nice(endVal)}` : type === 'permanent' ? `starting ${nice(start)}` : niceLong(start);
+    const when = type === 'weekly' ? `${everyDays(weekdays).toLowerCase()} starting ${nice(start)}${endVal ? ' until ' + nice(endVal) : ''}`
+      : type === 'date_range' ? `${nice(start)} – ${nice(endVal)}` : type === 'permanent' ? `starting ${nice(start)}` : niceLong(start);
     $('#f-trans').reset(); $('#t-start').value = '';
     await loadHome().catch(() => {});
     finish('Change Submitted', `${done.join(' and ')}: ${method}${person ? ' with ' + person : ''} — ${when}. ${alertFail ? 'Please also call the front office at (904) 730-5500 to confirm.' : 'The front office has been notified.'}`, failed.length);
@@ -570,7 +582,7 @@ async function loadHistory() {
     }).join('') || '<div class="empty">No notes yet.</div>';
     $('#hi-changes').innerHTML = h.changes.map(c => {
       const [l, k] = STATUS[c.status];
-      const when = c.change_type === 'date_range' ? `${nice(c.start_date)} – ${nice(c.end_date)}` : c.change_type === 'permanent' ? `From ${nice(c.start_date)} (permanent)` : nice(c.start_date);
+      const when = changeWhen(c);
       return `<div class="row"><div class="txt"><b>${esc(c.student)} — ${esc(c.new_method)}</b><p>${when} · Afternoon${c.pickup_person ? ' · ' + esc(c.pickup_person) : ''}${c.new_details && !c.pickup_person ? ' · ' + esc(c.new_details) : ''}</p></div><span class="tag ${k}">${l}</span></div>`;
     }).join('') || '<div class="empty">No dismissal changes yet.</div>';
   } catch (x) { if (x.status === 401) return signedOut(); $('#hi-notes').innerHTML = `<div class="empty">${msg(x.message)}</div>`; }
