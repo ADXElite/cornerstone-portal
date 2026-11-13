@@ -79,6 +79,8 @@ async function loadStudent(id) {
     try { await call('staff_ban_clear', { p_id: +b.dataset.banClear }); toast('Ban lifted'); loadStudent(String(s.student_id)); } catch (x) { toast(emsg(x)); }
   });
   const hist = (title, rows, fn) => `<details class="card" ${rows.length ? 'open' : ''}><summary><b class="t">${title} (${rows.length})</b></summary><div class="list" style="margin-top:8px">${rows.map(fn).join('') || '<div class="empty">None.</div>'}</div></details>`;
+  // Dismissal-change calendar (right after the Today card).
+  if (!arch) { const tc = $('#st-left .card'); (tc || $('#st-left')).insertAdjacentHTML(tc ? 'afterend' : 'afterbegin', '<div class="card" id="st-cal"></div>'); CAL = { id: s.student_id, m: TODAY.slice(0, 7) }; drawCal(); }
   $('#st-right').innerHTML =
     hist('Excused Notes', s.notes, n => `<div class="row"><div class="txt"><b>${n.kind === 'doctor' ? "Doctor's note" : 'Parent note'} · ${nice(n.absent_date)}${n.absent_end ? ' – ' + nice(n.absent_end) : ''}</b><p>${esc(n.reason || '')} · ${stamp(n.created_at)}</p></div><span class="tag ${STATUS_NOTE[n.status][1]}">${STATUS_NOTE[n.status][0]}</span></div>`)
     + hist('Dismissal Changes', s.changes, c => `<div class="row"><div class="txt"><b>${esc(c.new_method)}${c.new_details ? ' — ' + esc(c.new_details) : ''}</b><p>${when(c)} · ${c.period} · ${esc(c.submitted_name || '')}${c.pickup_person ? ' · with ' + esc(c.pickup_person) : ''}</p></div><span class="tag ${TS[c.status][1]}">${TS[c.status][0]}</span></div>`)
@@ -93,6 +95,37 @@ async function loadStudent(id) {
           ${arch ? '' : `<span class="actions" style="margin:0"><button class="btn ghost sm" data-att="${a.date}:${flip}">Mark ${flip === 'present' ? 'Present' : 'Absent'}</button>${a.override ? `<button class="btn ghost sm" data-att="${a.date}:">Undo</button>` : ''}</span>`}</div>`; })
     + hist('Afternoon Dismissals', s.dismissals, d => `<div class="row"><div class="txt"><b>${nice(d.day)}</b><p>${d.kind === 'bus' ? 'Bus ' + esc(d.bus || '') : 'Car line · ' + esc(d.person || '')} · ${new Date(d.at).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' })}</p></div></div>`);
 }
+// ---------- dismissal change calendar ----------
+let CAL = null;
+const CAL_CLS = m => m === 'Car Rider' ? 'car' : m === 'Bus Rider' ? 'bus' : /Extended Care/.test(m || '') ? 'care' : 'oth';
+const CAL_LBL = m => m === 'Afternoon Extended Care' ? 'Afterschool Care' : m;
+async function drawCal() {
+  const box = $('#st-cal'); if (!box || !CAL) return;
+  const [y, mo] = CAL.m.split('-').map(Number);
+  const first = new Date(y, mo - 1, 1), last = new Date(y, mo, 0);
+  const iso = d => d.toLocaleDateString('en-CA');
+  box.innerHTML = `<div class="calh"><b class="t" style="margin:0">Dismissal Changes</b><span class="calnav"><button class="btn ghost sm" data-cm="-1" aria-label="Previous month">‹</button>
+      <b>${first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</b><button class="btn ghost sm" data-cm="1" aria-label="Next month">›</button></span></div><p class="muted small">Loading…</p>`;
+  let days = []; try { days = await call('staff_change_calendar', { p_student: CAL.id, p_from: iso(first), p_to: iso(last) }); } catch (x) { box.querySelector('p').textContent = emsg(x); return; }
+  if (!CAL || box !== $('#st-cal')) return;
+  const by = Object.fromEntries(days.map(d => [d.date, d]));
+  const cells = []; for (let i = 0; i < (first.getDay() + 6) % 7; i++) cells.push('<span class="cd pad"></span>');
+  for (let d = 1; d <= last.getDate(); d++) {
+    const dt = new Date(y, mo - 1, d), k = iso(dt), wk = dt.getDay() === 0 || dt.getDay() === 6, c = by[k];
+    cells.push(`<button type="button" class="cd${wk ? ' wk' : ''}${c ? ' ' + CAL_CLS(c.method) : ''}${k === TODAY ? ' td' : ''}" ${c ? `data-cd="${k}" title="${esc(CAL_LBL(c.method))}"` : 'disabled'}>${d}</button>`);
+  }
+  const used = [...new Set(days.map(d => d.method))];
+  box.innerHTML = box.querySelector('.calh').outerHTML + `<div class="calg"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>${cells.join('')}</div>
+    <p class="small cal-key">${used.length ? used.map(m => `<span class="cd ${CAL_CLS(m)}"></span>${esc(CAL_LBL(m))}`).join(' ') : '<span class="muted">No dismissal changes this month — FACTS transportation every day.</span>'}</p>
+    <p class="small" id="cal-det" style="margin:0"></p>`;
+  box.querySelectorAll('[data-cd]').forEach(b => b.onclick = () => {
+    const c = by[b.dataset.cd];
+    box.querySelectorAll('.cd.sel').forEach(x => x.classList.remove('sel')); b.classList.add('sel');
+    $('#cal-det').innerHTML = `<b>${nice(c.date)}:</b> ${esc(CAL_LBL(c.method))}${c.details ? ' — ' + esc(c.details) : ''}${c.pickup ? ' · with ' + esc(c.pickup) : ''}<br><span class="muted">${esc(when({ change_type: c.type, start_date: c.date, end_date: null, weekdays: c.weekdays, week_interval: c.week_interval }).replace(/ · from.*$/, ''))} · ${TYPE[c.type]} · ${c.status === 'processed' ? 'Processed' : 'Not processed yet'}${c.by ? ' · ' + esc(c.by) : ''}</span>`;
+  });
+  box.querySelectorAll('[data-cm]').forEach(b => b.onclick = () => { const d = new Date(y, mo - 1 + +b.dataset.cm, 1); CAL.m = iso(d).slice(0, 7); drawCal(); });
+}
+
 // Office correction of attendance (FACTS synced it wrong). Today's change updates the boards, car line, bus and afterschool care right away.
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-att]'); if (!b || !$('#st-right').contains(b)) return;

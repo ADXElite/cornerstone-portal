@@ -122,6 +122,19 @@ td.c small{text-align:center}
 .sem-row{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:end}
 @media (max-width:640px){.sem-row{grid-template-columns:1fr 1fr}}
 .cnt{font-weight:700;color:var(--muted);font-size:.9rem}
+/* student page: dismissal-change calendar */
+#st-cal{gap:8px}
+.calh{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.calnav{display:flex;align-items:center;gap:6px}.calnav b{min-width:9.5em;text-align:center;font-size:.95rem}
+.calg{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center;max-width:320px}
+.calg>span{font-size:.72rem;font-weight:800;color:var(--muted)}
+.cd{aspect-ratio:1;display:grid;place-items:center;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:.85rem;font-weight:700;padding:0}
+.cd.pad{border:0;background:none}.cd.wk{opacity:.35}.cd:disabled{cursor:default}
+.cd.td{box-shadow:inset 0 0 0 2px var(--ink)}.cd.sel{outline:3px solid var(--ink);outline-offset:1px}
+.cd.car{background:#E4010D;border-color:#E4010D;color:#fff}.cd.bus{background:#F2B705;border-color:#D9A300;color:#141213}
+.cd.care{background:#6D3FC0;border-color:#6D3FC0;color:#fff}.cd.oth{background:#1F7A4D;border-color:#1F7A4D;color:#fff}
+.cd[data-cd]{cursor:pointer}
+.cal-key{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0}.cal-key .cd{width:14px;height:14px;aspect-ratio:auto;display:inline-block;vertical-align:-2px;margin-right:-6px}
 </style>
 </head>
 <body>
