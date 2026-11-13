@@ -609,7 +609,7 @@ $('#f-staff').addEventListener('submit', async e => {
     if (!roles.length) throw new Error('Choose at least one role.');
     await staffUsers({ action: 'create', email: $('#sa-email').value, name: $('#sa-name').value, phone: $('#sa-phone').value, roles, password: $('#sa-pass').value });
     const all = roles.includes('admin') ? ['office', 'carline', 'bus', 'care'] : [...new Set(roles.map(r => r === 'busdismiss' ? 'bus' : r))];
-    const where = all.map(r => ({ carline: 'portal.csjax.org/carline', carcollect: 'portal.csjax.org/collect', bus: 'portal.csjax.org/bus', care: 'portal.csjax.org/care', office: 'portal.csjax.org/office' })[r]).filter(Boolean).join('\n');
+    const where = all.map(r => ({ carline: 'portal.csjax.org/carline', carcollect: 'portal.csjax.org/carline', bus: 'portal.csjax.org/bus', care: 'portal.csjax.org/care', office: 'portal.csjax.org/office' })[r]).filter(Boolean).join('\n');
     alert(`Sign-in created.\n\nGive them:\n${where}\nEmail: ${$('#sa-email').value.trim().toLowerCase()}\nPassword: the one you just typed`);
     $('#f-staff').reset(); loadSettings();
   } catch (x) { $('#sa-err').textContent = x.message; }

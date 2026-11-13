@@ -2,7 +2,8 @@
 const sb = supabase.createClient('https://cvvdwhgdiqnoqgxtgzfw.supabase.co', 'sb_publishable_hnUHrqYS2un679djbzsXxg_oLYDQDp0');
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const MODE = location.pathname.startsWith('/bus') ? 'bus' : location.pathname.startsWith('/collect') ? 'collect' : 'carline';
+let MODE = location.pathname.startsWith('/bus') ? 'bus' : location.pathname.startsWith('/collect') ? 'collect' : 'carline';
+const CAR_SITE = MODE !== 'bus'; // /carline (and the older /collect address)
 const grade = g => g === 'K' ? 'K' : g ? String(g).replace(/^0/, '') : '';
 const tm = t => t ? new Date(t).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }) : '';
 const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} } };
@@ -12,14 +13,14 @@ const APP = $('#v-app');
 let ME = null, timer = null;
 
 document.title = MODE === 'bus' ? 'Bus Roster — Cornerstone' : MODE === 'collect' ? 'Car Line Collector — Cornerstone' : 'Car Line — Cornerstone';
-$('#lg-what').textContent = MODE === 'bus' ? 'Bus drivers' : MODE === 'collect' ? 'Car line collectors' : 'Car line';
+$('#lg-what').textContent = MODE === 'bus' ? 'Bus drivers' : 'Car line';
 
 async function boot() {
   const { data } = await sb.auth.getSession();
   if (!data.session) return login();
   try { ME = await call('duty_me'); } catch { await sb.auth.signOut(); return login("This account isn't set up for dismissal. Ask the front office."); }
   const roles = ME.roles || [ME.role];
-  const canHere = MODE === 'bus' ? roles.some(r => r === 'bus' || r === 'busdismiss') : MODE === 'collect' ? roles.some(r => r === 'carcollect' || r === 'carline') : roles.includes(MODE);
+  const canHere = MODE === 'bus' ? roles.some(r => r === 'bus' || r === 'busdismiss') : roles.some(r => r === 'carcollect' || r === 'carline');
   if (!roles.includes('office') && !roles.includes('admin') && !canHere) {
     const other = roles.includes('bus') || roles.includes('busdismiss') ? '/bus' : roles.includes('carline') ? '/carline' : roles.includes('carcollect') ? '/collect' : '/care';
     const what = { '/bus': 'the bus roster', '/carline': 'car line', '/collect': 'the car line collector list', '/care': 'extended care' }[other];
@@ -31,7 +32,7 @@ async function boot() {
   $('#who').innerHTML = `${esc(ME.name || ME.email)}<br><button id="b-out">Sign out</button>`;
   $('#b-out').onclick = async () => { await sb.auth.signOut(); location.reload(); };
   $('#v-login').hidden = true; APP.hidden = false;
-  MODE === 'bus' ? busStart() : MODE === 'collect' ? collectStart() : carStart();
+  MODE === 'bus' ? busStart() : carPick();
 }
 function login(err) {
   $('#v-login').hidden = false; APP.hidden = true; $('#lg-err').textContent = err || '';
@@ -40,10 +41,11 @@ $('#f-login').addEventListener('submit', async e => {
   e.preventDefault(); $('#lg-err').textContent = '';
   const { error } = await sb.auth.signInWithPassword({ email: $('#lg-email').value.trim().toLowerCase(), password: $('#lg-pass').value });
   if (error) return $('#lg-err').textContent = 'Email or password is incorrect.';
+  try { sessionStorage.removeItem('ccs_car_job'); } catch {}
   boot();
 });
 function every(fn, ms) { clearInterval(timer); timer = setInterval(() => { if (!document.hidden && $('#sheet').hidden) fn(true); }, ms); }
-document.addEventListener('visibilitychange', () => { if (!document.hidden && ME) (MODE === 'collect' ? loadCollect(true) : MODE === 'bus' ? (BUS === ALL_BUSES ? loadAllBuses(true) : BUS ? loadBus(true) : null) : loadCars(true)); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && ME && MODE !== 'pick') (MODE === 'collect' ? loadCollect(true) : MODE === 'bus' ? (BUS === ALL_BUSES ? loadAllBuses(true) : BUS ? loadBus(true) : null) : loadCars(true)); });
 
 // =================== BUS ===================
 let BUS = store.get('ccs_bus');
@@ -189,6 +191,35 @@ function changeNote(x, how) {
     <p class="small" style="margin:4px 0 0">Dismissing ${how === 'Car Rider' ? 'in car line' : 'on a bus'} changes today's dismissal to ${how}${x.method === 'Afternoon Extended Care' ? ' and takes them off the afterschool care list' : ''}.</p></div>`;
 }
 
+
+
+// =================== /carline: choose the job after sign-in ===================
+const carJobs = () => { const r = ME.roles || [ME.role], staff = r.some(x => ['office', 'admin', 'carline'].includes(x));
+  return [...(staff || r.includes('carcollect') ? ['collect'] : []), ...(staff ? ['carline'] : [])]; };
+function carPick(force) {
+  const jobs = carJobs();
+  let job = null; try { job = sessionStorage.getItem('ccs_car_job'); } catch {}
+  if (location.pathname.startsWith('/collect') && jobs.includes('collect') && !force) job = 'collect';
+  if (jobs.length === 1) job = jobs[0];
+  if (!force && job && jobs.includes(job)) return startCarJob(job);
+  clearInterval(timer); MODE = 'pick';
+  APP.innerHTML = `<div class="hd"><div><h1>Car Line</h1><span class="prog">What are you doing today?</span></div></div>
+    <div class="buses jobs">
+      <button data-job="collect"><b>Car Line Collector</b><small>Collect car riders from their classrooms (check #1)</small></button>
+      <button data-job="carline"><b>Car Line Dismisser</b><small>Check students into the car and pick who picked them up (check #2)</small></button>
+    </div>`;
+  APP.querySelectorAll('[data-job]').forEach(b => b.onclick = () => { try { sessionStorage.setItem('ccs_car_job', b.dataset.job); } catch {} startCarJob(b.dataset.job); });
+}
+function startCarJob(job) {
+  MODE = job;
+  document.title = job === 'collect' ? 'Car Line Collector — Cornerstone' : 'Car Line — Cornerstone';
+  job === 'collect' ? collectStart() : carStart();
+  if (carJobs().length > 1) {
+    const t = APP.querySelector('.hd .tools');
+    if (t) { t.insertAdjacentHTML('afterbegin', `<button class="btn ghost sm" id="swjob">${job === 'collect' ? 'Switch to Dismisser' : 'Switch to Collector'}</button>`);
+      $('#swjob').onclick = () => { const next = job === 'collect' ? 'carline' : 'collect'; try { sessionStorage.setItem('ccs_car_job', next); } catch {} startCarJob(next); }; }
+  }
+}
 
 // =================== CAR LINE COLLECTOR (/collect) ===================
 // Check #1: staff collect car riders from their classrooms. Car line staff still do check #2 (official dismissal).
