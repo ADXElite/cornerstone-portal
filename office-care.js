@@ -155,7 +155,7 @@ async function buildSheet() {
   const dayLine = day => `Cornerstone Christian School · ${D(day).toLocaleDateString('en-US', { weekday: 'long' })} ${cmd(day)}`;
   // One daily-format sheet. Weekly = one of these per weekday (each its own page in the PDF).
   const daySheet = (day, rows) => `<section class="csheet"><h3>${esc(title)} — Daily Sign-In / Sign-Out</h3><p class="small" style="margin:2px 0 8px;color:#555">${dayLine(day)}</p>
-      <table><colgroup>${ses === 'pm' ? '<col style="width:13%"><col style="width:8%"><col style="width:9%"><col style="width:11%"><col style="width:13%"><col style="width:9%"><col style="width:15%"><col style="width:22%">' : '<col style="width:20%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:50%">'}</colgroup>
+      <table><colgroup>${ses === 'pm' ? '<col style="width:19%"><col style="width:8%"><col style="width:8%"><col style="width:10%"><col style="width:11%"><col style="width:8%"><col style="width:17%"><col style="width:19%">' : '<col style="width:20%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:50%">'}</colgroup>
       <thead><tr><th>Student</th><th>Student #</th>${ses === 'pm' ? `<th>Sign-In</th><th>Signed In By</th><th>Sign-In Signature</th><th>Sign-Out</th><th>Signed Out By (Parent)</th><th>Parent Signature</th>` : '<th>Sign-In</th><th>Sign-Out</th><th>Notes</th>'}</tr></thead><tbody>
       ${rows.map(s => { const d = s.days[day]; return `<tr><td>${nm(s)}</td><td>${esc(s.student_id)}</td><td>${d ? ctm(d.in_at) : ''}</td>${ses === 'pm' ? `<td>${d ? esc(PM_SIGN_IN_BY) : ''}</td><td>${d ? `<img src="${PM_SIGN_IN_SIG}" alt="Signature">` : ''}</td>` : ''}<td>${d ? ctm(d.out_at) : ''}</td>${ses === 'pm' ? `<td>${outBy(d)}${d && d.out_relationship ? ` <span style="color:#555">(${esc(d.out_relationship)})</span>` : ''}</td><td>${sigImg(d)}</td>` : `<td>${d && d.out_how === 'auto' ? 'Signed out automatically 8:30 AM' : ''}</td>`}</tr>`; }).join('')}
       </tbody></table></section>`;
@@ -166,7 +166,25 @@ async function buildSheet() {
     html = [0, 1, 2, 3, 4].map(i => addDays(from, i)).map(day => { const on = st.filter(s => s.days[day]); return daySheet(day, on.length ? on : st); }).join('');
   }
   $('#cs-area').innerHTML = st.length ? html : '<div class="card">No students were signed in for this sheet.</div>';
+  fitCells($('#cs-area'));
   CS_NAME = `${title.replace(/ — /g, ' ')} Sign-In Sheet ${week ? 'Week of ' + cmd(from).replace(/\//g, '-') : cmd(from).replace(/\//g, '-')}.pdf`;
+}
+// Keep every row the same height: text that doesn't fit its column shrinks on one line (to 75%);
+// if that's still too wide it wraps to two smaller lines that fit inside the same row height.
+function fitCells(root) {
+  root.querySelectorAll('.csheet table').forEach(tb => {
+    const tds = [...tb.querySelectorAll('td')]; tds.forEach(td => { td.style.fontSize = ''; td.style.whiteSpace = ''; });
+    if (!tds.length || !tds[0].offsetHeight) return;
+    const H = Math.min(...tds.map(td => td.offsetHeight));
+    const ok = td => td.scrollWidth <= td.clientWidth && td.offsetHeight <= H;
+    tds.forEach(td => {
+      if (ok(td)) return;
+      const base = parseFloat(getComputedStyle(td).fontSize);
+      for (let f = base - 0.5; f >= base * 0.75; f -= 0.5) { td.style.fontSize = f + 'px'; if (ok(td)) return; }
+      td.style.whiteSpace = 'normal';
+      for (let f = base * 0.8; f >= base * 0.5; f -= 0.5) { td.style.fontSize = f + 'px'; if (ok(td)) return; }
+    });
+  });
 }
 let CS_NAME = 'Care Sign-In Sheet.pdf';
 // Export the sheets on screen as a letter-portrait PDF: each daily sheet starts a new page; long rosters continue onto extra pages, split between rows.
@@ -185,6 +203,7 @@ $('#cs-print').addEventListener('click', async () => {
     for (const sec of secs) {
       const c = sec.cloneNode(true); c.style.cssText = 'border:0;border-radius:0;margin:0;padding:0';
       host.replaceChildren(c);
+      fitCells(host);
       await Promise.all([...c.querySelectorAll('img')].map(i => i.complete ? null : new Promise(r => { i.onload = i.onerror = r; })));
       const canvas = await html2canvas(c, { scale: 2, backgroundColor: '#fff', logging: false });
       const k = PW / c.offsetWidth, pageCss = PH / k, sc = canvas.width / c.offsetWidth;   // pageCss: CSS px that fit on one page
