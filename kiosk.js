@@ -174,7 +174,7 @@ function studentEntry() {
       </div>
     </div></div>`);
   $('#bk').onclick = lateChoice;
-  S.facing = S.facing || 'user';
+  S.facing = S.facing || 'environment'; // back camera by default; "Switch camera" flips to the front
   startScan();
   $('#flip').onclick = async () => { S.facing = S.facing === 'user' ? 'environment' : 'user'; await stopScan(); startScan(); };
   let t; $('#q').oninput = () => { clearTimeout(t); t = setTimeout(async () => {
