@@ -102,6 +102,7 @@ async function loadDash() { return homeLoad(); }
 let NOTES = [];
 async function loadNotes() {
   $('#nf-export').hidden = !isAdmin();
+  loadScans();
   $('#n-rows').innerHTML = '<tr><td colspan="8" class="empty">Loading…</td></tr>';
   NOTES = await call('staff_notes', { p_status: $('#nf-status').value, p_q: $('#nf-q').value.trim() || null, p_kind: $('#nf-kind').value || null });
   $('#nf-count').textContent = `${NOTES.length} note${NOTES.length === 1 ? '' : 's'}`;
@@ -130,6 +131,65 @@ $('#n-rows').addEventListener('click', e => {
   const b = e.target.closest('[data-npdf]'); if (b) { e.stopPropagation(); return onePdf(NOTES[+b.dataset.npdf].id, b); }
   const tr = e.target.closest('tr[data-i]'); if (tr) openNote(NOTES[+tr.dataset.i].id);
 });
+// ---------- Scanned doctor's notes (from the front office scanner) ----------
+let SCANS = [];
+async function loadScans() {
+  try { SCANS = await call('staff_scans'); } catch { SCANS = []; }
+  const admin = isAdmin();
+  $('#sc-box').hidden = !SCANS.length && !admin;
+  $('#sc-n').textContent = SCANS.length; $('#sc-n').hidden = !SCANS.length;
+  $('#sc-rows').innerHTML = SCANS.map((x, i) => `<tr><td>${stamp(x.received_at)}</td><td>${esc(x.filename)}<small>${(x.size / 1024).toFixed(0)} KB</small></td>
+    <td style="text-align:right;white-space:nowrap"><button class="btn sm" data-scan="${i}">Add to Student</button> <button class="btn ghost sm" data-scandel="${i}">Delete</button></td></tr>`).join('')
+    || '<tr><td colspan="3" class="empty">No scanned documents waiting.</td></tr>';
+  if (admin && $('#sc-url').hidden) {
+    try { const k = await call('staff_scan_key'); $('#sc-url').innerHTML = `Scanner address (admins only): <b style="user-select:all">https://portal.csjax.org/api/scan/${esc(k)}</b> — works only on the school network.`; $('#sc-url').hidden = false; } catch {}
+  }
+}
+$('#sc-rows').addEventListener('click', async e => {
+  const d = e.target.closest('[data-scandel]');
+  if (d) { const x = SCANS[+d.dataset.scandel]; if (!confirm(`Delete the scan "${x.filename}"? Only do this for blank or duplicate scans.`)) return;
+    try { await call('staff_scan_delete', { p_id: x.id }); toast('Deleted'); loadScans(); } catch (er) { toast(emsg(er)); } return; }
+  const b = e.target.closest('[data-scan]'); if (b) openScan(SCANS[+b.dataset.scan]);
+});
+async function openScan(x) {
+  $('#modal').hidden = false; $('#modal-in').innerHTML = '<p class="muted">Loading…</p>';
+  let sc; try { sc = await call('staff_scan', { p_id: x.id }); } catch (er) { $('#modal-in').innerHTML = `<p class="err">${esc(emsg(er))}</p>`; return; }
+  const url = URL.createObjectURL(b64Blob(sc.data, sc.mime));
+  const view = sc.mime === 'application/pdf' ? `<iframe src="${url}" title="Scanned document" style="width:100%;height:420px;border:1px solid var(--line);border-radius:10px"></iframe>`
+    : sc.mime === 'image/tiff' ? `<p class="empty">TIFF scan — <a href="${url}" download="${esc(sc.filename)}">open the file</a> to view it.</p>` : `<img src="${url}" alt="Scanned document" style="max-width:100%;max-height:420px;border:1px solid var(--line);border-radius:10px">`;
+  $('#modal-in').innerHTML = `<div class="mh"><div><h2 style="margin:0">Scanned Document · ${stamp(sc.received_at)}</h2><h1 style="font-size:1.7rem">Add as Doctor's Note</h1></div><button class="x" id="m-x" aria-label="Close">×</button></div>
+    ${view}
+    <div class="stack" style="margin-top:12px">
+      <label>Student <input type="search" id="sc-q" placeholder="Type a name or student ID" autocomplete="off"></label>
+      <div id="sc-pick" class="stack" style="gap:4px"></div>
+      <div class="two"><label>Date Absent <input type="date" id="sc-date" value="${TODAY}"></label><label>Through <small class="muted">(optional, more than one day)</small><input type="date" id="sc-end"></label></div>
+      <label>Doctor / Office <small class="muted">(optional)</small><input type="text" id="sc-prov" maxlength="120"></label>
+      <label>Notes <small class="muted">(optional)</small><input type="text" id="sc-com" maxlength="500"></label>
+    </div>
+    <div class="actions"><button class="btn ok" id="sc-save">Add as Pending Doctor's Note</button><button class="btn ghost" id="sc-no">Cancel</button></div><p class="err" id="m-err"></p>`;
+  let pick = null;
+  const close = () => { URL.revokeObjectURL(url); closeModal(); };
+  $('#m-x').onclick = $('#sc-no').onclick = close;
+  $('#sc-q').oninput = debounce(async () => {
+    const q = $('#sc-q').value.trim(); pick = null;
+    if (q.length < 2) return $('#sc-pick').innerHTML = '';
+    let rows = []; try { rows = (await call('staff_students', { p_q: q })).filter(s => s.active).slice(0, 8); } catch {}
+    $('#sc-pick').innerHTML = rows.map(s => `<button type="button" class="btn ghost sm" data-sid="${s.student_id}" style="justify-content:flex-start;text-align:left">${esc(s.name)} · Grade ${esc(grade(s.grade))} · ID ${s.student_id}</button>`).join('') || '<p class="muted small">No match.</p>';
+    $('#sc-pick').onclick = ev => { const p = ev.target.closest('[data-sid]'); if (!p) return; pick = +p.dataset.sid; $('#sc-q').value = p.textContent; $('#sc-pick').innerHTML = ''; };
+  }, 250);
+  $('#sc-save').onclick = async () => {
+    $('#m-err').textContent = '';
+    if (!pick) return $('#m-err').textContent = 'Choose the student from the list.';
+    if (!$('#sc-date').value) return $('#m-err').textContent = 'Enter the date absent.';
+    if ($('#sc-end').value && $('#sc-end').value < $('#sc-date').value) return $('#m-err').textContent = 'The "through" date must be on or after the first date.';
+    $('#sc-save').disabled = true;
+    try {
+      await call('staff_scan_assign', { p_id: x.id, p_student: pick, p_date: $('#sc-date').value, p_end: $('#sc-end').value || null, p_provider: $('#sc-prov').value, p_comments: $('#sc-com').value });
+      close(); toast("Added as a pending doctor's note"); loadNotes(); refreshBadges();
+    } catch (er) { $('#m-err').textContent = emsg(er); $('#sc-save').disabled = false; }
+  };
+}
+
 // ---------- Admin: export every reviewed note not exported yet, one PDF file per note ----------
 const isAdmin = () => !!(ME && (ME.roles || []).includes('admin')); // also used by office-bus.js
 async function exportNotes() {

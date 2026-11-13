@@ -121,6 +121,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/scan/:key",
+      "destination": "/api/scan?key=:key"
+    },
+    {
       "source": "/icons/:file",
       "destination": "https://app.csjax.org/icons/:file"
     },

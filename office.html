@@ -193,6 +193,12 @@ td.c small{text-align:center}
 
     <!-- Notes -->
     <div class="screen" id="p-notes" hidden>
+      <section class="card" id="sc-box" hidden style="margin-bottom:14px;border-color:var(--red)">
+        <b class="t">Scanned Documents <span class="badge" id="sc-n"></span></b>
+        <p class="muted small" style="margin:0">Doctor's notes scanned at the front office. Pick the student and date to add each one as a pending doctor's note.</p>
+        <div class="tw"><table><thead><tr><th>Scanned</th><th>File</th><th></th></tr></thead><tbody id="sc-rows"></tbody></table></div>
+        <p class="muted small" id="sc-url" hidden style="margin:0"></p>
+      </section>
       <div class="bar">
         <label>Status<select id="nf-status"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="all">All</option></select></label>
         <label>Type<select id="nf-kind"><option value="">All</option><option value="parent">Parent Notes</option><option value="doctor">Doctor's Notes</option></select></label>
