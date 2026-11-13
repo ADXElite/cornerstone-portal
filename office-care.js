@@ -1,4 +1,5 @@
-// Office portal — Extended Care (morning + afterschool). View only here; staff sign students in/out at /care, parents at the kiosk.
+// Office portal — Extended Care (morning + afterschool). Staff sign students in/out at /care, parents at the kiosk.
+// The office can pick any date (from 11/13/2026) and correct whether a student was here, with times.
 const ctm = t => t ? new Date(t).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }) : '';
 const cmd = d => { if (!d) return ''; const [y, m, dd] = String(d).slice(0, 10).split('-'); return `${m}/${dd}/${y}`; };
 const cloc = l => l ? `<span class="cloc ${esc(l)}">${esc(l)}</span>` : '';
@@ -23,26 +24,32 @@ async function careNow(quiet) {
 let CP = null, CP_LOC = 'all';
 async function carePm(quiet) {
   if (!quiet) $('#cp-rows').innerHTML = '<tr><td colspan="6" class="empty">Loading…</td></tr>';
-  try { CP = await call('care_list', { p_session: 'pm' }); } catch (e) { toast(emsg(e)); return; }
-  drawCarePm();
+  const day = careDay('#cp-date');
+  try { CP = day === TODAY ? await call('care_list', { p_session: 'pm' }) : await call('staff_care_day', { p_session: 'pm', p_day: day }); } catch (e) { toast(emsg(e)); return; }
+  CP.day = day; drawCarePm();
 }
 function drawCarePm() {
   const q = $('#cp-q').value.trim().toLowerCase();
   const st = CP.students.filter(s => (CP_LOC === 'all' || s.location === CP_LOC) && (!q || `${s.first} ${s.last}`.toLowerCase().includes(q)));
   const here = st.filter(s => s.signed_in && !s.out_at).length, out = st.filter(s => s.out_at).length;
-  $('#cp-count').textContent = `${st.length} students · ${here} here now · ${out} picked up${CP.attendance_in ? '' : ' · today\'s attendance isn\'t in yet'}`;
-  const today = s => s.day_status === 'absent' ? '<span class="tag">Absent</span>' : s.day_status === 'dismissed' ? '<span class="tag gray">Checked Out Early</span>' : s.day_status === 'late' ? '<span class="tag warn">Late</span>' : '<span class="tag ok">Present</span>';
+  const isToday = CP.day === TODAY;
+  $('#cp-dayh').textContent = isToday ? 'Today' : 'Day';
+  $('#cp-count').textContent = isToday ? `${st.length} students · ${here} here now · ${out} picked up${CP.attendance_in ? '' : ' · today\'s attendance isn\'t in yet'}`
+    : `${cmd(CP.day)} · ${st.filter(s => s.signed_in).length} were here · ${out} picked up`;
+  const today = s => !isToday ? (s.signed_in ? '<span class="tag ok">Here</span>' : '<span class="tag gray">Not Here</span>') : s.day_status === 'absent' ? '<span class="tag">Absent</span>' : s.day_status === 'dismissed' ? '<span class="tag gray">Checked Out Early</span>' : s.day_status === 'late' ? '<span class="tag warn">Late</span>' : '<span class="tag ok">Present</span>';
   $('#cp-rows').innerHTML = st.map(s => `<tr class="click" data-id="${s.student_id}">
       <td><b>${esc(s.last)}, ${esc(s.first)}</b><small>#${esc(s.student_id)} · Gr ${esc(grade(s.grade))} · ${esc(s.teacher || '')} · tap for pick-up people</small></td>
       <td>${cloc(s.location)}${s.enrolled ? '' : '<small>Not on today\'s list</small>'}</td><td>${today(s)}</td>
       <td>${s.signed_in ? `<b>${ctm(s.in_at)}</b><small>${s.in_how === 'auto' ? 'Automatic' : esc(s.in_by || '')}</small>` : '<span class="muted">—</span>'}</td>
       <td>${s.out_at ? `<b>${ctm(s.out_at)}</b><small>${s.out_how === 'kiosk' ? 'Kiosk' : esc(s.out_by || '')}</small>` : s.signed_in ? '<span class="tag ok">Here now</span>' : '<span class="muted">—</span>'}</td>
-      <td>${esc(s.out_person_name || '')}${s.out_relationship ? `<small>${esc(s.out_relationship)}</small>` : ''}</td></tr>
-    <tr class="cp-more" data-for="${s.student_id}" hidden><td colspan="6"></td></tr>`).join('') || '<tr><td colspan="6" class="empty">No students.</td></tr>';
+      <td>${esc(s.out_person_name || '')}${s.out_relationship ? `<small>${esc(s.out_relationship)}</small>` : ''}</td>
+      <td class="noprint"><button class="btn ghost sm" data-cedit="pm:${s.student_id}">Edit</button></td></tr>
+    <tr class="cp-more" data-for="${s.student_id}" hidden><td colspan="7"></td></tr>`).join('') || '<tr><td colspan="7" class="empty">No students.</td></tr>';
 }
 $('#cp-loc').addEventListener('click', e => { const b = e.target.closest('[data-l]'); if (!b) return; CP_LOC = b.dataset.l; $$('#cp-loc button').forEach(x => x.setAttribute('aria-pressed', x === b)); if (CP) drawCarePm(); });
 $('#cp-q').addEventListener('input', debounce(() => CP && drawCarePm(), 200));
 $('#cp-rows').addEventListener('click', async e => {
+  if (e.target.closest('[data-cedit]')) return;
   const tr = e.target.closest('tr[data-id]'); if (!tr) return;
   const more = $(`#cp-rows tr[data-for="${tr.dataset.id}"]`); if (!more.hidden) return more.hidden = true;
   more.hidden = false; more.firstElementChild.innerHTML = '<span class="muted">Loading…</span>';
@@ -59,28 +66,72 @@ $('#cp-rows').addEventListener('click', async e => {
 let CA = null;
 async function careAm(quiet) {
   if (!quiet) $('#ca-rows').innerHTML = '<tr><td colspan="5" class="empty">Loading…</td></tr>';
-  try { CA = await call('care_list', { p_session: 'am' }); } catch (e) { toast(emsg(e)); return; }
-  drawCareAm();
+  const day = careDay('#ca-date');
+  try { CA = day === TODAY ? await call('care_list', { p_session: 'am' }) : await call('staff_care_day', { p_session: 'am', p_day: day }); } catch (e) { toast(emsg(e)); return; }
+  CA.day = day; drawCareAm();
 }
 function drawCareAm() {
   const q = $('#ca-q').value.trim().toLowerCase();
   const st = CA.students.filter(s => !q || `${s.first} ${s.last}`.toLowerCase().includes(q))
     .sort((a, b) => (b.signed_in - a.signed_in) || a.last.localeCompare(b.last) || a.first.localeCompare(b.first));
-  $('#ca-count').textContent = `${CA.students.filter(s => s.enrolled).length} signed up · ${CA.students.filter(s => s.signed_in).length} came today · ${CA.students.filter(s => s.signed_in && !s.out_at).length} here now`;
+  const isToday = CA.day === TODAY;
+  $('#ca-count').textContent = `${isToday ? '' : cmd(CA.day) + ' · '}${CA.students.filter(s => s.enrolled).length} signed up · ${CA.students.filter(s => s.signed_in).length} came${isToday ? ' today · ' + CA.students.filter(s => s.signed_in && !s.out_at).length + ' here now' : ''}`;
   $('#ca-rows').innerHTML = st.map(s => `<tr>
       <td><b>${esc(s.last)}, ${esc(s.first)}</b><small>#${esc(s.student_id)} · Gr ${esc(grade(s.grade))} · ${esc(s.teacher || '')}</small></td>
       <td>${s.enrolled ? 'Yes' : '<span class="tag warn">Not signed up</span>'}</td>
-      <td>${s.signed_in ? `<b>${ctm(s.in_at)}</b>` : '<span class="muted">Not here today</span>'}</td>
+      <td>${s.signed_in ? `<b>${ctm(s.in_at)}</b>` : `<span class="muted">Not here${CA.day === TODAY ? ' today' : ''}</span>`}</td>
       <td>${esc(s.in_by || '')}${s.in_how === 'kiosk' ? '<small>Kiosk</small>' : ''}</td>
-      <td>${s.out_at ? `${ctm(s.out_at)}${s.out_how === 'auto' ? '<small>Automatic</small>' : ''}` : s.signed_in ? '<span class="tag ok">Here now</span>' : ''}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">No students.</td></tr>';
+      <td>${s.out_at ? `${ctm(s.out_at)}${s.out_how === 'auto' ? '<small>Automatic</small>' : ''}` : s.signed_in ? '<span class="tag ok">Here now</span>' : ''}</td>
+      <td class="noprint"><button class="btn ghost sm" data-cedit="am:${s.student_id}">Edit</button></td></tr>`).join('') || '<tr><td colspan="6" class="empty">No students.</td></tr>';
 }
 $('#ca-q').addEventListener('input', debounce(() => CA && drawCareAm(), 200));
+
+// ---------- date picker + office corrections ----------
+const CARE_START = '2026-11-13';
+function careDay(sel) {
+  const el = $(sel);
+  if (!el.value) el.value = TODAY < CARE_START ? CARE_START : TODAY;
+  el.max = TODAY > CARE_START ? TODAY : CARE_START;
+  return el.value;
+}
+$('#cp-date').addEventListener('change', () => carePm());
+$('#ca-date').addEventListener('change', () => careAm());
+const hm = t => t ? new Date(t).toLocaleTimeString('en-GB', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit' }) : '';
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-cedit]'); if (!b) return;
+  e.stopPropagation();
+  const [ses, id] = b.dataset.cedit.split(':'), L = ses === 'pm' ? CP : CA, s = L.students.find(x => String(x.student_id) === id);
+  const pm = ses === 'pm';
+  $('#modal').hidden = false;
+  $('#modal-in').innerHTML = `<div class="mh"><div><h2 style="margin:0">${pm ? 'Afterschool Care' : 'Morning Care'} · ${cmd(L.day)}</h2><h1 style="font-size:1.7rem">${esc(s.first)} ${esc(s.last)}</h1></div><button class="x" id="m-x" aria-label="Close">×</button></div>
+    <div class="segs" id="ce-here" style="margin:6px 0 12px"><button type="button" data-h="1" aria-pressed="${!!s.signed_in}">Was Here</button><button type="button" data-h="0" aria-pressed="${!s.signed_in}">Not Here</button></div>
+    <div id="ce-times" ${s.signed_in ? '' : 'hidden'}>
+      <div class="two"><label>Sign-In Time<input type="time" id="ce-in" value="${hm(s.in_at) || (pm ? '15:00' : '07:00')}"></label>
+      <label>Sign-Out Time<input type="time" id="ce-out" value="${hm(s.out_at)}"></label></div>
+      ${pm ? `<div class="two"><label>Picked Up By<input type="text" id="ce-who" maxlength="80" value="${esc(s.out_person_name || '')}" placeholder="Name (optional)"></label>
+        <label>Location<select id="ce-loc"><option ${s.location === 'KHA' ? 'selected' : ''}>KHA</option><option ${s.location !== 'KHA' ? 'selected' : ''}>SP</option></select></label></div>` : ''}
+      <p class="hint">Leave Sign-Out Time blank if they haven't been picked up yet.</p>
+    </div>
+    <div class="actions"><button class="btn" id="ce-save">Save</button><button class="btn ghost" id="ce-no">Cancel</button></div><p class="err" id="m-err"></p>`;
+  let here = !!s.signed_in;
+  $('#ce-here').onclick = ev => { const h = ev.target.closest('[data-h]'); if (!h) return; here = h.dataset.h === '1';
+    $$('#ce-here button').forEach(x => x.setAttribute('aria-pressed', x === h)); $('#ce-times').hidden = !here; };
+  $('#m-x').onclick = $('#ce-no').onclick = closeModal;
+  $('#ce-save').onclick = async () => {
+    try {
+      await call('staff_care_set', { p_student: +id, p_session: ses, p_day: L.day, p_here: here,
+        p_in: here ? $('#ce-in').value || null : null, p_out: here ? $('#ce-out').value || null : null,
+        p_out_name: pm && here ? $('#ce-who').value : null, p_location: pm && here ? $('#ce-loc').value : null });
+      closeModal(); toast('Saved'); pm ? carePm(true) : careAm(true);
+    } catch (x) { $('#m-err').textContent = emsg(x); }
+  };
+}, true);
 
 // ---------- Sign-in / sign-out sheets ----------
 function monday(iso) { const d = D(iso); const k = (d.getDay() + 6) % 7; d.setDate(d.getDate() - k); return d.toLocaleDateString('en-CA'); }
 function addDays(iso, n) { const d = D(iso); d.setDate(d.getDate() + n); return d.toLocaleDateString('en-CA'); }
 function careSheets() {
-  if (!$('#cs-date').value) $('#cs-date').value = TODAY;
+  if (!$('#cs-date').value) $('#cs-date').value = TODAY < CARE_START ? CARE_START : TODAY;
   syncSheetForm(); buildSheet();
 }
 function syncSheetForm() {
@@ -94,7 +145,7 @@ async function buildSheet() {
   $('#cs-area').innerHTML = '<p class="muted">Loading…</p>';
   let r; try { r = await call('staff_care_sheet', { p_from: from, p_to: to, p_session: ses, p_loc: loc }); } catch (e) { $('#cs-area').innerHTML = `<div class="card">${esc(emsg(e))}</div>`; return; }
   const st = r.students;
-  $('#cs-count').textContent = `${st.length} students`;
+  $('#cs-count').textContent = `${st.length} student${st.length === 1 ? '' : 's'} signed in`;
   const title = ses === 'am' ? 'Morning Care' : loc === 'all' ? 'Afterschool Care' : `Afterschool Care — ${loc}`;
   const sub = `Cornerstone Christian School · ${week ? `Week of ${cmd(from)} – ${cmd(to)}` : D(from).toLocaleDateString('en-US', { weekday: 'long' }) + ' ' + cmd(from)}`;
   const nm = s => `<b>${esc(s.last)}, ${esc(s.first)}</b>${loc === 'all' && ses === 'pm' ? ' ' + cloc(s.location) : ''}`;
@@ -115,7 +166,7 @@ async function buildSheet() {
       ${st.map(s => `<tr><td>${nm(s)}</td><td>${esc(s.student_id)}</td>${days.map(day => { const d = s.days[day]; return `<td>${d ? `In ${ctm(d.in_at)}${d.out_at ? ` · Out ${ctm(d.out_at)}` : ''}${ses === 'pm' && d.out_person_name ? `<br>${esc(d.out_person_name)}` : ''}${sigImg(d)}` : 'In ____ Out ____'}</td>`; }).join('')}</tr>`).join('')}
       </tbody></table></section>`;
   }
-  $('#cs-area').innerHTML = st.length ? html : '<div class="card">No students for this sheet.</div>';
+  $('#cs-area').innerHTML = st.length ? html : '<div class="card">No students were signed in for this sheet.</div>';
 }
 $('#cs-print').addEventListener('click', () => {
   let s = $('#cs-page'); if (!s) { s = document.createElement('style'); s.id = 'cs-page'; document.head.appendChild(s); }

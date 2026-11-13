@@ -303,16 +303,17 @@ td.c small{text-align:center}
       <nav class="subtabs noprint"><a href="#carenow" data-s="carenow">Signed In Now</a><a href="#carepm" data-s="carepm">Afterschool Care</a><a href="#caream" data-s="caream">Morning Care</a><a href="#caresheets" data-s="caresheets">Sign-In / Sign-Out Sheets</a></nav>
       <div class="bar noprint">
         <div class="segs" id="cp-loc"><button data-l="all" aria-pressed="true">All</button><button data-l="KHA">KHA</button><button data-l="SP">SP</button></div>
+        <label>Date<input type="date" id="cp-date" min="2026-11-13"></label>
         <label class="grow">Search<input type="search" id="cp-q" placeholder="Student name"></label>
       </div>
       <span class="cnt" id="cp-count"></span>
-      <div class="tw"><table><thead><tr><th>Student</th><th>Care</th><th>Today</th><th>Signed In</th><th>Signed Out</th><th>Picked Up By</th></tr></thead><tbody id="cp-rows"></tbody></table></div>
+      <div class="tw"><table><thead><tr><th>Student</th><th>Care</th><th id="cp-dayh">Today</th><th>Signed In</th><th>Signed Out</th><th>Picked Up By</th><th class="noprint"></th></tr></thead><tbody id="cp-rows"></tbody></table></div>
     </div>
     <div class="screen" id="p-caream" hidden>
       <nav class="subtabs noprint"><a href="#carenow" data-s="carenow">Signed In Now</a><a href="#carepm" data-s="carepm">Afterschool Care</a><a href="#caream" data-s="caream">Morning Care</a><a href="#caresheets" data-s="caresheets">Sign-In / Sign-Out Sheets</a></nav>
-      <div class="bar noprint"><label class="grow">Search<input type="search" id="ca-q" placeholder="Student name"></label></div>
+      <div class="bar noprint"><label>Date<input type="date" id="ca-date" min="2026-11-13"></label><label class="grow">Search<input type="search" id="ca-q" placeholder="Student name"></label></div>
       <span class="cnt" id="ca-count"></span>
-      <div class="tw"><table><thead><tr><th>Student</th><th>Signed Up</th><th>Marked Present</th><th>By</th><th>Signed Out</th></tr></thead><tbody id="ca-rows"></tbody></table></div>
+      <div class="tw"><table><thead><tr><th>Student</th><th>Signed Up</th><th>Marked Present</th><th>By</th><th>Signed Out</th><th class="noprint"></th></tr></thead><tbody id="ca-rows"></tbody></table></div>
     </div>
     <div class="screen" id="p-caresheets" hidden>
       <nav class="subtabs noprint"><a href="#carenow" data-s="carenow">Signed In Now</a><a href="#carepm" data-s="carepm">Afterschool Care</a><a href="#caream" data-s="caream">Morning Care</a><a href="#caresheets" data-s="caresheets">Sign-In / Sign-Out Sheets</a></nav>
