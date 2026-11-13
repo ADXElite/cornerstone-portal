@@ -67,7 +67,7 @@ async function loadStudent(id) {
     ${arch ? '' : `<div class="card"><b class="t">Today</b><dl class="kv" style="padding:0">
       <dt>Going home</dt><dd>${esc(pl.method || '—')}${pl.bus ? ' · Bus ' + esc(pl.bus) : ''}${pl.stop && pl.method === 'Bus Rider' ? `<small style="display:block;color:var(--muted)">${esc(pl.stop)}</small>` : ''}${pl.changed ? ' <span class="tag warn">Changed Today</span>' : ''}${pl.pickup_person ? ` · with ${esc(pl.pickup_person)}` : ''}</dd>
       <dt>Dismissed</dt><dd>${dis ? `${dis.kind === 'bus' ? 'On Bus ' + esc(dis.bus || '') : 'Picked up by ' + esc(dis.person || '')} · ${stamp(dis.at)} <small style="color:var(--muted)">(${esc(dis.by)})</small>`
-        : early ? `<span class="tag gray">Signed Out Early</span> by ${esc(early.person_name || '—')} · ${stamp(early.created_at)}${early.reason ? ` <small style="color:var(--muted)">(${esc(early.reason)})</small>` : ''}` : 'Not yet'}</dd></dl></div>`}
+        : early ? `<span class="tag gray">Signed Out Early</span> by ${esc(early.person_name || '—')} · ${stamp(early.created_at)}${early.reason ? ` <small style="color:var(--muted)">(${esc(early.reason)})</small>` : ''}` : s.today === 'absent' ? '<span class="tag">Absent</span>' : 'Not yet'}</dd></dl></div>`}
     <div class="card"><b class="t">On File</b><dl class="kv" style="padding:0"><dt>Morning</dt><dd>${esc(s.am || '—')}</dd><dt>Afternoon</dt><dd>${esc(s.pm || '—')}</dd>
       <dt>Parent notes</dt><dd>${s.parent_notes_approved} of ${LIMIT} approved this semester · ${s.doctor_notes} doctor's note${s.doctor_notes === 1 ? '' : 's'}</dd></dl></div>
     <div><h2>Parents &amp; Pick-Up People</h2><div class="list">${people.join('') || '<div class="empty">None on file.</div>'}</div></div>
