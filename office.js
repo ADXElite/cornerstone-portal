@@ -101,7 +101,7 @@ async function loadDash() { return homeLoad(); }
 // ---------- notes ----------
 let NOTES = [];
 async function loadNotes() {
-  $('#n-rows').innerHTML = '<tr><td colspan="7" class="empty">Loading…</td></tr>';
+  $('#n-rows').innerHTML = '<tr><td colspan="8" class="empty">Loading…</td></tr>';
   NOTES = await call('staff_notes', { p_status: $('#nf-status').value, p_q: $('#nf-q').value.trim() || null, p_kind: $('#nf-kind').value || null });
   $('#nf-count').textContent = `${NOTES.length} note${NOTES.length === 1 ? '' : 's'}`;
   const NS = { pending: ['Pending', 'warn'], approved: ['Approved', 'ok'], rejected: ['Rejected', ''] };
@@ -112,10 +112,37 @@ async function loadNotes() {
     <td>${esc(n.reason_other || n.reason)}</td>
     <td>${n.kind === 'parent' ? `${n.approved_parent_notes} of ${LIMIT}` : '—'}<small>${esc(n.semester)}</small></td>
     <td>${stamp(n.created_at)}<small>${esc(n.parent_name || n.submitted_by)}</small></td>
-    <td><span class="tag ${NS[n.status][1]}">${NS[n.status][0]}</span>${n.reviewed_by ? `<small>${esc(n.reviewed_by)}</small>` : ''}</td></tr>`).join('')
-    || '<tr><td colspan="7" class="empty">No notes here.</td></tr>';
+    <td><span class="tag ${NS[n.status][1]}">${NS[n.status][0]}</span>${n.reviewed_by ? `<small>${esc(n.reviewed_by)}</small>` : ''}</td>
+    <td class="noprint"><button class="btn ghost sm" data-npdf="${i}">PDF</button></td></tr>`).join('')
+    || '<tr><td colspan="8" class="empty">No notes here.</td></tr>';
+  $('#nf-pdf').disabled = !NOTES.length;
 }
-$('#n-rows').addEventListener('click', e => { const tr = e.target.closest('tr[data-i]'); if (tr) openNote(NOTES[+tr.dataset.i].id); });
+const noteBase = n => { const nm = String(n.student || '').split(' '); return `${safe(nm.slice(-1)[0])}_${safe(nm[0])}_${n.student_id}`; };
+async function onePdf(id, btn) {
+  btn.disabled = true;
+  try { const n = await call('staff_note', { p_id: id }); n.kind === 'doctor' ? await notesPdf([id], `${noteBase(n)}_${n.absent_date}_doctors_note.pdf`) : notePdf(n, `${noteBase(n)}_${n.absent_date}_excused_note.pdf`); }
+  catch (x) { toast(emsg(x)); }
+  btn.disabled = false;
+}
+$('#n-rows').addEventListener('click', e => {
+  const b = e.target.closest('[data-npdf]'); if (b) { e.stopPropagation(); return onePdf(NOTES[+b.dataset.npdf].id, b); }
+  const tr = e.target.closest('tr[data-i]'); if (tr) openNote(NOTES[+tr.dataset.i].id);
+});
+$('#nf-pdf').addEventListener('click', async () => {
+  const list = NOTES.slice(0, 150), b = $('#nf-pdf'), label = b.textContent;
+  if (!list.length) return;
+  if (NOTES.length > 150 && !confirm(`Only the first 150 of ${NOTES.length} notes will be included. Search for a student to narrow the list. Continue?`)) return;
+  const ids = new Set(list.map(n => n.student_id));
+  const one = ids.size === 1 ? list[0] : null;
+  const name = one ? `${noteBase(one)}_excused_notes.pdf` : `Excused_notes_${TODAY}.pdf`;
+  b.disabled = true;
+  try {
+    const skipped = await notesPdf(list.slice().sort((x, y) => (x.student || '').localeCompare(y.student || '') || x.absent_date.localeCompare(y.absent_date)).map(n => n.id), name,
+      (k, t) => { b.textContent = `Building PDF… ${k}/${t}`; });
+    toast(skipped.length ? `PDF downloaded. Couldn't add: ${skipped.join(', ')} — download those from the note.` : 'PDF downloaded.');
+  } catch (x) { toast(emsg(x)); }
+  b.textContent = label; b.disabled = false;
+});
 ['#nf-status', '#nf-kind'].forEach(s => $(s).addEventListener('change', loadNotes));
 $('#nf-q').addEventListener('input', debounce(loadNotes));
 
@@ -152,6 +179,7 @@ async function openNote(id) {
       <button class="btn ok" id="m-ok" ${overLimit ? 'disabled' : ''}>Approve — Mark Excused</button>
       <button class="btn" id="m-no">Reject</button>
       ${n.status !== 'pending' ? '<button class="btn ghost" id="m-reset">Move Back to Pending</button>' : ''}
+      <button class="btn ghost" id="m-pdf">Download PDF</button>
     </div>
     <p class="err" id="m-err"></p>`;
   $('#m-x').onclick = closeModal;
@@ -162,6 +190,7 @@ async function openNote(id) {
   $('#m-ok').onclick = () => act('approved');
   $('#m-no').onclick = () => act('rejected');
   if ($('#m-reset')) $('#m-reset').onclick = () => act('pending');
+  $('#m-pdf').onclick = () => onePdf(id, $('#m-pdf'));
 }
 
 // ---------- transport report ----------

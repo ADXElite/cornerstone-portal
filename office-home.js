@@ -167,6 +167,7 @@ async function downloadNote(row, btn) {
   } catch (x) { toast(emsg(x)); }
   btn.disabled = false;
 }
+// One note as a jsPDF document. filename → saves it; no filename → returns the document (for combining).
 function notePdf(n, filename) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
@@ -177,7 +178,7 @@ function notePdf(n, filename) {
   doc.text('CORNERSTONE CHRISTIAN SCHOOL', M, 42);
   doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.text('9039 Beach Boulevard · Jacksonville, FL 32216 · (904) 730-5500', M, 58);
   doc.setTextColor(20, 18, 19); doc.setFont('helvetica', 'bold'); doc.setFontSize(20);
-  doc.text('Parent Excused Absence Note', M, 118);
+  doc.text(n.kind === 'doctor' ? "Doctor's Excused Absence Note" : 'Parent Excused Absence Note', M, 118);
   // mm/dd/yyyy dates (with time where it matters), New York time.
   const md = s => { const [y, m, d] = String(s).slice(0, 10).split('-'); return `${m}/${d}/${y}`; };
   const mdt = t => t ? new Date(t).toLocaleString('en-US', { timeZone: 'America/New_York', month: '2-digit', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }).replace(',', '') : '';
@@ -185,7 +186,10 @@ function notePdf(n, filename) {
   const rows = [
     ["Student's Name", n.student], ['Student ID', String(n.student_id)], ['Grade / Homeroom', `${grade(n.grade)} · ${n.teacher || ''}`],
     ['Absent Date', absent], ['Absent Reason', n.reason + (n.reason_other ? ': ' + n.reason_other : '')],
+    ...(n.kind === 'doctor' ? [['Doctor / Office', n.provider || ''], ['Attached Files', n.files && n.files.length ? n.files.map(f => f.filename).join(', ') : 'None']] : []),
     ["Parent's Name", n.parent_name || ''], ["Parent's Phone", n.parent_phone || ''],
+    ...(n.comments ? [['Parent Comments', n.comments]] : []),
+    ...(n.review_note ? [['Office Note', n.review_note]] : []),
     ['Submitted', mdt(n.created_at) + ' (Cornerstone Parent Portal)'],
     ['Office Review', n.status === 'pending' ? 'Pending' : `${n.status[0].toUpperCase() + n.status.slice(1)} by ${n.reviewed_by || ''} ${n.reviewed_at ? '· ' + mdt(n.reviewed_at) : ''}`],
     ['Semester', String(n.semester || '').replace(/^(\d{4})-(\d{2})\s*Semester\s*(\d)$/i, (_, a, b, c) => `${a}-${a.slice(0, 2)}${b} (Semester ${c})`)]
@@ -196,12 +200,58 @@ function notePdf(n, filename) {
     doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 18, 19);
     const lines = doc.splitTextToSize(String(v || '—'), W - M - 190); doc.text(lines, M + 150, y); y += 22 * Math.max(1, lines.length);
   }
-  y += 14; doc.setFont('helvetica', 'normal'); doc.setTextColor(107, 100, 102); doc.text("Parent's Signature", M, y);
-  doc.setDrawColor(200, 195, 195); doc.rect(M + 150, y - 14, 300, 96);
-  if (n.signature) { try { doc.addImage(n.signature, 'PNG', M + 154, y - 10, 292, 88); } catch {} }
+  if (n.kind !== 'doctor' || n.signature) {
+    y += 14; doc.setFont('helvetica', 'normal'); doc.setTextColor(107, 100, 102); doc.text("Parent's Signature", M, y);
+    doc.setDrawColor(200, 195, 195); doc.rect(M + 150, y - 14, 300, 96);
+    if (n.signature) { try { doc.addImage(n.signature, 'PNG', M + 154, y - 10, 292, 88); } catch {} }
+  }
   doc.setFontSize(8.5); doc.setTextColor(107, 100, 102);
-  doc.text('A parent/guardian may submit up to five (5) excused notes per student per semester. Notes must be submitted within five (5) school days of the absence.', M, 740, { maxWidth: W - 2 * M });
+  doc.text(n.kind === 'doctor' ? "Doctor's notes do not count toward the five (5) parent notes per semester. The doctor's note file(s) follow this page."
+    : 'A parent/guardian may submit up to five (5) excused notes per student per semester. Notes must be submitted within five (5) school days of the absence.', M, 740, { maxWidth: W - 2 * M });
+  if (!filename) return doc;
   doc.save(filename);
+}
+
+// ---------- several notes → one PDF (note pages + doctor's note photos/PDFs) ----------
+let PDFLIB = null;
+const loadPdfLib = () => PDFLIB || (PDFLIB = new Promise((ok, no) => {
+  const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+  sc.onload = () => ok(window.PDFLib); sc.onerror = () => { PDFLIB = null; no(new Error('Could not load the PDF tool. Check the internet connection and try again.')); };
+  document.head.appendChild(sc);
+}));
+async function imageToPng(blob) {
+  const img = await createImageBitmap(blob);
+  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; c.getContext('2d').drawImage(img, 0, 0);
+  return new Uint8Array(await (await new Promise(r => c.toBlob(r, 'image/png'))).arrayBuffer());
+}
+async function notesPdf(ids, filename, progress) {
+  const { PDFDocument, StandardFonts, rgb } = await loadPdfLib();
+  const out = await PDFDocument.create(); const font = await out.embedFont(StandardFonts.Helvetica);
+  const skipped = [];
+  for (let k = 0; k < ids.length; k++) {
+    progress && progress(k + 1, ids.length);
+    const n = await call('staff_note', { p_id: ids[k] });
+    const one = await PDFDocument.load(notePdf(n).output('arraybuffer'));
+    (await out.copyPages(one, one.getPageIndices())).forEach(pg => out.addPage(pg));
+    for (const f of (n.kind === 'doctor' ? n.files : [])) {
+      try {
+        const bytes = Uint8Array.from(atob(f.data), ch => ch.charCodeAt(0));
+        if (f.mime === 'application/pdf') {
+          const src = await PDFDocument.load(bytes, { ignoreEncryption: true });
+          (await out.copyPages(src, src.getPageIndices())).forEach(pg => out.addPage(pg));
+          continue;
+        }
+        const im = f.mime === 'image/jpeg' ? await out.embedJpg(bytes) : f.mime === 'image/png' ? await out.embedPng(bytes) : await out.embedPng(await imageToPng(new Blob([bytes], { type: f.mime })));
+        const pg = out.addPage([612, 792]); const M = 36, cap = 18;
+        const sc = Math.min((612 - 2 * M) / im.width, (792 - 2 * M - cap) / im.height, 1);
+        pg.drawText(`${n.student} · Doctor's note · ${f.filename}`, { x: M, y: 792 - M + 4, size: 9, font, color: rgb(.42, .39, .4) });
+        pg.drawImage(im, { x: (612 - im.width * sc) / 2, y: 792 - M - cap - im.height * sc, width: im.width * sc, height: im.height * sc });
+      } catch { skipped.push(`${n.student}: ${f.filename}`); }
+    }
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([await out.save()], { type: 'application/pdf' })); a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+  return skipped;
 }
 
 // ---------- manual alerts (Settings → Alerts) ----------

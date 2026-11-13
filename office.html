@@ -197,9 +197,10 @@ td.c small{text-align:center}
         <label>Status<select id="nf-status"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="all">All</option></select></label>
         <label>Type<select id="nf-kind"><option value="">All</option><option value="parent">Parent Notes</option><option value="doctor">Doctor's Notes</option></select></label>
         <label class="grow">Student<input type="search" id="nf-q" placeholder="Name or student ID"></label>
+        <button class="btn ghost sm" id="nf-pdf" type="button" title="All notes in this list as one PDF — search a student first to get just their notes">Download PDF</button>
         <span class="cnt" id="nf-count"></span>
       </div>
-      <div class="tw"><table><thead><tr><th>Student</th><th>Type</th><th>Date Absent</th><th>Reason</th><th>Parent Notes Used</th><th>Submitted</th><th>Status</th></tr></thead><tbody id="n-rows"></tbody></table></div>
+      <div class="tw"><table><thead><tr><th>Student</th><th>Type</th><th>Date Absent</th><th>Reason</th><th>Parent Notes Used</th><th>Submitted</th><th>Status</th><th class="noprint"></th></tr></thead><tbody id="n-rows"></tbody></table></div>
     </div>
 
     <!-- Transport report -->
