@@ -2,7 +2,7 @@
 const sb = supabase.createClient('https://cvvdwhgdiqnoqgxtgzfw.supabase.co', 'sb_publishable_hnUHrqYS2un679djbzsXxg_oLYDQDp0');
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const MODE = location.pathname.startsWith('/bus') ? 'bus' : 'carline';
+const MODE = location.pathname.startsWith('/bus') ? 'bus' : location.pathname.startsWith('/collect') ? 'collect' : 'carline';
 const grade = g => g === 'K' ? 'K' : g ? String(g).replace(/^0/, '') : '';
 const tm = t => t ? new Date(t).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }) : '';
 const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} } };
@@ -11,27 +11,27 @@ async function call(fn, args = {}) { const { data, error } = await sb.rpc(fn, ar
 const APP = $('#v-app');
 let ME = null, timer = null;
 
-document.title = MODE === 'bus' ? 'Bus Roster — Cornerstone' : 'Car Line — Cornerstone';
-$('#lg-what').textContent = MODE === 'bus' ? 'Bus drivers' : 'Car line';
+document.title = MODE === 'bus' ? 'Bus Roster — Cornerstone' : MODE === 'collect' ? 'Car Line Collector — Cornerstone' : 'Car Line — Cornerstone';
+$('#lg-what').textContent = MODE === 'bus' ? 'Bus drivers' : MODE === 'collect' ? 'Car line collectors' : 'Car line';
 
 async function boot() {
   const { data } = await sb.auth.getSession();
   if (!data.session) return login();
   try { ME = await call('duty_me'); } catch { await sb.auth.signOut(); return login("This account isn't set up for dismissal. Ask the front office."); }
   const roles = ME.roles || [ME.role];
-  const canHere = MODE === 'bus' ? roles.some(r => r === 'bus' || r === 'busdismiss') : roles.includes(MODE);
+  const canHere = MODE === 'bus' ? roles.some(r => r === 'bus' || r === 'busdismiss') : MODE === 'collect' ? roles.some(r => r === 'carcollect' || r === 'carline') : roles.includes(MODE);
   if (!roles.includes('office') && !roles.includes('admin') && !canHere) {
-    const other = roles.includes('bus') || roles.includes('busdismiss') ? '/bus' : roles.includes('carline') ? '/carline' : '/care';
-    const what = { '/bus': 'the bus roster', '/carline': 'car line', '/care': 'extended care' }[other];
+    const other = roles.includes('bus') || roles.includes('busdismiss') ? '/bus' : roles.includes('carline') ? '/carline' : roles.includes('carcollect') ? '/collect' : '/care';
+    const what = { '/bus': 'the bus roster', '/carline': 'car line', '/collect': 'the car line collector list', '/care': 'extended care' }[other];
     APP.hidden = false; $('#v-login').hidden = true;
-    APP.innerHTML = `<div class="card"><b class="t">This sign-in isn't set up for ${MODE === 'bus' ? 'bus drivers' : 'car line'}.</b><p><a class="btn" href="${other}">Open ${what}</a></p></div>`;
+    APP.innerHTML = `<div class="card"><b class="t">This sign-in isn't set up for ${MODE === 'bus' ? 'bus drivers' : MODE === 'collect' ? 'car line collectors' : 'car line'}.</b><p><a class="btn" href="${other}">Open ${what}</a></p></div>`;
     return;
   }
   $('#who').hidden = false;
   $('#who').innerHTML = `${esc(ME.name || ME.email)}<br><button id="b-out">Sign out</button>`;
   $('#b-out').onclick = async () => { await sb.auth.signOut(); location.reload(); };
   $('#v-login').hidden = true; APP.hidden = false;
-  MODE === 'bus' ? busStart() : carStart();
+  MODE === 'bus' ? busStart() : MODE === 'collect' ? collectStart() : carStart();
 }
 function login(err) {
   $('#v-login').hidden = false; APP.hidden = true; $('#lg-err').textContent = err || '';
@@ -43,7 +43,7 @@ $('#f-login').addEventListener('submit', async e => {
   boot();
 });
 function every(fn, ms) { clearInterval(timer); timer = setInterval(() => { if (!document.hidden && $('#sheet').hidden) fn(true); }, ms); }
-document.addEventListener('visibilitychange', () => { if (!document.hidden && ME) (MODE === 'bus' ? (BUS === ALL_BUSES ? loadAllBuses(true) : BUS ? loadBus(true) : null) : loadCars(true)); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && ME) (MODE === 'collect' ? loadCollect(true) : MODE === 'bus' ? (BUS === ALL_BUSES ? loadAllBuses(true) : BUS ? loadBus(true) : null) : loadCars(true)); });
 
 // =================== BUS ===================
 let BUS = store.get('ccs_bus');
@@ -189,6 +189,59 @@ function changeNote(x, how) {
     <p class="small" style="margin:4px 0 0">Dismissing ${how === 'Car Rider' ? 'in car line' : 'on a bus'} changes today's dismissal to ${how}${x.method === 'Afternoon Extended Care' ? ' and takes them off the afterschool care list' : ''}.</p></div>`;
 }
 
+
+// =================== CAR LINE COLLECTOR (/collect) ===================
+// Check #1: staff collect car riders from their classrooms. Car line staff still do check #2 (official dismissal).
+let COL = null, COLQ = '', COL_LEFT = false, COL_OPEN = {};
+const colKey = s => s.board || 'No board';
+async function collectStart() {
+  APP.innerHTML = `<div class="hd"><div><h1>Collect Car Riders</h1><span class="prog" id="cprog"></span></div><div class="tools"><button class="btn ghost sm" id="cref">Refresh</button></div></div>
+    <div class="abar"><input type="search" id="colq" placeholder="Search a student" autocomplete="off">
+      <div class="achips"><button id="colall" class="on">All</button><button id="colleft">Not Collected</button></div></div>
+    <p class="muted small">Tap a student when you collect them from their classroom. Car line staff still check them into the car.</p>
+    <div id="catt"></div><div id="clist"><p class="muted">Loading…</p></div>`;
+  $('#colq').oninput = e => { COLQ = e.target.value.trim().toLowerCase(); drawCollect(); };
+  $('#colall').onclick = () => { COL_LEFT = false; $('#colall').classList.add('on'); $('#colleft').classList.remove('on'); drawCollect(); };
+  $('#colleft').onclick = () => { COL_LEFT = true; $('#colleft').classList.add('on'); $('#colall').classList.remove('on'); drawCollect(); };
+  $('#cref').onclick = () => loadCollect();
+  loadCollect();
+  every(loadCollect, 20000);
+}
+async function loadCollect(quiet) {
+  try { COL = await call('duty_collect_list'); } catch (x) { if (!quiet) $('#clist').innerHTML = `<div class="card err">${esc(x.message)}</div>`; return; }
+  drawCollect();
+}
+function drawCollect() {
+  if (!COL) return;
+  const here = s => s.status === 'present' || s.status === 'late';
+  const all = COL.students.filter(here), got = all.filter(s => s.collected || s.dismissed).length;
+  $('#cprog').textContent = `${got} of ${all.length} collected`;
+  $('#catt').innerHTML = COL.attendance_in ? '' : '<p class="muted small">Today\'s attendance isn\'t in yet, so everyone shows as present.</p>';
+  const q = COLQ.split(/[\s,]+/).filter(Boolean);
+  const list = COL.students.filter(s => q.every(w => `${s.first} ${s.last}`.toLowerCase().includes(w)) && (!COL_LEFT || (here(s) && !s.collected && !s.dismissed)));
+  const boards = [...new Set(list.map(colKey))];
+  const y = scrollY;
+  $('#clist').innerHTML = boards.map(b => {
+    const kids = list.filter(s => colKey(s) === b), bAll = COL.students.filter(s => colKey(s) === b && here(s));
+    const bGot = bAll.filter(s => s.collected || s.dismissed).length, doneAll = bAll.length && bGot === bAll.length;
+    const open = COL_OPEN[b] ?? !doneAll;
+    return `<details class="cboard${doneAll ? ' alldone' : ''}" data-b="${esc(b)}" ${open || q.length ? 'open' : ''}><summary><b>${esc(b)}</b><span>${bGot} of ${bAll.length}${doneAll ? ' ✓' : ''}</span></summary>
+      ${kids.map(s => {
+        const out = !here(s);
+        const st = s.status === 'absent' ? 'Absent' : s.status === 'dismissed' ? 'Checked out early' : s.dismissed ? `In car · ${esc(s.picked_by || '')} ${tm(s.dismissed_at)}` : s.collected ? `Collected ${tm(s.collected_at)}${s.collected_by ? ' · ' + esc(s.collected_by.split(' ')[0]) : ''}` : '';
+        return `<button class="kid ${s.collected || s.dismissed ? 'on' : ''} ${out || s.dismissed ? 'out' : ''} ${s.changed ? 'chg' : ''}" data-cid="${s.student_id}" ${out || s.dismissed ? 'disabled' : ''}>
+          <span class="box">${s.collected || s.dismissed ? '✓' : ''}</span><span><b>${esc(s.last)}, ${esc(s.first)}</b><small>Grade ${esc(grade(s.grade))}${s.changed ? ' · <span style="color:var(--red)">car rider today (changed)</span>' : ''}</small></span>
+          <span class="st"><small>${st}</small></span></button>`; }).join('')}</details>`;
+  }).join('') || `<div class="card">${COL_LEFT ? 'Everyone has been collected.' : q.length ? 'No match.' : 'No car riders today.'}</div>`;
+  scrollTo(0, y);
+  $('#clist').querySelectorAll('details').forEach(d => d.ontoggle = () => { COL_OPEN[d.dataset.b] = d.open; });
+  $('#clist').querySelectorAll('[data-cid]').forEach(b => b.onclick = async () => {
+    const s = COL.students.find(x => String(x.student_id) === b.dataset.cid), on = !s.collected;
+    s.collected = on; s.collected_at = on ? new Date().toISOString() : null; s.collected_by = on ? (ME.name || '') : null; drawCollect();
+    try { await call('duty_collect_mark', { p_student: s.student_id, p_on: on }); } catch (x) { toast(x.message); loadCollect(true); }
+  });
+}
+
 // =================== CAR LINE ===================
 let CARS = null, CQ = '', SHOW_DONE = false;
 async function carStart() {
@@ -217,7 +270,7 @@ function drawCars() {
   const away = CARS.students.filter(s => !(s.status === 'present' || s.status === 'late'));
   $('#cars').innerHTML = list.map(s => `<button class="kid ${s.done ? 'on' : ''} ${s.changed ? 'chg' : ''}" data-id="${s.student_id}">
       <span class="box">${s.done ? '✓' : ''}</span><span><b>${esc(s.last)}, ${esc(s.first)}${s.banned ? ' <span style="background:var(--red);color:#fff;font-size:.7rem;font-weight:800;padding:1px 6px;border-radius:5px;vertical-align:2px">BANNED PERSON</span>' : ''}</b><small>Grade ${esc(grade(s.grade))} · ${esc((s.teacher || '').replace(/^(Mr|Mrs|Ms|Miss|Dr)\.?\s+/, ''))}${s.changed && s.pickup_person ? ` · <span style="color:var(--red)">today: ${esc(s.pickup_person)}</span>` : ''}</small></span>
-      <span class="st"><small>${s.done ? esc(s.picked_by || '') + ' · ' + tm(s.done_at) : ''}</small></span></button>`).join('')
+      <span class="st"><small>${s.done ? esc(s.picked_by || '') + ' · ' + tm(s.done_at) : s.collected ? `<span class="coll">✓ Collected ${tm(s.collected_at)}</span>` : '<span class="incl">In class</span>'}</small></span></button>`).join('')
     || `<div class="card">${SHOW_DONE ? 'No one picked up yet.' : CQ ? 'No match.' : 'Everyone has been picked up.'}</div>`;
   if (!SHOW_DONE && away.length && !CQ) $('#cars').innerHTML += `<details class="card" style="margin-top:10px"><summary class="muted">Not here today (${away.length})</summary><p class="small">${away.map(s => `${esc(s.name)} — ${s.status === 'absent' ? 'absent' : 'checked out early'}`).join('<br>')}</p></details>`;
   $('#cars').querySelectorAll('.kid').forEach(b => b.onclick = () => openKid(+b.dataset.id));
@@ -231,6 +284,8 @@ async function openKid(id, other) {
   $('#sheet-in').innerHTML = `<div class="hd"><div><h1 style="font-size:1.8rem">${esc(r.student.name)}</h1><span class="muted">Grade ${esc(grade(r.student.grade))} · ${esc(r.student.teacher || '')}</span></div><button class="x" id="sx" aria-label="Close">×</button></div>
     ${s.done ? `<div class="card on" style="background:var(--ok-bg);color:var(--ok);border-color:var(--ok)"><b>Picked up by ${esc(s.picked_by || '')} at ${tm(s.done_at)}</b><button class="link" id="undo">Undo</button></div>` : ''}
     ${other ? changeNote(other, 'Car Rider') : ''}
+    ${!s.done && s.collected ? `<div class="card" style="border-color:var(--ok);background:var(--ok-bg)"><b style="color:var(--ok)">✓ Collected from class at ${tm(s.collected_at)}${s.collected_by ? ' by ' + esc(s.collected_by) : ''}</b></div>`
+      : !s.done && s.collected === false ? '<div class="card"><b>Not collected from class yet.</b></div>' : ''}
     ${r.today_pickup ? `<div class="card alert"><b>Today's change: picked up by ${esc(r.today_pickup)}</b></div>` : ''}
     <b>Who is picking up?</b>
     <div class="people">${r.people.map((p, i) => `<button class="person ${today && p.name.toLowerCase() === today ? 'today' : ''}" data-i="${i}"><span><b>${esc(p.name)}</b><small>${esc([p.relationship, p.type].filter(Boolean).join(' · '))}</small></span></button>`).join('')

@@ -34,7 +34,12 @@ main{padding-bottom:40px}
 .achips button.on{background:var(--red);border-color:var(--red);color:#fff}
 .achips .not.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
 .others-h{font-size:1rem;margin:16px 0 8px;font-family:var(--body);font-weight:800}.others-h small{font-weight:600;color:var(--muted)}
-.kid.other{border-style:dashed}.kid.other .box{font-weight:800;color:var(--muted)}
+.kid.other{border-style:dashed}
+.coll{color:var(--ok);font-weight:800}.incl{color:var(--muted)}
+.cboard{margin:0 0 10px;border:2px solid var(--line);border-radius:14px;background:var(--surface);padding:0 10px}
+.cboard>summary{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 4px;cursor:pointer;list-style:none;font-size:1.1rem}
+.cboard>summary::-webkit-details-marker{display:none}.cboard>summary span{color:var(--muted);font-weight:800}
+.cboard[open]>summary{border-bottom:1px solid var(--line);margin-bottom:8px}.cboard.alldone>summary span{color:var(--ok)}.kid.other .box{font-weight:800;color:var(--muted)}
 .stop{font-family:var(--display);font-weight:800;font-size:1.15rem;text-transform:uppercase;letter-spacing:.03em;margin:14px 0 6px;display:flex;justify-content:space-between;gap:8px}
 .kid{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:2px solid var(--line);background:var(--surface);border-radius:14px;padding:12px 14px;cursor:pointer;color:var(--ink);margin-bottom:8px;min-height:64px}
 .kid .box{width:34px;height:34px;border-radius:10px;border:3px solid var(--line);flex:none;display:grid;place-items:center;font-weight:800;font-size:1.2rem;color:#fff}

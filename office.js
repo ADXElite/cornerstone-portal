@@ -518,7 +518,7 @@ async function loadSettings() {
   SET = set;
   $('#ap-on').checked = set.alerts_paused === true;
   $('#ap-card').style.borderColor = set.alerts_paused === true ? 'var(--red)' : '';
-  const ROLE = { admin: ['Admin', 'ok'], office: ['Front Office', 'ok'], carline: ['Car Line', 'warn'], bus: ['Bus Driver', 'gray'], busdismiss: ['Bus Dismissal', 'gray'], care: ['Extended Care', 'warn'] };
+  const ROLE = { admin: ['Admin', 'ok'], office: ['Front Office', 'ok'], carline: ['Car Line', 'warn'], carcollect: ['Car Line Collector', 'warn'], bus: ['Bus Driver', 'gray'], busdismiss: ['Bus Dismissal', 'gray'], care: ['Extended Care', 'warn'] };
   const rolesOf = st => st.roles || [st.role];
   $('#staff-list').innerHTML = staff.map(st => `<div class="row" data-row="${esc(st.email)}"><div class="txt"><b>${esc(st.name || st.email)} ${rolesOf(st).map(r => `<span class="tag ${(ROLE[r] || ['', ''])[1]}">${(ROLE[r] || [r])[0]}</span>`).join(' ')}${st.active ? '' : ' <span class="tag gray">Off</span>'}</b>
       <p>${esc(st.email)}${st.phone ? ' · ' + esc(fmtPhone(st.phone)) : ''}${st.has_login ? (st.last_sign_in ? ' · last signed in ' + stamp(st.last_sign_in) : ' · has a sign-in') : ' · <b style="display:inline;color:var(--red)">no sign-in yet</b>'}</p>
@@ -609,7 +609,7 @@ $('#f-staff').addEventListener('submit', async e => {
     if (!roles.length) throw new Error('Choose at least one role.');
     await staffUsers({ action: 'create', email: $('#sa-email').value, name: $('#sa-name').value, phone: $('#sa-phone').value, roles, password: $('#sa-pass').value });
     const all = roles.includes('admin') ? ['office', 'carline', 'bus', 'care'] : [...new Set(roles.map(r => r === 'busdismiss' ? 'bus' : r))];
-    const where = all.map(r => ({ carline: 'portal.csjax.org/carline', bus: 'portal.csjax.org/bus', care: 'portal.csjax.org/care', office: 'portal.csjax.org/office' })[r]).filter(Boolean).join('\n');
+    const where = all.map(r => ({ carline: 'portal.csjax.org/carline', carcollect: 'portal.csjax.org/collect', bus: 'portal.csjax.org/bus', care: 'portal.csjax.org/care', office: 'portal.csjax.org/office' })[r]).filter(Boolean).join('\n');
     alert(`Sign-in created.\n\nGive them:\n${where}\nEmail: ${$('#sa-email').value.trim().toLowerCase()}\nPassword: the one you just typed`);
     $('#f-staff').reset(); loadSettings();
   } catch (x) { $('#sa-err').textContent = x.message; }
