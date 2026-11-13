@@ -162,7 +162,7 @@ function renderHome() {
     || '<div class="empty">No pickup people on file.</div>';
   box.innerHTML = HOME.students.map(s => {
     const t = transportLines(s);
-    const up = s.upcoming_changes.map(c => `<span class="tag ${c.status === 'processed' ? 'ok' : 'warn'}">${c.change_type === 'weekly' ? esc(everyDays(c.weekdays)) : `${c.change_type === 'permanent' ? 'From ' : ''}${nice(c.start_date)}${c.change_type === 'date_range' ? '–' + nice(c.end_date) : ''}`}: ${esc(c.new_method)}</span>`).join(' ');
+    const up = s.upcoming_changes.map(c => `<span class="tag ${c.status === 'processed' ? 'ok' : 'warn'}">${c.change_type === 'weekly' ? esc(everyDays(c.weekdays, c.week_interval)) : `${c.change_type === 'permanent' ? 'From ' : ''}${nice(c.start_date)}${c.change_type === 'date_range' ? '–' + nice(c.end_date) : ''}`}: ${esc(c.new_method)}</span>`).join(' ');
     return `<article class="stu">
       <div class="stu-h"><div class="av">${esc((s.first_name || '?')[0])}</div><div><b>${esc(s.first_name)} ${esc(s.last_name)}</b><small>${esc(gradeLabel(s.grade))}${s.teacher ? ' · ' + esc(s.teacher) : ''}</small></div></div>
       <dl class="kv">
@@ -350,8 +350,20 @@ const afterCut = () => HOME.now_et >= HOME.cutoff || isWeekend(HOME.today);
 
 // "Every Friday" / "Every Mon & Wed" — weekly changes use ISO day numbers 1 (Mon) … 5 (Fri).
 const DAYN = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], DAYS3 = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-const everyDays = d => 'Every ' + ((d || []).length === 1 ? DAYN[d[0]] : (d || []).map(x => DAYS3[x]).join(' & '));
-const changeWhen = c => c.change_type === 'weekly' ? `${everyDays(c.weekdays)} from ${nice(c.start_date)}${c.end_date ? ' to ' + nice(c.end_date) : ''}`
+const everyDays = (d, n = 1) => (n === 2 ? 'Every other ' : n > 2 ? `Every ${n} weeks on ` : 'Every ') + ((d || []).length === 1 ? DAYN[d[0]] : (d || []).map(x => DAYS3[x]).join(' & '));
+// Next dates a repeating change applies (weeks counted from the start date's week, Monday-based).
+function nextDates(start, days, n, count = 4, end = '') {
+  if (!start || !days.length) return [];
+  const mon = d => { const x = new Date(d + 'T12:00:00'); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
+  const m0 = mon(start), out = []; const d = new Date(start + 'T12:00:00');
+  for (let i = 0; i < 400 && out.length < count; i++, d.setDate(d.getDate() + 1)) {
+    if (end && d.toLocaleDateString('en-CA') > end) break;
+    const iso = ((d.getDay() + 6) % 7) + 1, wk = Math.round((mon(d.toLocaleDateString('en-CA')) - m0) / 6048e5);
+    if (days.includes(iso) && wk % n === 0) out.push(`${d.toLocaleDateString('en-US', { weekday: 'short' })} ${d.getMonth() + 1}/${d.getDate()}`);
+  }
+  return out;
+}
+const changeWhen = c => c.change_type === 'weekly' ? `${everyDays(c.weekdays, c.week_interval)} from ${nice(c.start_date)}${c.end_date ? ' to ' + nice(c.end_date) : ''}`
   : c.change_type === 'date_range' ? `${nice(c.start_date)} – ${nice(c.end_date)}` : c.change_type === 'permanent' ? `From ${nice(c.start_date)} (permanent)` : nice(c.start_date);
 function renderTrans() {
   $('#t-cutnote').innerHTML = afterCut()
@@ -385,7 +397,8 @@ function syncTrans() {
   $('#t-start-l').firstChild.textContent = type === 'date_range' ? 'From ' : type === 'permanent' || type === 'weekly' ? 'Starting ' : 'Date ';
   $('#t-end-l').hidden = type !== 'date_range' && type !== 'weekly';
   $('#t-end-t').textContent = type === 'weekly' ? 'Until (optional) ' : 'Through ';
-  $('#t-days').hidden = $('#t-weekly-note').hidden = type !== 'weekly';
+  $('#t-days').hidden = $('#t-every').hidden = $('#t-weekly-note').hidden = type !== 'weekly';
+  showNext();
   const min = type === 'today' ? HOME.today : afterCut() ? addDays(HOME.today, 1) : HOME.today;
   $('#t-start').min = min; if ($('#t-start').value < min) $('#t-start').value = isWeekend(min) ? nextSchoolDay(min) : min;
   $('#t-end').min = $('#t-start').value;
@@ -401,6 +414,15 @@ function syncMethod() {
   $('#t-driver').hidden = m !== 'Student Driver and/or Passenger';
 }
 $$('input[name=t-period],input[name=t-type]').forEach(i => i.addEventListener('change', syncTrans));
+function showNext() {
+  const weekly = $('input[name=t-type]:checked')?.value === 'weekly';
+  const days = $$('#t-days input:checked').map(i => +i.value), n = +($('input[name=t-every]:checked')?.value || 1);
+  const list = weekly ? nextDates($('#t-start').value, days, n, 4, $('#t-end').value) : [];
+  $('#t-next').hidden = !list.length;
+  $('#t-next').textContent = list.length ? `Next: ${list.join(' · ')} …` : '';
+}
+$$('#t-days input, input[name=t-every]').forEach(i => i.addEventListener('change', showNext));
+$('#t-start').addEventListener('change', showNext); $('#t-end').addEventListener('change', showNext);
 $('#t-methods').addEventListener('change', syncMethod);
 $('#t-start').addEventListener('change', () => { $('#t-end').min = $('#t-start').value; });
 
@@ -434,7 +456,7 @@ $('#f-trans').addEventListener('submit', async e => {
   for (const s of kids) {
     try {
       const r = await api('/api/parent', { action: 'transport', student_id: s.student_id, period, change_type: type, start_date: start,
-        end_date: type === 'date_range' || type === 'weekly' ? $('#t-end').value : '', weekdays, new_method: method, new_details: details,
+        end_date: type === 'date_range' || type === 'weekly' ? $('#t-end').value : '', weekdays, week_interval: type === 'weekly' ? +($('input[name=t-every]:checked')?.value || 1) : 1, new_method: method, new_details: details,
         pickup_person: person, pickup_relationship: rel, pickup_phone: phone, comments: $('#t-comments').value });
       if (!r.alerted) alertFail = true;
       done.push(s.first_name);
@@ -443,7 +465,7 @@ $('#f-trans').addEventListener('submit', async e => {
   busy(btn, false);
   if (failed.length) err.textContent = failed.join(' ');
   if (done.length) {
-    const when = type === 'weekly' ? `${everyDays(weekdays).toLowerCase()} starting ${nice(start)}${endVal ? ' until ' + nice(endVal) : ''}`
+    const when = type === 'weekly' ? `${everyDays(weekdays, +($('input[name=t-every]:checked')?.value || 1)).toLowerCase()} starting ${nice(start)}${endVal ? ' until ' + nice(endVal) : ''}`
       : type === 'date_range' ? `${nice(start)} – ${nice(endVal)}` : type === 'permanent' ? `starting ${nice(start)}` : niceLong(start);
     $('#f-trans').reset(); $('#t-start').value = '';
     await loadHome().catch(() => {});

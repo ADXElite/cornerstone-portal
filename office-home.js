@@ -239,9 +239,11 @@ function drawEFields() {
   if (!s) return F.innerHTML = '<p class="muted">Choose a student first.</p>';
   const nowT = new Date().toLocaleTimeString('en-GB', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit' });
   if (t === 'transport') F.innerHTML = `<div class="two"><label>Applies To <select id="ef-period"><option value="afternoon">Afternoon Dismissal</option><option value="morning">Morning Arrival</option></select></label>
-      <label>How Long <select id="ef-ct"><option value="one_day">One Day</option><option value="date_range">Date Range</option><option value="weekly">Every Week</option><option value="permanent">Permanent</option></select></label></div>
-    <fieldset id="ef-days" class="days" hidden><legend>Which days each week?</legend>${['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((d, i) => `<label><input type="checkbox" value="${i + 1}"><span>${d}</span></label>`).join('')}</fieldset>
+      <label>How Long <select id="ef-ct"><option value="one_day">One Day</option><option value="date_range">Date Range</option><option value="weekly">Repeating (Weekly)</option><option value="permanent">Permanent</option></select></label></div>
+    <fieldset id="ef-days" class="days" hidden><legend>Which days?</legend>${['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((d, i) => `<label><input type="checkbox" value="${i + 1}"><span>${d}</span></label>`).join('')}</fieldset>
+    <label id="ef-every-l" hidden>Repeats <select id="ef-every"><option value="1">Every Week</option><option value="2">Every Other Week (starting the week of the start date)</option></select></label>
     <div class="two"><label><span id="ef-start-t">Date</span> <input type="date" id="ef-start" value="${TODAY}"></label><label id="ef-end-l" hidden><span id="ef-end-t">Through</span> <input type="date" id="ef-end"></label></div>
+    <p class="small" id="ef-next" hidden style="margin:0;font-weight:700"></p>
     <label>New Method <select id="ef-method"></select></label>
     <label id="ef-stop-l" hidden>Bus Stop <small class="muted">(required — afternoon drop-off order)</small><select id="ef-stop"><option value="">Loading stops…</option></select></label>
     <label id="ef-care-l" hidden>Afterschool Care Location <select id="ef-care"><option value="Afterschool Care - SP">Afterschool Care - SP</option><option value="Afterschool Care - KHA">Afterschool Care - KHA</option></select></label>
@@ -259,14 +261,31 @@ function drawEFields() {
   if ($('#ef-period')) {
     const syncM = () => { const m = $('#ef-method').value, am = $('#ef-period').value === 'morning';
       $('#ef-stop-l').hidden = m !== 'Bus Rider'; $('#ef-care-l').hidden = am || m !== 'Afternoon Extended Care'; $('#ef-drv-l').hidden = m !== 'Student Driver and/or Passenger'; };
-    const sync = () => { const am = $('#ef-period').value === 'morning'; $('#ef-method').innerHTML = (am ? AM_OPTS : PM_OPTS).map(o => `<option>${o}</option>`).join(''); const ct = $('#ef-ct').value; $('#ef-end-l').hidden = ct !== 'date_range' && ct !== 'weekly'; $('#ef-days').hidden = ct !== 'weekly';
+    const sync = () => { const am = $('#ef-period').value === 'morning'; $('#ef-method').innerHTML = (am ? AM_OPTS : PM_OPTS).map(o => `<option>${o}</option>`).join(''); const ct = $('#ef-ct').value; $('#ef-end-l').hidden = ct !== 'date_range' && ct !== 'weekly'; $('#ef-days').hidden = $('#ef-every-l').hidden = ct !== 'weekly'; efNext();
       $('#ef-end-t').textContent = ct === 'weekly' ? 'Until (optional — blank keeps it going)' : 'Through'; $('#ef-start-t').textContent = ct === 'weekly' || ct === 'permanent' ? 'Starting' : ct === 'date_range' ? 'From' : 'Date'; syncM(); };
-    $('#ef-period').onchange = $('#ef-ct').onchange = sync; $('#ef-method').onchange = syncM; sync();
+    $('#ef-period').onchange = $('#ef-ct').onchange = sync; $('#ef-method').onchange = syncM;
+    $$('#ef-days input').forEach(i => i.onchange = efNext); $('#ef-every').onchange = $('#ef-start').onchange = $('#ef-end').onchange = efNext; sync();
     busStops().then(stops => { if (!$('#ef-stop')) return; const buses = [...new Set(stops.map(x => x.bus))];
       $('#ef-stop').innerHTML = '<option value="">Choose a Stop…</option>' + buses.map(b => `<optgroup label="${esc(b)}">${stops.filter(x => x.bus === b).map(x => `<option value="${esc(x.stop)}">${esc(x.label)}</option>`).join('')}</optgroup>`).join(''); })
       .catch(() => { if ($('#ef-stop')) $('#ef-stop').innerHTML = '<option value="">Could not load stops — refresh the page</option>'; });
   }
   if ($('#ef-person')) $('#ef-person').onchange = () => $('#ef-other').hidden = $('#ef-person').value !== 'other';
+}
+// Preview the next dates a repeating change applies (weeks counted from the start date's week).
+function efNext() {
+  const el = $('#ef-next'); if (!el) return;
+  const weekly = $('#ef-ct').value === 'weekly', days = $$('#ef-days input:checked').map(i => +i.value), n = +$('#ef-every').value, start = $('#ef-start').value, end = $('#ef-end').value;
+  const out = [];
+  if (weekly && start && days.length) {
+    const mon = x => { const y = new Date(x); y.setDate(y.getDate() - ((y.getDay() + 6) % 7)); y.setHours(12, 0, 0, 0); return y; };
+    const d = new Date(start + 'T12:00:00'), m0 = mon(d);
+    for (let i = 0; i < 400 && out.length < 4; i++, d.setDate(d.getDate() + 1)) {
+      if (end && d.toLocaleDateString('en-CA') > end) break;
+      const iso = ((d.getDay() + 6) % 7) + 1, wk = Math.round((mon(d) - m0) / 6048e5);
+      if (days.includes(iso) && wk % n === 0) out.push(`${d.toLocaleDateString('en-US', { weekday: 'short' })} ${d.getMonth() + 1}/${d.getDate()}`);
+    }
+  }
+  el.hidden = !out.length; el.textContent = out.length ? `Next: ${out.join(' · ')} …` : '';
 }
 $('#e-type').addEventListener('change', drawEFields);
 $('#e-save').onclick = async () => {
@@ -288,7 +307,7 @@ $('#e-save').onclick = async () => {
     if (m === 'Student Driver and/or Passenger') { if (!v('#ef-drv')) return err.textContent = "Enter the student driver's full name."; details = 'Student driver: ' + v('#ef-drv'); }
     const ct = v('#ef-ct'), weekdays = ct === 'weekly' ? $$('#ef-days input:checked').map(i => +i.value) : [];
     if (ct === 'weekly' && !weekdays.length) return err.textContent = 'Pick at least one day of the week.';
-    Object.assign(p, { period: v('#ef-period'), change_type: ct, start_date: v('#ef-start'), end_date: v('#ef-end'), weekdays, new_method: m, new_details: details, comments: v('#ef-comments') });
+    Object.assign(p, { period: v('#ef-period'), change_type: ct, start_date: v('#ef-start'), end_date: v('#ef-end'), weekdays, week_interval: ct === 'weekly' ? +v('#ef-every') : 1, new_method: m, new_details: details, comments: v('#ef-comments') });
   }
   if (t === 'pickup_add') Object.assign(p, { first_name: v('#ef-first'), last_name: v('#ef-last'), relationship: v('#ef-rel'), phone: v('#ef-phone'), email: v('#ef-email'), comments: v('#ef-comments') });
   if (t === 'pickup_remove') { if (!v('#ef-rm')) return err.textContent = 'Choose who to remove.'; Object.assign(p, { person_key: v('#ef-rm'), comments: v('#ef-comments') }); }
@@ -303,7 +322,7 @@ $('#e-save').onclick = async () => {
     if (window.loadStudent) loadStudent(s.student_id);
   } catch (x) {
     const m = { missing_fields: 'Fill in every field.', need_name: 'Enter first and last name.', need_phone: 'Enter a 10-digit phone.', already_on_list: 'That person is already on the list.',
-      cant_remove_guardian: "Parents/guardians can't be removed here.", not_on_list: 'That person is no longer on the list.', pick_student: 'Choose a student.', need_bus: 'Choose a bus stop from the list.' }[x.message];
+      cant_remove_guardian: "Parents/guardians can't be removed here.", not_on_list: 'That person is no longer on the list.', pick_student: 'Choose a student.', need_bus: 'Choose a bus stop from the list.', need_weekdays: 'Pick at least one day of the week.', bad_range: 'Check the dates — the end date must be on or after the start date.' }[x.message];
     err.textContent = m || emsg(x);
   }
   b.disabled = false;

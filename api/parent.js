@@ -6,9 +6,9 @@
 const C = require('../lib/core');
 
 const fmtDate = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '';
-const TYPE = { one_day: 'One day only', date_range: 'Date range', permanent: 'Permanent change', weekly: 'Every week' };
+const TYPE = { one_day: 'One day only', date_range: 'Date range', permanent: 'Permanent change', weekly: 'Repeating' };
 const DAYN = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-const everyDays = d => 'Every ' + (d || []).map(x => DAYN[x]).join(' & ');
+const everyDays = (d, n = 1) => (n === 2 ? 'Every other ' : n > 2 ? `Every ${n} weeks on ` : 'Every ') + (d || []).map(x => DAYN[x]).join(' & ');
 
 async function alertOffice(ch, req) {
   const to = await C.rpc('portal_staff_alert_emails', {});
@@ -16,7 +16,7 @@ async function alertOffice(ch, req) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
   const isoToday = ((new Date(today + 'T12:00:00').getDay() + 6) % 7) + 1;
   const sameDay = ch.start_date === today && (ch.change_type !== 'weekly' || (ch.weekdays || []).includes(isoToday));
-  const when = ch.change_type === 'weekly' ? `${everyDays(ch.weekdays)}, starting ${fmtDate(ch.start_date)}${ch.end_date ? ' until ' + fmtDate(ch.end_date) : ' (ongoing)'}`
+  const when = ch.change_type === 'weekly' ? `${everyDays(ch.weekdays, ch.week_interval)}, starting ${fmtDate(ch.start_date)}${ch.end_date ? ' until ' + fmtDate(ch.end_date) : ' (ongoing)'}`
     : ch.change_type === 'date_range' ? `${fmtDate(ch.start_date)} – ${fmtDate(ch.end_date)}`
     : ch.change_type === 'permanent' ? `Starting ${fmtDate(ch.start_date)} (permanent)` : fmtDate(ch.start_date);
   const newWay = [ch.new_method, ch.new_details].filter(Boolean).join(' — ');

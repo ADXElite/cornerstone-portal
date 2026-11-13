@@ -89,10 +89,11 @@ $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') closeM
 addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').hidden) closeModal(); });
 
 // ---------- today ----------
-const TYPE = { one_day: 'One day', date_range: 'Date range', permanent: 'Permanent', weekly: 'Every week' };
+const TYPE = { one_day: 'One day', date_range: 'Date range', permanent: 'Permanent', weekly: 'Repeating' };
+const weeksBetween = (a, b) => { const mon = x => { const y = D(x); y.setDate(y.getDate() - ((y.getDay() + 6) % 7)); return y; }; return Math.round((mon(b) - mon(a)) / 6048e5); };
 const DAYN = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], DAYS3 = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-const everyDays = d => 'Every ' + ((d || []).length === 1 ? DAYN[d[0]] : (d || []).map(x => DAYS3[x]).join(' & '));
-const when = c => c.change_type === 'weekly' ? `${everyDays(c.weekdays)} · from ${nice(c.start_date)}${c.end_date ? ' to ' + nice(c.end_date) : ''}`
+const everyDays = (d, n = 1) => (n === 2 ? 'Every other ' : n > 2 ? `Every ${n} weeks on ` : 'Every ') + ((d || []).length === 1 ? DAYN[d[0]] : (d || []).map(x => DAYS3[x]).join(' & '));
+const when = c => c.change_type === 'weekly' ? `${everyDays(c.weekdays, c.week_interval)} · from ${nice(c.start_date)}${c.end_date ? ' to ' + nice(c.end_date) : ''}`
   : c.change_type === 'date_range' ? `${nice(c.start_date)} – ${nice(c.end_date)}` : c.change_type === 'permanent' ? `From ${nice(c.start_date)}` : nice(c.start_date);
 const TS = { new: ['Not Processed', 'warn'], processed: ['Processed', 'ok'], cancelled: ['Cancelled', 'gray'] };
 async function loadDash() { return homeLoad(); }
@@ -168,7 +169,7 @@ let TR = [];
 function tRow(c, i) {
   const [l, k] = TS[c.status];
   const isoT = ((D(TODAY).getDay() + 6) % 7) + 1;
-  const onToday = c.status !== 'cancelled' && c.start_date <= TODAY && (c.change_type === 'weekly' ? (!c.end_date || c.end_date >= TODAY) && (c.weekdays || []).includes(isoT) : (c.end_date || '9999') >= TODAY);
+  const onToday = c.status !== 'cancelled' && c.start_date <= TODAY && (c.change_type === 'weekly' ? (!c.end_date || c.end_date >= TODAY) && (c.weekdays || []).includes(isoT) && weeksBetween(c.start_date, TODAY) % (c.week_interval || 1) === 0 : (c.end_date || '9999') >= TODAY);
   return `<tr class="click ${onToday ? 'today' : ''}" data-i="${i}">
     <td><b>${esc(c.student)}</b><small>Gr ${esc(grade(c.grade))} · ${esc(c.teacher || '')}</small></td>
     <td>${when(c)}<small>${c.period === 'afternoon' ? 'Afternoon' : 'Morning'} · ${TYPE[c.change_type]}</small></td>
@@ -224,7 +225,7 @@ $('#tf-today').onclick = () => { $('#tf-by').value = 'effective'; $('#tf-from').
 const keepZeros = v => v == null || v === '' ? '' : `="${v}"`;
 $('#tf-csv').onclick = () => {
   const cols = [['Student', c => c.student], ['Grade', c => c.grade], ['Teacher', c => c.teacher], ['Period', c => c.period], ['Type', c => TYPE[c.change_type]],
-    ['Start date', c => c.start_date], ['End date', c => c.end_date], ['Days', c => c.change_type === 'weekly' ? (c.weekdays || []).map(x => DAYS3[x]).join(' ') : ''], ['Was', c => c.current_method], ['New method', c => c.new_method], ['Details', c => c.new_details],
+    ['Start date', c => c.start_date], ['End date', c => c.end_date], ['Days', c => c.change_type === 'weekly' ? (c.weekdays || []).map(x => DAYS3[x]).join(' ') + (c.week_interval === 2 ? ' (every other week)' : c.week_interval > 2 ? ` (every ${c.week_interval} weeks)` : '') : ''], ['Was', c => c.current_method], ['New method', c => c.new_method], ['Details', c => c.new_details],
     ['Pickup person', c => c.pickup_person], ['Pickup relationship', c => c.pickup_relationship], ['Pickup phone', c => c.pickup_phone], ['Comments', c => c.comments],
     ['Submitted by', c => c.submitted_name], ['Parent login', c => c.submitted_by], ['Submitted at', c => stamp(c.created_at)], ['Status', c => TS[c.status][0]], ['Processed by', c => c.processed_by], ['Processed at', c => stamp(c.processed_at)]];
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
