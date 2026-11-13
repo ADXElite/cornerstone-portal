@@ -136,15 +136,28 @@ let SCANS = [];
 async function loadScans() {
   try { SCANS = await call('staff_scans'); } catch { SCANS = []; }
   const admin = isAdmin();
-  $('#sc-box').hidden = !SCANS.length && !admin;
+  $('#sc-box').hidden = false;
   $('#sc-n').textContent = SCANS.length; $('#sc-n').hidden = !SCANS.length;
   $('#sc-rows').innerHTML = SCANS.map((x, i) => `<tr><td>${stamp(x.received_at)}</td><td>${esc(x.filename)}<small>${(x.size / 1024).toFixed(0)} KB</small></td>
     <td style="text-align:right;white-space:nowrap"><button class="btn sm" data-scan="${i}">Add to Student</button> <button class="btn ghost sm" data-scandel="${i}">Delete</button></td></tr>`).join('')
     || '<tr><td colspan="3" class="empty">No scanned documents waiting.</td></tr>';
   if (admin && $('#sc-url').hidden) {
-    try { const k = await call('staff_scan_key'); $('#sc-url').innerHTML = `Scanner address (admins only): <b style="user-select:all">https://portal.csjax.org/api/scan/${esc(k)}</b> — works only on the school network.`; $('#sc-url').hidden = false; } catch {}
+    try { const k = await call('staff_scan_remote_key'); $('#sc-url').innerHTML = `Admins only — address for the scan-to-email script: <b style="user-select:all;word-break:break-all">https://portal.csjax.org/api/scan/${esc(k)}</b>. Keep it private.`; $('#sc-url').hidden = false; } catch {}
   }
 }
+$('#sc-file').addEventListener('change', async e => {
+  const files = [...e.target.files]; e.target.value = '';
+  const ok = /^(application\/pdf|image\/(jpeg|png|tiff))$/;
+  let added = 0;
+  for (const f of files) {
+    const mime = f.type || (/\.pdf$/i.test(f.name) ? 'application/pdf' : /\.tiff?$/i.test(f.name) ? 'image/tiff' : '');
+    if (!ok.test(mime)) { toast(`${f.name}: only PDF or picture files.`); continue; }
+    if (f.size > 20 * 1024 * 1024) { toast(`${f.name} is over 20 MB.`); continue; }
+    const b64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(f); });
+    try { await call('staff_scan_upload', { p_name: f.name, p_mime: mime, p_b64: b64 }); added++; } catch (x) { toast(`${f.name}: ${emsg(x)}`); }
+  }
+  if (added) { toast(`${added} scan${added === 1 ? '' : 's'} added — pick the student for each below.`); await loadScans(); if (added === 1 && files.length === 1) openScan(SCANS[SCANS.length - 1]); }
+});
 $('#sc-rows').addEventListener('click', async e => {
   const d = e.target.closest('[data-scandel]');
   if (d) { const x = SCANS[+d.dataset.scandel]; if (!confirm(`Delete the scan "${x.filename}"? Only do this for blank or duplicate scans.`)) return;

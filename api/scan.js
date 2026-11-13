@@ -1,7 +1,7 @@
 // Scanner drop box for doctor's notes turned in at the front office.
 //   POST https://portal.csjax.org/api/scan/<scan key>
 // Accepts the file as the raw request body (Content-Type: application/pdf) or as a multipart form upload
-// (any field name). Only the school's network can send. The scan waits under Excused Notes → Scanned Documents
+// (any field name). The school's network can send with the scan key; anywhere else needs the longer remote key. The scan waits under Excused Notes → Scanned Documents
 // until the office picks the student and date(s).
 const C = require('../lib/core');
 
@@ -48,8 +48,9 @@ const sniff = b => b.slice(0, 4).toString() === '%PDF' ? 'application/pdf'
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Robots-Tag', 'noindex, nofollow');
   const ip = C.clientIp(req);
-  if (!allowedIps().includes(ip)) return C.send(res, 403, { error: 'campus_only', ip });
-  if (req.method === 'GET') return C.send(res, 200, { ok: true, ready: true, note: 'POST the scanned PDF to this address.' });
+  // On campus: the short scan key works. Off campus (e.g. Google Apps Script for scan-to-email): only the long remote key works.
+  const campus = allowedIps().includes(ip);
+  if (req.method === 'GET') return campus ? C.send(res, 200, { ok: true, ready: true, note: 'POST the scanned PDF to this address.' }) : C.send(res, 404, { error: 'not_found' });
   if (req.method !== 'POST' && req.method !== 'PUT') return C.send(res, 405, { error: 'method' });
   const key = String(req.query.key || '').trim();
   if (!key) return C.send(res, 404, { error: 'not_found' });
@@ -67,7 +68,7 @@ module.exports = async (req, res) => {
     if (real) mime = real;
     if (!['application/pdf', 'image/jpeg', 'image/png', 'image/tiff'].includes(mime)) return C.send(res, 415, { error: 'pdf_or_image_only' });
     if (buf.length > MAX) return C.send(res, 413, { error: 'too_big' });
-    const r = await C.rpc('portal_scan_add', { p_scan_key: key, p_name: name.slice(0, 120), p_mime: mime, p_b64: buf.toString('base64'), p_ip: ip });
+    const r = await C.rpc('portal_scan_add', { p_scan_key: key, p_name: name.slice(0, 120), p_mime: mime, p_b64: buf.toString('base64'), p_ip: ip, p_campus: campus });
     return C.send(res, 200, { ok: true, id: r.id });
   } catch (e) {
     if (e.message === 'bad_scan_key') return C.send(res, 404, { error: 'not_found' });

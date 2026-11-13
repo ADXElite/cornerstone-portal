@@ -194,8 +194,9 @@ td.c small{text-align:center}
     <!-- Notes -->
     <div class="screen" id="p-notes" hidden>
       <section class="card" id="sc-box" hidden style="margin-bottom:14px;border-color:var(--red)">
-        <b class="t">Scanned Documents <span class="badge" id="sc-n"></span></b>
-        <p class="muted small" style="margin:0">Doctor's notes scanned at the front office. Pick the student and date to add each one as a pending doctor's note.</p>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b class="t" style="margin-right:auto">Scanned Documents <span class="badge" id="sc-n"></span></b>
+          <label class="btn sm" style="cursor:pointer">Upload Scan<input type="file" id="sc-file" accept="application/pdf,image/jpeg,image/png,image/tiff,.pdf,.jpg,.jpeg,.png,.tif,.tiff" multiple hidden></label></div>
+        <p class="muted small" style="margin:0">Doctor's notes turned in at the front office. Scan the note, click Upload Scan and pick the file (or it arrives here automatically from scan-to-email). Then pick the student and date to add it as a pending doctor's note.</p>
         <div class="tw"><table><thead><tr><th>Scanned</th><th>File</th><th></th></tr></thead><tbody id="sc-rows"></tbody></table></div>
         <p class="muted small" id="sc-url" hidden style="margin:0"></p>
       </section>
