@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
   }
 
   if (b.action === "create") {
-    const ALL = ["admin", "office", "carline", "bus", "care"];
+    const ALL = ["admin", "office", "carline", "bus", "busdismiss", "care"];
     const roles = (Array.isArray(b.roles) ? b.roles : [b.role]).filter((r: unknown) => ALL.includes(String(r)));
     if (!roles.length) return json({ error: "Choose at least one role." }, 400);
     const { error: sErr } = await asStaff.rpc("staff_staff_save", { p_email: email, p_name: String(b.name || "").trim() || null, p_active: true, p_roles: roles, p_phone: String(b.phone || "").trim() || null });

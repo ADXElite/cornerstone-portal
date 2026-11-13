@@ -19,8 +19,9 @@ async function boot() {
   if (!data.session) return login();
   try { ME = await call('duty_me'); } catch { await sb.auth.signOut(); return login("This account isn't set up for dismissal. Ask the front office."); }
   const roles = ME.roles || [ME.role];
-  if (!roles.includes('office') && !roles.includes('admin') && !roles.includes(MODE)) {
-    const other = roles.includes('bus') ? '/bus' : roles.includes('carline') ? '/carline' : '/care';
+  const canHere = MODE === 'bus' ? roles.some(r => r === 'bus' || r === 'busdismiss') : roles.includes(MODE);
+  if (!roles.includes('office') && !roles.includes('admin') && !canHere) {
+    const other = roles.includes('bus') || roles.includes('busdismiss') ? '/bus' : roles.includes('carline') ? '/carline' : '/care';
     const what = { '/bus': 'the bus roster', '/carline': 'car line', '/care': 'extended care' }[other];
     APP.hidden = false; $('#v-login').hidden = true;
     APP.innerHTML = `<div class="card"><b class="t">This sign-in isn't set up for ${MODE === 'bus' ? 'bus drivers' : 'car line'}.</b><p><a class="btn" href="${other}">Open ${what}</a></p></div>`;
@@ -42,17 +43,66 @@ $('#f-login').addEventListener('submit', async e => {
   boot();
 });
 function every(fn, ms) { clearInterval(timer); timer = setInterval(() => { if (!document.hidden && $('#sheet').hidden) fn(true); }, ms); }
-document.addEventListener('visibilitychange', () => { if (!document.hidden && ME) (MODE === 'bus' ? (BUS ? loadBus(true) : null) : loadCars(true)); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && ME) (MODE === 'bus' ? (BUS === ALL_BUSES ? loadAllBuses(true) : BUS ? loadBus(true) : null) : loadCars(true)); });
 
 // =================== BUS ===================
 let BUS = store.get('ccs_bus');
-async function busStart() { BUS ? loadBus() : pickBus(); }
+const ALL_BUSES = '*all*';
+// Bus Dismissal staff (not drivers) go straight to the all-buses list.
+const dismissOnly = () => { const r = ME.roles || [ME.role]; return r.includes('busdismiss') && !r.some(x => ['bus', 'office', 'admin'].includes(x)); };
+const mayAll = () => (ME.roles || [ME.role]).some(x => ['busdismiss', 'office', 'admin'].includes(x));
+async function busStart() { if (dismissOnly()) BUS = ALL_BUSES; BUS === ALL_BUSES ? (mayAll() ? loadAllBuses() : pickBus()) : BUS ? loadBus() : pickBus(); }
 async function pickBus() {
   BUS = null; clearInterval(timer);
   APP.innerHTML = `<div class="hd"><h1>Choose your bus</h1></div><div class="buses" id="buses"><p class="muted">Loading…</p></div>`;
   const list = await call('duty_buses');
-  $('#buses').innerHTML = list.map(b => `<button data-b="${esc(b.bus)}"><b>Bus ${esc(b.bus)}</b><small>${b.present} riding today</small></button>`).join('') || '<div class="card">No bus riders today.</div>';
-  $('#buses').onclick = e => { const b = e.target.closest('[data-b]'); if (!b) return; BUS = b.dataset.b; store.set('ccs_bus', BUS); loadBus(); };
+  const total = list.reduce((n, b) => n + b.present, 0);
+  $('#buses').innerHTML = (mayAll() ? `<button data-b="${ALL_BUSES}" class="allb"><b>All Buses</b><small>${total} riding today · check everyone on</small></button>` : '')
+    + (list.map(b => `<button data-b="${esc(b.bus)}"><b>Bus ${esc(b.bus)}</b><small>${b.present} riding today</small></button>`).join('') || '<div class="card">No bus riders today.</div>');
+  $('#buses').onclick = e => { const b = e.target.closest('[data-b]'); if (!b) return; BUS = b.dataset.b; store.set('ccs_bus', BUS); BUS === ALL_BUSES ? loadAllBuses() : loadBus(); };
+}
+
+// ----- All buses (Bus Dismissal role): Last, First (Grade) (Bus #), check each student onto the bus -----
+let AQ = '', ABUS = '';
+async function loadAllBuses(quiet) {
+  if (!quiet) APP.innerHTML = '<p class="muted">Loading…</p>';
+  let r; try { r = await call('duty_bus_all'); } catch (x) { if (!quiet) APP.innerHTML = `<div class="card err">${esc(x.message)}</div>`; return; }
+  const riding = s => s.status === 'present' || s.status === 'late';
+  const busNo = b => b ? String(b).replace(/^bus\s*/i, '') : '?';
+  const buses = [...new Set(r.students.map(s => busNo(s.bus)))].sort((a, b) => (+a || 999) - (+b || 999) || a.localeCompare(b));
+  const all = r.students.filter(riding), on = all.filter(s => s.on_bus).length;
+  const y = scrollY, focused = document.activeElement && document.activeElement.id === 'aq';
+  APP.innerHTML = `<div class="hd"><div><h1>All Buses</h1><span class="prog">${on} of ${all.length} on a bus</span></div>
+      <div class="tools">${dismissOnly() ? '' : '<button class="btn ghost sm" id="chg">Change bus</button>'}<button class="btn ghost sm" id="ref">Refresh</button></div></div>
+    ${r.attendance_in ? '' : '<p class="muted small">Today\'s attendance isn\'t in yet, so everyone shows as present.</p>'}
+    <div class="abar"><input type="search" id="aq" placeholder="Search a student" value="${esc(AQ)}" autocomplete="off">
+      <div class="achips"><button data-ab="" class="${ABUS ? '' : 'on'}">All</button>${buses.map(b => `<button data-ab="${esc(b)}" class="${ABUS === b ? 'on' : ''}">Bus ${esc(b)}</button>`).join('')}</div></div>
+    <p class="muted small">Tap a student when they get on the bus. Tap again to undo.</p>
+    <div id="alist"></div>`;
+  const draw = () => {
+    const q = AQ.trim().toLowerCase().split(/[\s,]+/).filter(Boolean);
+    const list = r.students.filter(s => (!ABUS || busNo(s.bus) === ABUS) && q.every(w => `${s.first} ${s.last}`.toLowerCase().includes(w)));
+    $('#alist').innerHTML = list.map(s => {
+      const out = s.status === 'absent' || s.status === 'dismissed' || s.elsewhere;
+      const st = s.status === 'absent' ? 'Absent' : s.status === 'dismissed' ? 'Checked out early' : s.elsewhere ? 'Picked up in car line' : s.on_bus ? 'On bus ' + tm(s.on_bus_at) : s.status === 'late' ? 'Present (late)' : '';
+      return `<button class="kid ${s.on_bus ? 'on' : ''} ${out ? 'out' : ''} ${s.changed ? 'chg' : ''}" data-id="${s.student_id}" ${out ? 'disabled' : ''}>
+        <span class="box">${s.on_bus ? '✓' : ''}</span><span><b>${esc(s.last)}, ${esc(s.first)} (${esc(grade(s.grade) === 'K' ? 'K' : grade(s.grade))}) (Bus ${esc(busNo(s.bus))})</b>${s.changed ? '<small style="color:var(--red)">changed today</small>' : ''}</span>
+        <span class="st"><small>${esc(st)}</small></span></button>`;
+    }).join('') || '<div class="card">No bus riders match.</div>';
+    $('#alist').querySelectorAll('.kid:not(.out)').forEach(b => b.onclick = async () => {
+      const was = b.classList.contains('on'); b.classList.toggle('on', !was); b.querySelector('.box').textContent = was ? '' : '✓';
+      const s = r.students.find(x => String(x.student_id) === b.dataset.id); if (s) { s.on_bus = !was; s.on_bus_at = was ? null : new Date().toISOString(); }
+      try { await call('duty_bus_mark', { p_student: +b.dataset.id, p_on: !was }); } catch (x) { toast(x.message); loadAllBuses(true); }
+      const n = r.students.filter(x => riding(x) && x.on_bus).length; $('.prog').textContent = `${n} of ${all.length} on a bus`;
+    });
+  };
+  draw(); scrollTo(0, y);
+  if (focused) { const i = $('#aq'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
+  $('#aq').oninput = e => { AQ = e.target.value; draw(); };
+  APP.querySelector('.achips').onclick = e => { const b = e.target.closest('[data-ab]'); if (!b) return; ABUS = b.dataset.ab; APP.querySelectorAll('.achips button').forEach(x => x.classList.toggle('on', x === b)); draw(); };
+  if ($('#chg')) $('#chg').onclick = () => { store.set('ccs_bus', null); pickBus(); };
+  $('#ref').onclick = () => loadAllBuses();
+  every(loadAllBuses, 30000);
 }
 async function loadBus(quiet) {
   if (!quiet) APP.innerHTML = '<p class="muted">Loading…</p>';
