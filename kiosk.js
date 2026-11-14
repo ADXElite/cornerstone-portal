@@ -63,7 +63,7 @@ addEventListener('keydown', resetIdle);
 
 // ---------- state ----------
 let S = {};
-function go(screen, html) { stopScan(); S.screen = screen; K.innerHTML = html; resetIdle(); window.scrollTo(0, 0); }
+function go(screen, html) { document.querySelectorAll('.kpop').forEach(x => x.remove()); stopScan(); S.screen = screen; K.innerHTML = html; resetIdle(); window.scrollTo(0, 0); }
 
 const ICON_OUT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>';
 const ICON_IN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>';
@@ -253,11 +253,29 @@ function careStudents() {
   if (!S.students.some(x => x.can)) $('#kerr').textContent = am ? 'Your students are already signed in today.' : 'None of your students are signed in to afterschool care right now. Please see the care staff.';
   $('#next').onclick = async () => {
     if (!S.selected.size) return $('#kerr').textContent = ERR.pick_student;
-    if (!am) return careSign();
+    if (!am) return khaEarly() ? khaWarn(careSign) : careSign();
     const b = $('#next'); b.disabled = true; b.textContent = 'Saving…';
     try { careDone(await rpc('kiosk_care_submit', { p: { session: 'am', pin: S.pin, student_ids: [...S.selected] } })); }
     catch (x) { $('#kerr').textContent = errText(x.message); b.disabled = false; b.textContent = 'Sign In'; }
   };
+}
+// KHA-funded students must stay in afterschool care until 4:30 PM. Warn the parent (SP students get no warning), but still allow the sign-out.
+function khaEarly() {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: 'numeric', hourCycle: 'h23' }).formatToParts(new Date()).map(x => [x.type, x.value]));
+  return (+p.hour * 60 + +p.minute) < 16 * 60 + 30 && S.students.some(x => S.selected.has(x.student_id) && String(x.location || '').toUpperCase() === 'KHA');
+}
+function khaWarn(next) {
+  const kids = S.students.filter(x => S.selected.has(x.student_id) && String(x.location || '').toUpperCase() === 'KHA').map(x => x.first_name).join(' and ');
+  const box = document.createElement('div'); box.className = 'kpop';
+  box.innerHTML = `<div class="kpop-card" role="alertdialog" aria-modal="true" aria-labelledby="kpop-h">
+    <div class="kpop-ic">!</div>
+    <h1 id="kpop-h">Before 4:30 PM</h1>
+    <p><b>KHA Requires Students to attend Afterschool Care until 4:30pm to receive funding, parents will be responsible for the cost of afterschool care if they pick up their student before 4:30pm.</b></p>
+    <p class="muted">Applies to: ${esc(kids)}</p>
+    <div class="row2" style="justify-content:center"><button class="back" id="kpop-no" style="align-self:auto;padding:18px 28px;font-size:1.2rem">Go Back</button><button class="kbtn" id="kpop-ok">I Understand — Continue</button></div></div>`;
+  document.body.appendChild(box);
+  box.querySelector('#kpop-no').onclick = () => box.remove();
+  box.querySelector('#kpop-ok').onclick = () => { box.remove(); next(); };
 }
 function careSign() {
   const names = S.students.filter(x => S.selected.has(x.student_id)).map(x => x.first_name).join(' and ');

@@ -57,6 +57,12 @@ main.k{flex:1;max-width:980px;width:100%;margin:0 auto;padding:24px max(20px,env
   .pad button{height:var(--kh)}
   .pininfo .kerr{text-align:left}
 }
+.kpop{position:fixed;inset:0;z-index:50;background:rgba(18,16,17,.72);display:grid;place-items:center;padding:24px}
+.kpop-card{background:var(--surface);color:var(--ink);border:4px solid var(--red);border-radius:28px;padding:28px 36px;max-width:760px;width:100%;display:grid;gap:18px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);max-height:calc(100dvh - 48px);overflow:auto}
+.kpop-card h1{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size:2.4rem;line-height:1;margin:0;color:var(--red)}
+.kpop-card p{font-size:1.45rem;line-height:1.4;margin:0}
+.kpop-card p.muted{font-size:1.1rem}
+.kpop-ic{width:76px;height:76px;border-radius:50%;background:var(--red);color:#fff;font:800 3rem/76px var(--display);margin:0 auto}
 .kerr{color:var(--red);font-weight:700;font-size:1.15rem;min-height:1.5em;text-align:center}
 .choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
 .choice{border:2px solid var(--line);background:var(--surface);border-radius:20px;padding:22px;text-align:left;cursor:pointer;display:grid;gap:6px;color:var(--ink)}
